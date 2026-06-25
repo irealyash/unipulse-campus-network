@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Environment secrets
+.env
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Editor / OS noise
+.DS_Store
+.vscode/
+*.swp
+
+# Uploaded temp files (we use in-memory storage, but just in case)
+uploads/
+tmp/
