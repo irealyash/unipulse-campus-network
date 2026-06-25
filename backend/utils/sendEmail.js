@@ -41,6 +41,17 @@ export const sendEmail = async ({ to, subject, html, text }) => {
  * Keeping the template here keeps the auth controller clean.
  */
 export const sendOtpEmail = async (to, code) => {
+  // DEV convenience: if SMTP isn't configured, print the code to the server
+  // console instead of trying (and failing) to send a real email. This lets you
+  // test the full signup/login/reset flows without setting up an inbox.
+  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    console.log('\n==================== DEV OTP ====================');
+    console.log(`  Code for ${to}:  ${code}`);
+    console.log('  (Set SMTP_* in .env to email codes for real.)');
+    console.log('================================================\n');
+    return;
+  }
+
   const subject = 'Your UniPulse verification code';
   const text = `Your UniPulse verification code is ${code}. It expires in ${
     process.env.OTP_TTL_MINUTES || 10

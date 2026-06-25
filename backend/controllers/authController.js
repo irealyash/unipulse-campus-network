@@ -16,6 +16,7 @@ import {
   isValidUsername,
   isValidPassword
 } from '../utils/validators.js';
+import { isModeratorEmail } from '../utils/moderators.js';
 
 /**
  * AUTH CONTROLLER
@@ -46,8 +47,9 @@ export const signup = asyncHandler(async (req, res) => {
   const username = (req.body.username || '').trim();
   const password = req.body.password || '';
 
-  // 1) Must be a UBC student address.
-  if (!isValidUbcEmail(email)) {
+  // 1) Must be a UBC student address — unless it's a configured moderator email,
+  //    which is allowed to sign up regardless of domain.
+  if (!isValidUbcEmail(email) && !isModeratorEmail(email)) {
     throw new ApiError(400, `Email must end in ${process.env.ALLOWED_EMAIL_DOMAIN || '@student.ubc.ca'}`);
   }
 
@@ -139,7 +141,9 @@ export const verify = asyncHandler(async (req, res) => {
   const user = await User.create({
     email,
     username: otp.pendingUsername,
-    password: otp.pendingPasswordHash // already a bcrypt hash
+    password: otp.pendingPasswordHash, // already a bcrypt hash
+    // Auto-promote configured moderator emails the moment they're created.
+    moderator: isModeratorEmail(email)
   });
 
   // One-time codes are single-use.
@@ -181,6 +185,12 @@ export const login = asyncHandler(async (req, res) => {
 
   if (user.isBanned) {
     throw new ApiError(403, 'Your account is banned.');
+  }
+
+  // Keep configured moderator emails promoted even if added after signup.
+  if (isModeratorEmail(user.email) && !user.moderator) {
+    user.moderator = true;
+    await user.save();
   }
 
   const token = signToken(user._id);

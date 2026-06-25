@@ -1,0 +1,168 @@
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import api from '../../lib/api';
+
+/**
+ * MODERATOR SLICE
+ * ----------------------------------------------------------------------------
+ * Backs the moderator tab: searching all communities, looking up users and
+ * their content, the reports queue, the user-requests queue, banning, and
+ * deleting any content. Every call here hits the protected /moderator/* API.
+ */
+
+export const modFetchCommunities = createAsyncThunk(
+  'mod/communities',
+  async (search = '', { rejectWithValue }) => {
+    try {
+      const { data } = await api.get('/moderator/communities', { params: { search } });
+      return data.communities;
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
+export const modLookupUser = createAsyncThunk(
+  'mod/lookupUser',
+  async (identifier, { rejectWithValue }) => {
+    try {
+      const { data } = await api.get(`/moderator/users/${encodeURIComponent(identifier)}`);
+      return data;
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
+export const modFetchReports = createAsyncThunk(
+  'mod/reports',
+  async (status = 'pending', { rejectWithValue }) => {
+    try {
+      const { data } = await api.get('/moderator/reports', { params: { status } });
+      return data.reports;
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
+export const modResolveReport = createAsyncThunk(
+  'mod/resolveReport',
+  async ({ id, action }, { rejectWithValue }) => {
+    try {
+      await api.post(`/moderator/reports/${id}/resolve`, { action });
+      return id;
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
+export const modFetchRequests = createAsyncThunk(
+  'mod/requests',
+  async (status = 'pending', { rejectWithValue }) => {
+    try {
+      const { data } = await api.get('/moderator/requests', { params: { status } });
+      return data.requests;
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
+export const modResolveRequest = createAsyncThunk(
+  'mod/resolveRequest',
+  async ({ id, action }, { rejectWithValue }) => {
+    try {
+      await api.post(`/moderator/requests/${id}/resolve`, { action });
+      return id;
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
+export const modBanUser = createAsyncThunk(
+  'mod/ban',
+  async ({ id, banned }, { rejectWithValue }) => {
+    try {
+      const { data } = await api.patch(`/moderator/users/${id}/ban`, { banned });
+      return data.user;
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
+export const modDeleteContent = createAsyncThunk(
+  'mod/deleteContent',
+  async ({ kind, id }, { rejectWithValue }) => {
+    // kind: 'posts' | 'comments' | 'messages'
+    try {
+      const { data } = await api.delete(`/moderator/${kind}/${id}`);
+      return { kind, id, message: data.message };
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
+const moderatorSlice = createSlice({
+  name: 'moderator',
+  initialState: {
+    communities: [],
+    userLookup: null,
+    reports: [],
+    requests: [],
+    status: 'idle',
+    error: null,
+    notice: null,
+  },
+  reducers: {
+    clearModMessages(state) {
+      state.error = null;
+      state.notice = null;
+    },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(modFetchCommunities.fulfilled, (state, action) => {
+        state.communities = action.payload;
+      })
+      .addCase(modLookupUser.fulfilled, (state, action) => {
+        state.userLookup = action.payload;
+      })
+      .addCase(modFetchReports.fulfilled, (state, action) => {
+        state.reports = action.payload;
+      })
+      .addCase(modResolveReport.fulfilled, (state, action) => {
+        state.reports = state.reports.filter((r) => r._id !== action.payload);
+        state.notice = 'Report resolved.';
+      })
+      .addCase(modFetchRequests.fulfilled, (state, action) => {
+        state.requests = action.payload;
+      })
+      .addCase(modResolveRequest.fulfilled, (state, action) => {
+        state.requests = state.requests.filter((r) => r._id !== action.payload);
+        state.notice = 'Request handled.';
+      })
+      .addCase(modBanUser.fulfilled, (state, action) => {
+        state.userLookup = state.userLookup
+          ? { ...state.userLookup, user: action.payload }
+          : state.userLookup;
+        state.notice = action.payload.isBanned ? 'User banned.' : 'User unbanned.';
+      })
+      .addCase(modDeleteContent.fulfilled, (state, action) => {
+        state.notice = action.payload.message || 'Content deleted.';
+      })
+      // Generic error capture for all moderator thunks.
+      .addMatcher(
+        (action) => action.type.startsWith('mod/') && action.type.endsWith('/rejected'),
+        (state, action) => {
+          state.error = action.payload || 'Action failed.';
+        }
+      );
+  },
+});
+
+export const { clearModMessages } = moderatorSlice.actions;
+export default moderatorSlice.reducer;
