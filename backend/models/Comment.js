@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { emojiReactionSchema } from './reactionSchema.js';
 
 const commentSchema = new mongoose.Schema({
   postId: { 
@@ -24,15 +25,20 @@ const commentSchema = new mongoose.Schema({
     type: String, 
     required: true 
   },
-  // Same Reddit-style voting model used on posts (see Post.js for the rationale).
-  upvotes: {
+  // Same Reddit-style reactions used on posts (see Post.js for the rationale).
+  likes: {
     type: [mongoose.Schema.Types.ObjectId],
     ref: 'User',
     default: []
   },
-  downvotes: {
+  dislikes: {
     type: [mongoose.Schema.Types.ObjectId],
     ref: 'User',
+    default: []
+  },
+  // Free-form emoji reactions, identical shape to posts/messages.
+  reactions: {
+    type: [emojiReactionSchema],
     default: []
   },
   createdAt: { 
@@ -43,7 +49,7 @@ const commentSchema = new mongoose.Schema({
 
 // Computed net score, exposed on JSON output for the frontend.
 commentSchema.virtual('score').get(function () {
-  return this.upvotes.length - this.downvotes.length;
+  return this.likes.length - this.dislikes.length;
 });
 commentSchema.set('toJSON', { virtuals: true });
 commentSchema.set('toObject', { virtuals: true });

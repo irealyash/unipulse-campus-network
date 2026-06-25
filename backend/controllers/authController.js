@@ -53,7 +53,7 @@ export const signup = asyncHandler(async (req, res) => {
 
   // 2) Username + password format rules.
   if (!isValidUsername(username)) {
-    throw new ApiError(400, 'Username must be 3-20 characters: letters, numbers or underscores.');
+    throw new ApiError(400, 'Username must be 3-10 characters: letters, numbers or underscores.');
   }
   if (!isValidPassword(password)) {
     throw new ApiError(400, 'Password must be at least 8 characters.');
@@ -311,6 +311,8 @@ export const serializeUser = (user) => ({
   enrolledSections: user.enrolledSections,
   scheduleUploaded: user.scheduleUploaded,
   isBanned: user.isBanned,
+  // The frontend uses this flag to decide whether to render the moderator tab.
+  moderator: user.moderator,
   lastUsernameChange: user.lastUsernameChange,
   createdAt: user.createdAt
 });

@@ -1,4 +1,5 @@
 import Event from '../models/Event.js';
+import Community from '../models/Community.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import ApiError from '../utils/ApiError.js';
 import { assertCommunityAccess } from '../utils/membership.js';
@@ -48,11 +49,15 @@ export const getEvent = asyncHandler(async (req, res) => {
 /**
  * POST /api/communities/:communityId/events
  * Body: { title, description?, eventDate }
- * Any member of the community can create an event for it.
+ * MODERATOR-ONLY (enforced by requireModerator on the route). Because a
+ * moderator may not be enrolled in a course community, we don't run the normal
+ * enrollment access check here — we just confirm the community exists.
  */
 export const createEvent = asyncHandler(async (req, res) => {
   const { communityId } = req.params;
-  await assertCommunityAccess(req.user, communityId);
+
+  const community = await Community.findById(communityId);
+  if (!community) throw new ApiError(404, `Community "${communityId}" not found.`);
 
   const { title, description, eventDate } = req.body;
 

@@ -5,6 +5,11 @@ import communityRoutes from './communityRoutes.js';
 import postRoutes from './postRoutes.js';
 import commentRoutes from './commentRoutes.js';
 import eventRoutes from './eventRoutes.js';
+import messageRoutes from './messageRoutes.js';
+import messageReplyRoutes from './messageReplyRoutes.js';
+import reportRoutes from './reportRoutes.js';
+import requestRoutes from './requestRoutes.js';
+import moderatorRoutes from './moderatorRoutes.js';
 
 /**
  * Top-level API router. server.js mounts this at "/api", so every path below
@@ -23,5 +28,10 @@ router.use('/communities', communityRoutes);
 router.use('/posts', postRoutes);
 router.use('/comments', commentRoutes);
 router.use('/events', eventRoutes);
+router.use('/messages', messageRoutes);
+router.use('/message-replies', messageReplyRoutes);
+router.use('/reports', reportRoutes);
+router.use('/requests', requestRoutes);
+router.use('/moderator', moderatorRoutes);
 
 export default router;

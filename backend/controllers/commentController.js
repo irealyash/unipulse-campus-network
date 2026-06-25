@@ -3,7 +3,9 @@ import Post from '../models/Post.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import ApiError from '../utils/ApiError.js';
 import { assertCommunityAccess } from '../utils/membership.js';
-import { applyVote } from '../utils/vote.js';
+import { applyLikeDislike } from '../utils/likeDislike.js';
+import { toggleEmojiReaction } from '../utils/emojiReaction.js';
+import { deleteCommentCascade } from '../utils/contentDeletion.js';
 
 /**
  * COMMENT CONTROLLER
@@ -87,20 +89,38 @@ export const createComment = asyncHandler(async (req, res) => {
 });
 
 /**
- * POST /api/comments/:id/vote
- * Body: { direction: "up" | "down" | "none" }
+ * POST /api/comments/:id/react
+ * Body: { action: "like" | "dislike" | "none" }
  */
-export const voteComment = asyncHandler(async (req, res) => {
+export const reactToComment = asyncHandler(async (req, res) => {
   const comment = await Comment.findById(req.params.id);
   if (!comment) throw new ApiError(404, 'Comment not found.');
 
   const post = await Post.findById(comment.postId);
   if (post) await assertCommunityAccess(req.user, post.communityId);
 
-  applyVote(comment, req.user._id, req.body.direction);
+  applyLikeDislike(comment, req.user._id, req.body.action);
   await comment.save();
 
   res.json({ success: true, score: comment.score, comment });
+});
+
+/**
+ * POST /api/comments/:id/emoji
+ * Body: { emoji }
+ * Toggles an emoji reaction on a comment or reply (replies are comments).
+ */
+export const reactToCommentWithEmoji = asyncHandler(async (req, res) => {
+  const comment = await Comment.findById(req.params.id);
+  if (!comment) throw new ApiError(404, 'Comment not found.');
+
+  const post = await Post.findById(comment.postId);
+  if (post) await assertCommunityAccess(req.user, post.communityId);
+
+  const state = toggleEmojiReaction(comment, req.user._id, req.body.emoji);
+  await comment.save();
+
+  res.json({ success: true, state, reactions: comment.reactions, comment });
 });
 
 /**
@@ -117,39 +137,9 @@ export const deleteComment = asyncHandler(async (req, res) => {
     throw new ApiError(403, 'You can only delete your own comments.');
   }
 
-  // Gather this comment plus every descendant (replies, replies-of-replies...).
-  const toDelete = await collectDescendantIds(comment._id, comment.postId);
+  // Cascade: removes the comment + all descendant replies, fixes commentCount,
+  // and resolves any reports against the deleted comments.
+  const deleted = await deleteCommentCascade(comment._id, comment.postId);
 
-  await Comment.deleteMany({ _id: { $in: toDelete } });
-  await Post.updateOne({ _id: comment.postId }, { $inc: { commentCount: -toDelete.length } });
-
-  res.json({ success: true, message: `Deleted ${toDelete.length} comment(s).` });
+  res.json({ success: true, message: `Deleted ${deleted} comment(s).` });
 });
-
-/**
- * Walks the reply tree under a comment and returns the set of ids to delete
- * (including the comment itself). Done in memory from a single fetch of the
- * post's comments to avoid N recursive DB calls.
- */
-const collectDescendantIds = async (rootId, postId) => {
-  const all = await Comment.find({ postId }).select('_id parentId').lean();
-
-  // Build parent -> children adjacency.
-  const childrenOf = new Map();
-  all.forEach((c) => {
-    const key = c.parentId ? c.parentId.toString() : null;
-    if (!childrenOf.has(key)) childrenOf.set(key, []);
-    childrenOf.get(key).push(c._id.toString());
-  });
-
-  // BFS from the root collecting every descendant id.
-  const result = [];
-  const queue = [rootId.toString()];
-  while (queue.length) {
-    const current = queue.shift();
-    result.push(current);
-    const kids = childrenOf.get(current) || [];
-    queue.push(...kids);
-  }
-  return result;
-};

@@ -45,6 +45,14 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    // When true the user gains access to the moderator tab: platform-wide power
+    // to browse every community, look up any user's content by id/username,
+    // delete any post/comment/reply, review reports, and ban users.
+    // Promote a user with `npm run make-moderator <email>` (no public endpoint).
+    moderator: {
+        type: Boolean,
+        default: false
+    },
     createdAt: {
         type: Date,
         default: Date.now

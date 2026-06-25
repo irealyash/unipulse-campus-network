@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { protect, requireNotBanned } from '../middleware/auth.js';
+import { protect, requireNotBanned, requireModerator } from '../middleware/auth.js';
 import {
   listCommunities,
   getCommunity,
@@ -13,22 +13,27 @@ import { getMessages } from '../controllers/messageController.js';
  * Community routes, plus the community-scoped collections nested beneath them
  * (posts / events / chat history). All require authentication.
  *
+ * Creating communities and events is MODERATOR-ONLY (requireModerator). Course
+ * communities are still auto-created from a student's calendar upload (see
+ * userController.uploadScheduleFile) — that path is system-driven, not a user
+ * calling createCommunity, so it is unaffected by this restriction.
+ *
  *   GET  /api/communities                      -> rooms this user can see
- *   POST /api/communities                      -> create a general community
+ *   POST /api/communities                      -> create a general community (mod only)
  *   GET  /api/communities/:id                  -> one community (access-gated)
  *
  *   GET  /api/communities/:communityId/posts   -> post feed
  *   POST /api/communities/:communityId/posts   -> create post
  *   GET  /api/communities/:communityId/events  -> events list
- *   POST /api/communities/:communityId/events  -> create event
+ *   POST /api/communities/:communityId/events  -> create event (mod only)
  *   GET  /api/communities/:communityId/messages-> chat history
  */
 const router = Router();
 
 router.use(protect);
 
-// Community collection + creation.
-router.route('/').get(listCommunities).post(requireNotBanned, createCommunity);
+// Community collection + creation (creation is moderator-only).
+router.route('/').get(listCommunities).post(requireModerator, createCommunity);
 
 // Nested post feed (declared before "/:id" is fine since paths are distinct).
 router
@@ -36,11 +41,11 @@ router
   .get(listPosts)
   .post(requireNotBanned, createPost);
 
-// Nested events.
+// Nested events (creation is moderator-only).
 router
   .route('/:communityId/events')
   .get(listEvents)
-  .post(requireNotBanned, createEvent);
+  .post(requireModerator, createEvent);
 
 // Nested chat history (sending happens over Socket.io).
 router.get('/:communityId/messages', getMessages);

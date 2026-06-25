@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { emojiReactionSchema } from './reactionSchema.js';
 
 const postSchema = new mongoose.Schema({
     communityId: {
@@ -42,17 +43,23 @@ const postSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    // Reddit-style voting. We store the set of user ids who up/down voted so that a
-    // single user can only count once and can toggle their vote. The net score is
-    // derived as (upvotes.length - downvotes.length) in the controller / virtuals.
-    upvotes: {
+    // Reddit-style reactions. We store the set of user ids who liked/disliked so a
+    // single user can only count once and can toggle their reaction. The net score
+    // is derived as (likes.length - dislikes.length) in the controller / virtuals.
+    likes: {
         type: [mongoose.Schema.Types.ObjectId],
         ref: 'User',
         default: []
     },
-    downvotes: {
+    dislikes: {
         type: [mongoose.Schema.Types.ObjectId],
         ref: 'User',
+        default: []
+    },
+    // Free-form emoji reactions (👍🔥😂...). A user may add several different
+    // emojis but only once per emoji (enforced in utils/emojiReaction.js).
+    reactions: {
+        type: [emojiReactionSchema],
         default: []
     },
     // Running count of comments so feeds can show "X comments" without a second query.
@@ -68,7 +75,7 @@ const postSchema = new mongoose.Schema({
 
 // Convenient computed score that the frontend can read directly off serialized posts.
 postSchema.virtual('score').get(function () {
-    return this.upvotes.length - this.downvotes.length;
+    return this.likes.length - this.dislikes.length;
 });
 
 // Make sure virtuals (like "score") are included when documents are converted to JSON.

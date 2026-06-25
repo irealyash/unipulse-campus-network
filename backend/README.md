@@ -35,6 +35,10 @@ npm run seed              # (optional) create default general communities
 npm run dev               # start with auto-reload (nodemon)
 # or
 npm start
+
+# Grant a user moderator powers (no public API for this on purpose):
+npm run make-moderator -- someone@student.ubc.ca
+npm run make-moderator -- someone@student.ubc.ca --revoke
 ```
 
 Server runs on `http://localhost:5000` by default. Health check: `GET /api/health`.
@@ -49,7 +53,8 @@ Server runs on `http://localhost:5000` by default. Health check: `GET /api/healt
 backend/
   server.js              # entry: express + socket.io + db
   config/db.js           # mongoose connection
-  models/                # User, Community, Post, Comment, Message, Event, Otp
+  models/                # User, Community, Post, Comment, Message, MessageReply,
+                         #   Event, Otp, Reported, ModeratorRequest, reactionSchema
   middleware/
     auth.js              # protect (JWT) + requireNotBanned
     upload.js            # multer schedule upload
@@ -57,7 +62,7 @@ backend/
   controllers/           # one per resource
   routes/                # one per resource + index.js (mounts at /api)
   socket/chatSocket.js   # realtime group chat
-  utils/                 # token, otp, sendEmail, scheduleParser, vote, membership...
+  utils/                 # token, otp, sendEmail, scheduleParser, likeDislike, emojiReaction, membership...
   scripts/seed.js        # seed default general communities
 ```
 
@@ -99,6 +104,24 @@ communities only.
 ### 6. Username changes
 `PATCH /api/users/me/username { username }` — allowed **once every 7 days**.
 
+### 7. Moderation
+Any user can **report** content — posts, comments, replies, or group-chat
+messages — via `POST /api/reports`. Users flagged with
+`moderator: true` unlock the **moderator tab** (`/api/moderator/*`), which:
+- bypasses community access checks so a mod can browse **every** community
+  (general + course), its posts, chat and comment threads — with all ids visible;
+- looks up **any user by id or username** and lists everything they've posted;
+- **deletes any post / comment / reply / chat message** by id (cascades + resolves reports);
+- reviews the **reports queue** and either **deletes** the content or **dismisses**
+  ("skips") the report;
+- reviews the **user requests queue** (free-text messages users send via
+  `POST /api/requests`) and marks them reviewed/dismissed;
+- **creates communities and events** (these actions are moderator-only);
+- **bans / unbans** a user by id.
+
+All of this is gated by `protect` + `requireModerator`. There is no public
+endpoint to become a moderator — use `npm run make-moderator`.
+
 ---
 
 ## API reference (all under `/api`, JWT required unless noted)
@@ -133,7 +156,8 @@ communities only.
 | GET    | `/communities/:communityId/posts`      | `?sort=new\|top&page&limit`           |
 | POST   | `/communities/:communityId/posts`      | `{ title, content, tag?, media? }`    |
 | GET    | `/posts/:id`                           |                                       |
-| POST   | `/posts/:id/vote`                      | `{ direction: "up"\|"down"\|"none" }` |
+| POST   | `/posts/:id/react`                     | `{ action: "like"\|"dislike"\|"none" }` |
+| POST   | `/posts/:id/emoji`                     | `{ emoji }` — toggle an emoji reaction |
 | DELETE | `/posts/:id`                           | author only                           |
 
 ### Comments (threaded)
@@ -141,21 +165,76 @@ communities only.
 |--------|---------------------------------|---------------------------------------|
 | GET    | `/posts/:postId/comments`       | returns a nested tree                 |
 | POST   | `/posts/:postId/comments`       | `{ content, parentId? }`              |
-| POST   | `/comments/:id/vote`            | `{ direction }`                       |
+| POST   | `/comments/:id/react`           | `{ action: "like"\|"dislike"\|"none" }` |
+| POST   | `/comments/:id/emoji`           | `{ emoji }` (also covers replies)     |
 | DELETE | `/comments/:id`                 | author only (cascades to replies)     |
 
 ### Events
 | Method | Path                                | Body / Notes                       |
 |--------|-------------------------------------|------------------------------------|
 | GET    | `/communities/:communityId/events`  | `?past=true` to include past       |
-| POST   | `/communities/:communityId/events`  | `{ title, description?, eventDate }`|
+| POST   | `/communities/:communityId/events`  | **moderator only** — `{ title, description?, eventDate }`|
 | GET    | `/events/:id`                       |                                    |
 | DELETE | `/events/:id`                       | creator only                       |
+
+### Communities
+| Method | Path                | Body / Notes                                   |
+|--------|---------------------|------------------------------------------------|
+| GET    | `/communities`      | rooms this user can see                        |
+| POST   | `/communities`      | **moderator only** — `{ name, description?, allowedTags? }` |
+| GET    | `/communities/:id`  | one community (access-gated)                    |
+
+Course communities are created automatically by `POST /users/me/schedule` from
+the uploaded calendar (any missing section room is provisioned on the fly).
 
 ### Chat history (live sending is via Socket.io)
 | Method | Path                                  | Notes                          |
 |--------|---------------------------------------|--------------------------------|
 | GET    | `/communities/:communityId/messages`  | `?before=<ISO>&limit` cursor   |
+
+### Chat reactions & replies (REST; also available live over Socket.io)
+| Method | Path                                | Body / Notes                              |
+|--------|-------------------------------------|-------------------------------------------|
+| POST   | `/messages/:id/react`               | `{ action: "like"\|"dislike"\|"none" }`   |
+| POST   | `/messages/:id/emoji`               | `{ emoji }` — toggles an emoji reaction   |
+| GET    | `/messages/:messageId/replies`      | nested reply thread for a message         |
+| POST   | `/messages/:parentId/replies`       | `{ content }` — parentId may be a message **or** a reply |
+| POST   | `/message-replies/:id/react`        | `{ action: "like"\|"dislike"\|"none" }`   |
+| POST   | `/message-replies/:id/emoji`        | `{ emoji }`                               |
+| DELETE | `/message-replies/:id`              | author only (cascades to nested replies)  |
+
+### Reports (any user)
+| Method | Path        | Body                                    |
+|--------|-------------|-----------------------------------------|
+| POST   | `/reports`  | `{ contentType, contentId, reason? }`   |
+
+`contentType` is `"post"`, `"comment"`, `"reply"` or `"message"` (group-chat
+message). A user can only report a given piece of content once.
+
+### Requests to moderators (any user)
+| Method | Path        | Body                          |
+|--------|-------------|-------------------------------|
+| POST   | `/requests` | `{ message, communityId? }`   |
+
+A free-text message asking moderators to create/update a community. Moderators
+read these under `/moderator/requests`.
+
+### Moderator tab (requires `moderator: true`)
+| Method | Path                                            | Notes                               |
+|--------|-------------------------------------------------|-------------------------------------|
+| GET    | `/moderator/communities`                        | `?search=` all rooms (general+course)|
+| GET    | `/moderator/communities/:communityId/posts`     | any room's posts (no gate)          |
+| GET    | `/moderator/communities/:communityId/messages`  | any room's chat (with senderIds)    |
+| GET    | `/moderator/posts/:postId/comments`             | any post's full thread              |
+| GET    | `/moderator/users/:identifier`                  | by id OR username + their content   |
+| PATCH  | `/moderator/users/:id/ban`                      | `{ banned: true\|false }`           |
+| DELETE | `/moderator/posts/:id`                          | delete any post (cascades)          |
+| DELETE | `/moderator/comments/:id`                       | delete any comment/reply (cascades) |
+| DELETE | `/moderator/messages/:id`                       | delete any group-chat message       |
+| GET    | `/moderator/reports`                            | `?status=pending\|resolved\|dismissed\|all` |
+| POST   | `/moderator/reports/:id/resolve`                | `{ action: "delete"\|"dismiss" }`   |
+| GET    | `/moderator/requests`                           | user requests; `?status=pending\|reviewed\|dismissed\|all` |
+| POST   | `/moderator/requests/:id/resolve`               | `{ action: "reviewed"\|"dismissed" }` |
 
 ---
 
@@ -172,10 +251,23 @@ socket.emit('chat:join', { communityId: 'CPSC-110-101' });
 socket.on('chat:message', (msg) => console.log(msg));
 
 socket.emit('chat:message', { communityId: 'CPSC-110-101', content: 'hi!' });
+
+// Reply to a message (or another reply — parentId may be either):
+socket.emit('chat:reply', { parentId: '<messageOrReplyId>', content: 'nice!' });
+socket.on('chat:reply', (reply) => console.log(reply));
+
+// Like/dislike or emoji-react, live:
+socket.emit('chat:react', { targetType: 'message', targetId: '<id>', action: 'like' });
+socket.emit('chat:emoji', { targetType: 'reply', targetId: '<id>', emoji: '🔥' });
+socket.on('chat:reaction', (state) => console.log(state));
 ```
 
-**Client → server events:** `chat:join`, `chat:leave`, `chat:typing`, `chat:message`
-**Server → client events:** `chat:joined`, `chat:left`, `chat:message`, `chat:typing`, `chat:error`
+**Client → server events:** `chat:join`, `chat:leave`, `chat:typing`,
+`chat:message`, `chat:reply`, `chat:react`, `chat:emoji`
+**Server → client events:** `chat:joined`, `chat:left`, `chat:message`,
+`chat:reply`, `chat:reaction`, `chat:typing`, `chat:error`
 
-Every message is access-checked, persisted to MongoDB, and broadcast with the
-sender's current anonymous alias.
+Every message, reply and reaction is access-checked and persisted to MongoDB.
+Messages and replies carry the sender's anonymous alias and support both
+like/dislike and free-form emoji reactions. The same actions are available over
+REST (see the tables above) for non-realtime clients.

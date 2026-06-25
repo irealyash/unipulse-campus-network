@@ -1,6 +1,9 @@
 import Message from '../models/Message.js';
 import asyncHandler from '../utils/asyncHandler.js';
+import ApiError from '../utils/ApiError.js';
 import { assertCommunityAccess } from '../utils/membership.js';
+import { applyLikeDislike } from '../utils/likeDislike.js';
+import { toggleEmojiReaction } from '../utils/emojiReaction.js';
 
 /**
  * MESSAGE CONTROLLER
@@ -40,4 +43,38 @@ export const getMessages = asyncHandler(async (req, res) => {
     // Return chronological (oldest -> newest) so the client can append directly.
     messages: messages.reverse()
   });
+});
+
+/**
+ * POST /api/messages/:id/react
+ * Body: { action: "like" | "dislike" | "none" }
+ * Like/dislike a chat message (toggles, "none" clears it).
+ */
+export const reactToMessage = asyncHandler(async (req, res) => {
+  const message = await Message.findById(req.params.id);
+  if (!message) throw new ApiError(404, 'Message not found.');
+
+  await assertCommunityAccess(req.user, message.communityId);
+
+  applyLikeDislike(message, req.user._id, req.body.action);
+  await message.save();
+
+  res.json({ success: true, score: message.score, message });
+});
+
+/**
+ * POST /api/messages/:id/emoji
+ * Body: { emoji: "🔥" }
+ * Toggles an emoji reaction on a chat message for the current user.
+ */
+export const reactWithEmoji = asyncHandler(async (req, res) => {
+  const message = await Message.findById(req.params.id);
+  if (!message) throw new ApiError(404, 'Message not found.');
+
+  await assertCommunityAccess(req.user, message.communityId);
+
+  const state = toggleEmojiReaction(message, req.user._id, req.body.emoji);
+  await message.save();
+
+  res.json({ success: true, state, reactions: message.reactions, message });
 });

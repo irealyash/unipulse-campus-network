@@ -52,3 +52,14 @@ export const requireNotBanned = (req, res, next) => {
   }
   next();
 };
+
+/**
+ * `requireModerator` gates the entire moderator tab. Use it after `protect` on
+ * every /api/moderator route so only users with moderator === true get in.
+ */
+export const requireModerator = (req, res, next) => {
+  if (!req.user?.moderator) {
+    throw new ApiError(403, 'Moderator access required.');
+  }
+  next();
+};

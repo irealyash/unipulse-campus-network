@@ -1,10 +1,10 @@
-import mongoose from 'mongoose';
 import Post from '../models/Post.js';
-import Comment from '../models/Comment.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import ApiError from '../utils/ApiError.js';
 import { assertCommunityAccess } from '../utils/membership.js';
-import { applyVote } from '../utils/vote.js';
+import { applyLikeDislike } from '../utils/likeDislike.js';
+import { toggleEmojiReaction } from '../utils/emojiReaction.js';
+import { deletePostCascade } from '../utils/contentDeletion.js';
 
 /**
  * POST CONTROLLER
@@ -29,13 +29,13 @@ export const listPosts = asyncHandler(async (req, res) => {
 
   let posts;
   if (sort === 'top') {
-    // "Top" needs to sort by net score (upvotes - downvotes), which is a virtual,
+    // "Top" needs to sort by net score (likes - dislikes), which is a virtual,
     // so we compute it server-side with an aggregation pipeline.
     posts = await Post.aggregate([
       { $match: { communityId } },
       {
         $addFields: {
-          score: { $subtract: [{ $size: '$upvotes' }, { $size: '$downvotes' }] }
+          score: { $subtract: [{ $size: '$likes' }, { $size: '$dislikes' }] }
         }
       },
       { $sort: { score: -1, createdAt: -1 } },
@@ -112,21 +112,38 @@ export const createPost = asyncHandler(async (req, res) => {
 });
 
 /**
- * POST /api/posts/:id/vote
- * Body: { direction: "up" | "down" | "none" }
- * Toggles the current user's vote. "none" clears any existing vote.
+ * POST /api/posts/:id/react
+ * Body: { action: "like" | "dislike" | "none" }
+ * Toggles the current user's like/dislike. "none" clears any existing reaction.
  */
-export const votePost = asyncHandler(async (req, res) => {
+export const reactToPost = asyncHandler(async (req, res) => {
   const post = await Post.findById(req.params.id);
   if (!post) throw new ApiError(404, 'Post not found.');
 
   await assertCommunityAccess(req.user, post.communityId);
 
-  // applyVote mutates the upvotes/downvotes arrays according to the direction.
-  applyVote(post, req.user._id, req.body.direction);
+  // applyLikeDislike mutates the likes/dislikes arrays according to the action.
+  applyLikeDislike(post, req.user._id, req.body.action);
   await post.save();
 
   res.json({ success: true, score: post.score, post });
+});
+
+/**
+ * POST /api/posts/:id/emoji
+ * Body: { emoji: "🔥" }
+ * Toggles an emoji reaction on a post for the current user.
+ */
+export const reactToPostWithEmoji = asyncHandler(async (req, res) => {
+  const post = await Post.findById(req.params.id);
+  if (!post) throw new ApiError(404, 'Post not found.');
+
+  await assertCommunityAccess(req.user, post.communityId);
+
+  const state = toggleEmojiReaction(post, req.user._id, req.body.emoji);
+  await post.save();
+
+  res.json({ success: true, state, reactions: post.reactions, post });
 });
 
 /**
@@ -138,13 +155,13 @@ export const deletePost = asyncHandler(async (req, res) => {
   const post = await Post.findById(req.params.id);
   if (!post) throw new ApiError(404, 'Post not found.');
 
-  // Only the original author may delete.
+  // Only the original author may delete. (Moderators use the /moderator routes.)
   if (post.authorId.toString() !== req.user._id.toString()) {
     throw new ApiError(403, 'You can only delete your own posts.');
   }
 
-  await Comment.deleteMany({ postId: post._id });
-  await post.deleteOne();
+  // Cascade: removes the post, all its comments/replies, and resolves reports.
+  await deletePostCascade(post._id);
 
   res.json({ success: true, message: 'Post deleted.' });
 });
