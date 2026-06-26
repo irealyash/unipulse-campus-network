@@ -18,13 +18,16 @@ export default function CommunityHub() {
   const { communityId } = useParams();
   const list = useSelector((s) => s.communities.list);
   const status = useSelector((s) => s.communities.status);
+  const user = useSelector((s) => s.auth.user);
 
   useEffect(() => {
     dispatch(fetchCommunities());
   }, [dispatch]);
 
   useEffect(() => {
-    if (communityId) dispatch(fetchCommunity(communityId));
+    if (communityId && communityId !== 'moderator') {
+      dispatch(fetchCommunity(communityId));
+    }
   }, [dispatch, communityId]);
 
   if (status === 'loading' && !list.length) {
@@ -35,8 +38,14 @@ export default function CommunityHub() {
     );
   }
 
-  // Unknown community id -> fall back to general
-  if (communityId && communityId !== 'moderator' && list.length && !list.some((c) => c._id === communityId)) {
+  const inList = list.some((c) => c._id === communityId);
+  if (
+    communityId &&
+    communityId !== 'moderator' &&
+    list.length > 0 &&
+    !inList &&
+    !user?.moderator
+  ) {
     return <Navigate to="/c/general/chat" replace />;
   }
 

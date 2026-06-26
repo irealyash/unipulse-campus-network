@@ -14,12 +14,12 @@ import { withCommunityImage } from '../utils/avatars.js';
 
 /**
  * GET /api/communities
- * Returns everything THIS user can see: all general communities plus the course
- * communities matching their enrolledSections. Course rooms they aren't in are
- * hidden entirely (they shouldn't even know the room exists in their feed).
+ * Returns communities visible to the user. Moderators receive every community
+ * (including course sections they are not enrolled in).
  */
 export const listCommunities = asyncHandler(async (req, res) => {
-  const communities = await Community.find(visibleCommunitiesFilter(req.user)).sort({
+  const filter = req.user.moderator ? {} : visibleCommunitiesFilter(req.user);
+  const communities = await Community.find(filter).sort({
     type: 1,
     name: 1,
   });

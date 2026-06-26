@@ -57,6 +57,9 @@ const communitiesSlice = createSlice({
       })
       .addCase(fetchCommunity.fulfilled, (state, action) => {
         state.current = action.payload;
+        if (!state.list.some((c) => c._id === action.payload._id)) {
+          state.list.push(action.payload);
+        }
       });
   },
 });
