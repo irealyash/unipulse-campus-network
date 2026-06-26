@@ -15,7 +15,7 @@ export default function LandingPage() {
       <div className="pointer-events-none absolute bottom-0 left-1/3 w-80 h-80 rounded-full bg-accent/20 blur-3xl" />
 
       {/* Top bar */}
-      <header className="navbar max-w-6xl mx-auto px-4 sm:px-6 relative z-10">
+      <header className="navbar max-w-6xl mx-auto px-4 sm:px-6 relative z-20">
         <div className="flex-1">
           <span className="btn btn-ghost text-xl gap-2 normal-case">
             <span className="text-primary text-2xl">

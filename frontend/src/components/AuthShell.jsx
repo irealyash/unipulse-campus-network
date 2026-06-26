@@ -14,7 +14,7 @@ export default function AuthShell({ title, subtitle, children, footer }) {
       <div className="pointer-events-none absolute -bottom-24 -right-24 w-96 h-96 rounded-full bg-secondary/30 blur-3xl" />
       <div className="pointer-events-none absolute top-1/3 right-1/4 w-72 h-72 rounded-full bg-accent/20 blur-3xl" />
 
-      <div className="absolute top-4 right-4 z-10">
+      <div className="absolute top-4 right-4 z-20">
         <ThemeToggle />
       </div>
 
