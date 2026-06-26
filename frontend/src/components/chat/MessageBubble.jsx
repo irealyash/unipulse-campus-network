@@ -104,7 +104,7 @@ export default function MessageBubble({
   const isOwn = message.anonymousUsername === myUsername;
   const targetType = message.itemType === 'reply' ? 'reply' : 'message';
   const grouped = groupReactions(message.reactions, myId);
-  const myReaction = myReactions[message._id];
+  const myReaction = myReactions[message._id] ?? message.myVote ?? null;
   const hasMedia = Boolean(message.media?.url);
   const hasText = Boolean(message.content?.trim());
   const hasReply = Boolean(message.parentMessageId);

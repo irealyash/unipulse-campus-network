@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { createComment, reactToComment } from '../../features/posts/postsSlice';
 import { ThumbUpIcon, ThumbDownIcon, CloseIcon, GifIcon } from '../icons';
 import GifPicker from '../chat/GifPicker';
@@ -150,6 +150,7 @@ export default function PostCommentSection({
   onReport,
 }) {
   const dispatch = useDispatch();
+  const user = useSelector((s) => s.auth.user);
   const [replyParent, setReplyParent] = useState(null);
   const [commentText, setCommentText] = useState('');
   const [gifOpen, setGifOpen] = useState(false);
@@ -159,26 +160,36 @@ export default function PostCommentSection({
   const submitComment = async (e) => {
     e.preventDefault();
     if (!commentText.trim()) return;
+    const parentId = replyParent?._id || replyParent || null;
+    const optimisticId = `temp-${Date.now()}`;
     await dispatch(
-      createComment({ postId, content: commentText, parentId: replyParent?._id || replyParent })
+      createComment({
+        postId,
+        content: commentText,
+        parentId,
+        optimisticId,
+        username: user?.username,
+      })
     );
     setCommentText('');
     setReplyParent(null);
-    onRefresh?.();
   };
 
   const sendGif = async (url) => {
+    const parentId = replyParent?._id || replyParent || null;
+    const optimisticId = `temp-${Date.now()}`;
     await dispatch(
       createComment({
         postId,
         content: '',
-        parentId: replyParent?._id || replyParent,
+        parentId,
         media: { url, mediaType: 'gif' },
+        optimisticId,
+        username: user?.username,
       })
     );
     setGifOpen(false);
     setReplyParent(null);
-    onRefresh?.();
   };
 
   return (
@@ -206,7 +217,9 @@ export default function PostCommentSection({
       <CommentTree
         comments={comments}
         onReply={(c) => setReplyParent(c)}
-        onReact={(id, action) => dispatch(reactToComment({ commentId: id, action }))}
+        onReact={(id, action) =>
+          dispatch(reactToComment({ commentId: id, action, userId: user?.id }))
+        }
         onReport={onReport}
       />
 

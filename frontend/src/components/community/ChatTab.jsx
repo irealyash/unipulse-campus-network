@@ -7,7 +7,10 @@ import {
   messageReceived,
   replyReceived,
   reactionReceived,
-  setMyReaction,
+  optimisticMessage,
+  optimisticReply,
+  optimisticChatReaction,
+  optimisticChatEmoji,
   messagesDeleted,
 } from '../../features/chat/chatSlice';
 import { getSocket } from '../../lib/socket';
@@ -47,8 +50,10 @@ export default function ChatTab() {
     const onConnect = () => setConnected(true);
     const onDisconnect = () => setConnected(false);
     const onJoined = () => setConnected(true);
-    const onMessage = (msg) => dispatch(messageReceived(msg));
-    const onReply = (reply) => dispatch(replyReceived(reply));
+    const onMessage = (msg) =>
+      dispatch(messageReceived({ ...msg, _id: msg.id || msg._id, _userId: user?.id }));
+    const onReply = (reply) =>
+      dispatch(replyReceived({ ...reply, _id: reply.id || reply._id, _userId: user?.id }));
     const onReaction = (payload) => dispatch(reactionReceived(payload));
     const onError = (e) => setChatError(e?.message || 'Chat error');
     const onTyping = ({ username }) => {
@@ -84,7 +89,7 @@ export default function ChatTab() {
       socket.off('chat:typing', onTyping);
       socket.off('chat:deleted', onDeleted);
     };
-  }, [dispatch, communityId]);
+  }, [dispatch, communityId, user?.id]);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -101,26 +106,50 @@ export default function ChatTab() {
   const handleSend = useCallback(
     ({ content, media, parentId }) => {
       const socket = getSocket();
+      const tempId = `temp-${Date.now()}`;
+      const base = {
+        _id: tempId,
+        communityId,
+        anonymousUsername: user?.username,
+        content: content || '',
+        media: media || null,
+        createdAt: new Date().toISOString(),
+      };
+
       if (parentId) {
+        dispatch(
+          optimisticReply({
+            ...base,
+            parentMessageId: parentId,
+            parentAuthor: replyTo?.author,
+            parentPreview: replyTo?.preview,
+          })
+        );
         socket.emit('chat:reply', { parentId, content, media });
+        setReplyTo(null);
       } else {
+        dispatch(optimisticMessage(base));
         socket.emit('chat:message', { communityId, content, media });
       }
     },
-    [communityId]
+    [communityId, dispatch, replyTo, user?.username]
   );
 
   const handleReact = useCallback(
     (targetType, targetId, action) => {
+      dispatch(optimisticChatReaction({ targetId, action, userId: user?.id }));
       getSocket().emit('chat:react', { targetType, targetId, action });
-      dispatch(setMyReaction({ id: targetId, value: action === 'none' ? null : action }));
     },
-    [dispatch]
+    [dispatch, user?.id]
   );
 
-  const handleEmoji = useCallback((targetType, targetId, emoji) => {
-    getSocket().emit('chat:emoji', { targetType, targetId, emoji });
-  }, []);
+  const handleEmoji = useCallback(
+    (targetType, targetId, emoji) => {
+      dispatch(optimisticChatEmoji({ targetId, emoji, userId: user?.id }));
+      getSocket().emit('chat:emoji', { targetType, targetId, emoji });
+    },
+    [dispatch, user?.id]
+  );
 
   const handleDelete = useCallback((targetType, targetId) => {
     getSocket().emit('chat:delete', { targetType, targetId });

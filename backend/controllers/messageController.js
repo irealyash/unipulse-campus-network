@@ -5,6 +5,7 @@ import ApiError from '../utils/ApiError.js';
 import { assertCommunityAccess } from '../utils/membership.js';
 import { applyLikeDislike } from '../utils/likeDislike.js';
 import { toggleEmojiReaction } from '../utils/emojiReaction.js';
+import { serializeVotable } from '../utils/serializeVotes.js';
 
 /**
  * MESSAGE CONTROLLER
@@ -74,9 +75,12 @@ export const getChatTimeline = asyncHandler(async (req, res) => {
   };
 
   const items = [
-    ...messages.map((m) => ({ ...m, itemType: 'message' })),
+    ...messages.map((m) => ({
+      ...serializeVotable(m, req.user._id),
+      itemType: 'message',
+    })),
     ...replies.map((r) => ({
-      ...r,
+      ...serializeVotable(r, req.user._id),
       itemType: 'reply',
       ...parentMeta(r.parentMessageId),
     })),

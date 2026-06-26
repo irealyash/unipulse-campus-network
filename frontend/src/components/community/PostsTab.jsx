@@ -16,6 +16,7 @@ export default function PostsTab() {
     s.communities.list.find((c) => c._id === communityId) || s.communities.current
   );
   const bucket = useSelector((s) => s.posts.byCommunity[communityId]);
+  const user = useSelector((s) => s.auth.user);
 
   const [sort, setSort] = useState('new');
   const [createOpen, setCreateOpen] = useState(false);
@@ -93,10 +94,22 @@ export default function PostsTab() {
                   score={p.score}
                   myVote={p.myVote}
                   onLike={() =>
-                    dispatch(reactToPost({ postId: p._id, action: p.myVote === 'like' ? 'none' : 'like' }))
+                    dispatch(
+                      reactToPost({
+                        postId: p._id,
+                        action: p.myVote === 'like' ? 'none' : 'like',
+                        userId: user?.id,
+                      })
+                    )
                   }
                   onDislike={() =>
-                    dispatch(reactToPost({ postId: p._id, action: p.myVote === 'dislike' ? 'none' : 'dislike' }))
+                    dispatch(
+                      reactToPost({
+                        postId: p._id,
+                        action: p.myVote === 'dislike' ? 'none' : 'dislike',
+                        userId: user?.id,
+                      })
+                    )
                   }
                 />
               </div>

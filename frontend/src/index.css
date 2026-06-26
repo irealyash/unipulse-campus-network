@@ -1,11 +1,47 @@
 @import "tailwindcss";
 
 /* DaisyUI v5 is enabled as a Tailwind plugin. We register a curated set of
-   pastel/bubbly themes; "cupcake" is the default light theme and "dracula"
-   kicks in for users who prefer dark mode. The theme switcher in the navbar
-   lets users pick any of these. */
+   pastel/bubbly themes plus the custom "true-dark" palette. The theme switcher
+   in the navbar lets users pick any of these. */
 @plugin "daisyui" {
-  themes: dracula --default, cupcake, bumblebee, valentine, pastel, night, aqua;
+  themes: dracula --default, cupcake, bumblebee, valentine, pastel, night, aqua, true-dark;
+}
+
+@plugin "daisyui/theme" {
+  name: "true-dark";
+  default: false;
+  prefersdark: false;
+  color-scheme: dark;
+
+  --color-base-100: #121212;
+  --color-base-200: #1e1e1e;
+  --color-base-300: #333333;
+  --color-base-content: #ededed;
+
+  --color-primary: #ededed;
+  --color-primary-content: #121212;
+  --color-secondary: #afafaf;
+  --color-secondary-content: #121212;
+  --color-accent: #afafaf;
+  --color-accent-content: #121212;
+  --color-neutral: #1e1e1e;
+  --color-neutral-content: #afafaf;
+
+  --color-info: #60a5fa;
+  --color-info-content: #121212;
+  --color-success: #4ade80;
+  --color-success-content: #121212;
+  --color-warning: #fbbf24;
+  --color-warning-content: #121212;
+  --color-error: #f87171;
+  --color-error-content: #121212;
+
+  --radius-selector: 1rem;
+  --radius-field: 0.5rem;
+  --radius-box: 1rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
 }
 
 /* ---- Small global niceties ---------------------------------------------- */

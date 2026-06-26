@@ -1,5 +1,42 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import api from '../../lib/api';
+import { applyOptimisticVote } from '../../lib/votes';
+
+const updatePostInState = (state, postId, post) => {
+  const merge = (prev) => ({
+    ...prev,
+    ...post,
+    myVote: post.myVote ?? prev.myVote,
+  });
+
+  if (state.currentPost?._id === postId) {
+    state.currentPost = merge(state.currentPost);
+  }
+  Object.values(state.byCommunity).forEach((b) => {
+    const i = b.posts?.findIndex((p) => p._id === postId);
+    if (i >= 0) b.posts[i] = merge(b.posts[i]);
+  });
+};
+
+const updateCommentInTree = (nodes, commentId, patch) => {
+  if (!nodes) return nodes;
+  return nodes.map((n) => {
+    if (n._id === commentId) {
+      return { ...n, ...patch, myVote: patch.myVote ?? n.myVote };
+    }
+    return { ...n, replies: updateCommentInTree(n.replies, commentId, patch) };
+  });
+};
+
+const appendCommentToTree = (nodes, comment, parentId) => {
+  if (!parentId) return [...(nodes || []), comment];
+  return (nodes || []).map((n) => {
+    if (n._id === parentId) {
+      return { ...n, replies: [...(n.replies || []), comment] };
+    }
+    return { ...n, replies: appendCommentToTree(n.replies, comment, parentId) };
+  });
+};
 
 export const fetchPosts = createAsyncThunk(
   'posts/fetch',
@@ -53,7 +90,7 @@ export const createComment = createAsyncThunk(
   async ({ postId, content, parentId, media }, { rejectWithValue }) => {
     try {
       const { data } = await api.post(`/posts/${postId}/comments`, { content, parentId, media });
-      return { postId, comment: data.comment };
+      return { postId, comment: data.comment, parentId: parentId || null };
     } catch (err) {
       return rejectWithValue(err.message);
     }
@@ -101,6 +138,14 @@ const postsSlice = createSlice({
     clearPostNotice(state) {
       state.notice = null;
     },
+    removeOptimisticComment(state, action) {
+      const { postId, tempId } = action.payload;
+      const strip = (nodes) =>
+        (nodes || [])
+          .filter((n) => n._id !== tempId)
+          .map((n) => ({ ...n, replies: strip(n.replies) }));
+      state.commentsByPost[postId] = strip(state.commentsByPost[postId]);
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -134,29 +179,93 @@ const postsSlice = createSlice({
       .addCase(fetchComments.fulfilled, (state, action) => {
         state.commentsByPost[action.payload.postId] = action.payload.comments;
       })
-      .addCase(reactToPost.fulfilled, (state, action) => {
-        const { postId, post } = action.payload;
-        if (state.currentPost?._id === postId) state.currentPost = post;
+      .addCase(createComment.pending, (state, action) => {
+        const { postId, content, parentId, media, optimisticId, username } = action.meta.arg;
+        if (!optimisticId || !username) return;
+        const optimistic = {
+          _id: optimisticId,
+          content: content || '',
+          media: media || null,
+          anonymousUsername: username,
+          createdAt: new Date().toISOString(),
+          parentId: parentId || null,
+          score: 0,
+          myVote: null,
+          likeCount: 0,
+          dislikeCount: 0,
+          replies: [],
+          pending: true,
+        };
+        state.commentsByPost[postId] = appendCommentToTree(
+          state.commentsByPost[postId],
+          optimistic,
+          parentId || null
+        );
+      })
+      .addCase(createComment.fulfilled, (state, action) => {
+        const { postId, comment, parentId } = action.payload;
+        const tempId = action.meta.arg.optimisticId;
+        let tree = state.commentsByPost[postId] || [];
+        if (tempId) {
+          const strip = (nodes) =>
+            (nodes || [])
+              .filter((n) => n._id !== tempId)
+              .map((n) => ({ ...n, replies: strip(n.replies) }));
+          tree = strip(tree);
+        }
+        state.commentsByPost[postId] = appendCommentToTree(tree, comment, parentId);
+      })
+      .addCase(createComment.rejected, (state, action) => {
+        const { postId, optimisticId } = action.meta.arg;
+        if (!optimisticId) return;
+        const strip = (nodes) =>
+          (nodes || [])
+            .filter((n) => n._id !== optimisticId)
+            .map((n) => ({ ...n, replies: strip(n.replies) }));
+        state.commentsByPost[postId] = strip(state.commentsByPost[postId]);
+      })
+      .addCase(reactToPost.pending, (state, action) => {
+        const { postId, action: voteAction, userId } = action.meta.arg;
+        if (!userId) return;
+
+        const patch = (post) => applyOptimisticVote(post, voteAction, userId);
+
+        if (state.currentPost?._id === postId) {
+          state.currentPost = patch(state.currentPost);
+        }
         Object.values(state.byCommunity).forEach((b) => {
           const i = b.posts?.findIndex((p) => p._id === postId);
-          if (i >= 0) b.posts[i] = post;
+          if (i >= 0) b.posts[i] = patch(b.posts[i]);
+        });
+      })
+      .addCase(reactToPost.fulfilled, (state, action) => {
+        const { postId, post } = action.payload;
+        updatePostInState(state, postId, post);
+      })
+      .addCase(reactToComment.pending, (state, action) => {
+        const { commentId, action: voteAction, userId } = action.meta.arg;
+        if (!userId) return;
+        Object.keys(state.commentsByPost).forEach((postId) => {
+          const patchTree = (nodes) =>
+            (nodes || []).map((n) => {
+              if (n._id === commentId) return applyOptimisticVote(n, voteAction, userId);
+              return { ...n, replies: patchTree(n.replies) };
+            });
+          state.commentsByPost[postId] = patchTree(state.commentsByPost[postId]);
         });
       })
       .addCase(reactToComment.fulfilled, (state, action) => {
         const { commentId, comment } = action.payload;
-        const updateTree = (nodes) => {
-          if (!nodes) return nodes;
-          return nodes.map((n) => {
-            if (n._id === commentId) return { ...n, ...comment };
-            return { ...n, replies: updateTree(n.replies) };
-          });
-        };
         Object.keys(state.commentsByPost).forEach((postId) => {
-          state.commentsByPost[postId] = updateTree(state.commentsByPost[postId]);
+          state.commentsByPost[postId] = updateCommentInTree(
+            state.commentsByPost[postId],
+            commentId,
+            comment
+          );
         });
       });
   },
 });
 
-export const { clearCurrentPost, clearPostNotice } = postsSlice.actions;
+export const { clearCurrentPost, clearPostNotice, removeOptimisticComment } = postsSlice.actions;
 export default postsSlice.reducer;

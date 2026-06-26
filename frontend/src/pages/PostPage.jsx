@@ -18,6 +18,7 @@ export default function PostPage() {
   const dispatch = useDispatch();
   const post = useSelector((s) => s.posts.currentPost);
   const comments = useSelector((s) => s.posts.commentsByPost[postId]);
+  const user = useSelector((s) => s.auth.user);
   const [commentSort, setCommentSort] = useState('new');
   const [reportTarget, setReportTarget] = useState(null);
 
@@ -89,10 +90,22 @@ export default function PostPage() {
                 score={post.score}
                 myVote={post.myVote}
                 onLike={() =>
-                  dispatch(reactToPost({ postId: post._id, action: post.myVote === 'like' ? 'none' : 'like' }))
+                  dispatch(
+                    reactToPost({
+                      postId: post._id,
+                      action: post.myVote === 'like' ? 'none' : 'like',
+                      userId: user?.id,
+                    })
+                  )
                 }
                 onDislike={() =>
-                  dispatch(reactToPost({ postId: post._id, action: post.myVote === 'dislike' ? 'none' : 'dislike' }))
+                  dispatch(
+                    reactToPost({
+                      postId: post._id,
+                      action: post.myVote === 'dislike' ? 'none' : 'dislike',
+                      userId: user?.id,
+                    })
+                  )
                 }
               />
             </div>

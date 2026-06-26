@@ -2,8 +2,19 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 // The themes we registered in index.css (@plugin "daisyui").
-const THEMES = ['cupcake', 'bumblebee', 'valentine', 'pastel', 'aqua', 'dracula', 'night'];
+const THEMES = [
+  { id: 'cupcake', label: 'Cupcake' },
+  { id: 'bumblebee', label: 'Bumblebee' },
+  { id: 'valentine', label: 'Valentine' },
+  { id: 'pastel', label: 'Pastel' },
+  { id: 'aqua', label: 'Aqua' },
+  { id: 'dracula', label: 'Dracula' },
+  { id: 'night', label: 'Night' },
+  { id: 'true-dark', label: 'True Dark' },
+];
 const STORAGE_KEY = 'unipulse_theme';
+
+const themeLabel = (id) => THEMES.find((t) => t.id === id)?.label || id;
 
 /**
  * Theme switcher. Persists the chosen DaisyUI theme to localStorage and applies
@@ -52,8 +63,8 @@ export default function ThemeToggle() {
     };
   }, [open]);
 
-  const pick = (t) => {
-    setTheme(t);
+  const pick = (id) => {
+    setTheme(id);
     setOpen(false);
   };
 
@@ -65,21 +76,21 @@ export default function ThemeToggle() {
           className="fixed z-[9999] -translate-x-full menu bg-base-200 rounded-box w-44 p-2 shadow-xl border border-base-content/10"
         >
           {THEMES.map((t) => (
-            <li key={t}>
+            <li key={t.id}>
               <button
                 type="button"
-                className={`capitalize w-full ${theme === t ? 'active' : ''}`}
-                onClick={() => pick(t)}
+                className={`w-full ${theme === t.id ? 'active' : ''}`}
+                onClick={() => pick(t.id)}
               >
                 <span
-                  data-theme={t}
+                  data-theme={t.id}
                   className="inline-flex gap-0.5 rounded-full p-1 bg-base-100 border border-base-content/10 pointer-events-none"
                 >
                   <span className="w-2 h-2 rounded-full bg-primary" />
                   <span className="w-2 h-2 rounded-full bg-secondary" />
                   <span className="w-2 h-2 rounded-full bg-accent" />
                 </span>
-                {t}
+                {t.label}
               </button>
             </li>
           ))}
@@ -98,7 +109,7 @@ export default function ThemeToggle() {
         aria-expanded={open}
         aria-haspopup="listbox"
       >
-        🎨 <span className="hidden sm:inline capitalize">{theme}</span>
+        🎨 <span className="hidden sm:inline">{themeLabel(theme)}</span>
       </button>
       {menu}
     </>
