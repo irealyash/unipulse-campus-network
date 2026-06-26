@@ -11,7 +11,6 @@ import { CalendarIcon } from '../icons';
 export default function EventsTab() {
   const { communityId } = useParams();
   const dispatch = useDispatch();
-  const user = useSelector((s) => s.auth.user);
   const bucket = useSelector((s) => s.events.byCommunity[communityId]);
 
   const [createOpen, setCreateOpen] = useState(false);
@@ -46,6 +45,7 @@ export default function EventsTab() {
     setCreateOpen(false);
     setForm({ title: '', description: '', eventDate: '' });
     setImageFile(null);
+    dispatch(fetchEvents({ communityId }));
   };
 
   const handleRsvp = (eventId, status) => {
@@ -59,11 +59,9 @@ export default function EventsTab() {
           <CalendarIcon className="text-primary text-xl" />
           <h1 className="font-bold text-lg">Events</h1>
         </div>
-        {user?.moderator && (
-          <button type="button" className="btn btn-primary btn-sm rounded-full" onClick={() => setCreateOpen(true)}>
-            + New event
-          </button>
-        )}
+        <button type="button" className="btn btn-primary btn-sm rounded-full" onClick={() => setCreateOpen(true)}>
+          + New event
+        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 bg-base-200/30 min-h-0">
@@ -134,6 +132,9 @@ export default function EventsTab() {
         <div className="modal modal-open">
           <div className="modal-box rounded-3xl">
             <h3 className="font-bold text-lg">Create event</h3>
+            <p className="text-xs text-base-content/50 mt-1">
+              Events are reviewed by a moderator before they appear in the list.
+            </p>
             <form onSubmit={submitEvent} className="flex flex-col gap-3 mt-3">
               <input
                 className="input input-bordered rounded-2xl"
@@ -166,7 +167,7 @@ export default function EventsTab() {
                   Cancel
                 </button>
                 <button type="submit" className="btn btn-primary rounded-2xl">
-                  Create
+                  Submit for review
                 </button>
               </div>
             </form>

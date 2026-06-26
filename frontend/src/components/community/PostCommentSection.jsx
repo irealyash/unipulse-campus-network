@@ -4,7 +4,15 @@ import { createComment, reactToComment } from '../../features/posts/postsSlice';
 import { ThumbUpIcon, ThumbDownIcon, CloseIcon, GifIcon } from '../icons';
 import GifPicker from '../chat/GifPicker';
 
-export const POST_TAGS = ['Humour', 'Angry', 'Confession'];
+export const POST_TAGS = [
+  'General',
+  'Discussion',
+  'Question',
+  'Life Sucks',
+  'Humour',
+  'Angry',
+  'Confession',
+];
 
 function CommentMedia({ media }) {
   if (!media?.url) return null;
@@ -14,18 +22,32 @@ function CommentMedia({ media }) {
   return <img src={media.url} alt="" className="rounded-xl max-h-48 mt-2 object-contain" />;
 }
 
-function VoteColumn({ score, onLike, onDislike }) {
+export function VoteColumn({ score, myVote, onLike, onDislike }) {
   return (
     <div className="flex flex-col items-center gap-0.5 pt-1 text-base-content/60">
-      <button type="button" className="btn btn-ghost btn-xs btn-square" onClick={onLike}>
+      <button
+        type="button"
+        className={`btn btn-ghost btn-xs btn-square ${myVote === 'like' ? 'text-primary bg-primary/10' : ''}`}
+        onClick={onLike}
+        aria-pressed={myVote === 'like'}
+      >
         <ThumbUpIcon />
       </button>
       <span className="text-sm font-bold">{score ?? 0}</span>
-      <button type="button" className="btn btn-ghost btn-xs btn-square" onClick={onDislike}>
+      <button
+        type="button"
+        className={`btn btn-ghost btn-xs btn-square ${myVote === 'dislike' ? 'text-error bg-error/10' : ''}`}
+        onClick={onDislike}
+        aria-pressed={myVote === 'dislike'}
+      >
         <ThumbDownIcon />
       </button>
     </div>
   );
+}
+
+function VoteColumnLocal(props) {
+  return <VoteColumn {...props} />;
 }
 
 function CommentTree({ comments, onReply, onReact, depth = 0 }) {
@@ -35,10 +57,11 @@ function CommentTree({ comments, onReply, onReact, depth = 0 }) {
       {comments.map((c) => (
         <li key={c._id}>
           <div className="flex gap-2">
-            <VoteColumn
+            <VoteColumnLocal
               score={c.score}
-              onLike={() => onReact(c._id, 'like')}
-              onDislike={() => onReact(c._id, 'dislike')}
+              myVote={c.myVote}
+              onLike={() => onReact(c._id, c.myVote === 'like' ? 'none' : 'like')}
+              onDislike={() => onReact(c._id, c.myVote === 'dislike' ? 'none' : 'dislike')}
             />
             <div className="flex-1 min-w-0">
               <p className="text-xs text-base-content/50">

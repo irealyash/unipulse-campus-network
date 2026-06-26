@@ -5,9 +5,18 @@ import { assertCommunityAccess } from '../utils/membership.js';
 import { applyLikeDislike } from '../utils/likeDislike.js';
 import { toggleEmojiReaction } from '../utils/emojiReaction.js';
 import { deletePostCascade } from '../utils/contentDeletion.js';
+import { serializeVotable } from '../utils/serializeVotes.js';
 
-/** Tags users can pick when creating a post. */
-export const POST_TAGS = ['Humour', 'Angry', 'Confession'];
+/** Tags users can pick when creating a post (order matters for the UI). */
+export const POST_TAGS = [
+  'General',
+  'Discussion',
+  'Question',
+  'Life Sucks',
+  'Humour',
+  'Angry',
+  'Confession',
+];
 
 /**
  * POST CONTROLLER
@@ -63,7 +72,7 @@ export const listPosts = asyncHandler(async (req, res) => {
     limit,
     total,
     hasMore: skip + posts.length < total,
-    posts
+    posts: posts.map((p) => serializeVotable(p, req.user._id)),
   });
 });
 
@@ -82,7 +91,7 @@ export const getPost = asyncHandler(async (req, res) => {
     throw new ApiError(404, 'Post not found.');
   }
 
-  res.json({ success: true, post });
+  res.json({ success: true, post: serializeVotable(post, req.user._id) });
 });
 
 /**
@@ -118,7 +127,7 @@ export const createPost = asyncHandler(async (req, res) => {
 
   res.status(201).json({
     success: true,
-    post,
+    post: serializeVotable(post, req.user._id),
     message: 'Your post has been submitted for moderator approval.'
   });
 });
@@ -142,7 +151,8 @@ export const reactToPost = asyncHandler(async (req, res) => {
   applyLikeDislike(post, req.user._id, req.body.action);
   await post.save();
 
-  res.json({ success: true, score: post.score, post });
+  const serialized = serializeVotable(post, req.user._id);
+  res.json({ success: true, score: serialized.score, post: serialized });
 });
 
 /**

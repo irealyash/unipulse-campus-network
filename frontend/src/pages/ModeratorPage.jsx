@@ -13,10 +13,13 @@ import {
   modFetchPendingPosts,
   modApprovePost,
   modRejectPost,
+  modFetchPendingEvents,
+  modApproveEvent,
+  modRejectEvent,
 } from '../features/moderator/moderatorSlice';
 import { Link } from 'react-router-dom';
 import UserAvatar from '../components/UserAvatar';
-import { communityAvatar } from '../lib/avatars';
+import { communityAvatar, eventAvatar } from '../lib/avatars';
 import { uploadMedia } from '../lib/media';
 import { PostMedia } from '../components/community/PostCommentSection';
 import {
@@ -33,6 +36,7 @@ import {
 const TABS = [
   { id: 'reports', label: 'Reports', icon: <FlagIcon /> },
   { id: 'posts', label: 'Posts', icon: <ChatIcon /> },
+  { id: 'events', label: 'Events', icon: <CalendarIcon /> },
   { id: 'requests', label: 'Requests', icon: <InboxIcon /> },
   { id: 'users', label: 'Users', icon: <UsersIcon /> },
   { id: 'communities', label: 'Communities', icon: <CalendarIcon /> },
@@ -173,6 +177,82 @@ function PostsTab() {
                     <button
                       className="btn btn-primary btn-sm rounded-full"
                       onClick={() => dispatch(modApprovePost(p._id))}
+                    >
+                      Approve
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ----------------------------- Events tab ------------------------------ */
+function ModEventsTab() {
+  const dispatch = useDispatch();
+  const pendingEvents = useSelector((s) => s.moderator.pendingEvents);
+  const [status, setStatus] = useState('pending');
+
+  useEffect(() => {
+    dispatch(modFetchPendingEvents(status));
+  }, [dispatch, status]);
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-lg font-bold">Event approvals</h2>
+        <select
+          className="select select-bordered select-sm rounded-full"
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+        >
+          <option value="pending">Pending</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+          <option value="all">All</option>
+        </select>
+      </div>
+
+      {pendingEvents.length === 0 ? (
+        <EmptyState text="No events in this queue." />
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {pendingEvents.map((ev) => (
+            <div key={ev._id} className="card bg-base-100 border border-base-200 shadow-sm overflow-hidden">
+              <figure className="h-28 bg-base-200">
+                <img src={eventAvatar(ev)} alt="" className="w-full h-full object-cover" />
+              </figure>
+              <div className="card-body p-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="badge badge-ghost badge-sm">{ev.communityId}</span>
+                  <span className="badge badge-outline badge-sm">{ev.status || 'pending'}</span>
+                  <span className="text-xs text-base-content/40 ml-auto">
+                    {new Date(ev.createdAt).toLocaleString()}
+                  </span>
+                </div>
+                <h3 className="font-bold mt-1">{ev.title}</h3>
+                <p className="text-xs text-base-content/50">
+                  {new Date(ev.eventDate).toLocaleString()}
+                </p>
+                {ev.description && (
+                  <p className="text-sm text-base-content/80 line-clamp-3">{ev.description}</p>
+                )}
+
+                {ev.status === 'pending' && (
+                  <div className="card-actions justify-end mt-2">
+                    <button
+                      className="btn btn-ghost btn-sm rounded-full"
+                      onClick={() => dispatch(modRejectEvent(ev._id))}
+                    >
+                      Reject
+                    </button>
+                    <button
+                      className="btn btn-primary btn-sm rounded-full"
+                      onClick={() => dispatch(modApproveEvent(ev._id))}
                     >
                       Approve
                     </button>
@@ -546,6 +626,7 @@ export default function ModeratorPage() {
 
       {tab === 'reports' && <ReportsTab />}
       {tab === 'posts' && <PostsTab />}
+      {tab === 'events' && <ModEventsTab />}
       {tab === 'requests' && <RequestsTab />}
       {tab === 'users' && <UsersTab />}
       {tab === 'communities' && <CommunitiesTab />}

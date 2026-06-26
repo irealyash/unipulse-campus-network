@@ -157,6 +157,42 @@ export const modRejectPost = createAsyncThunk(
   }
 );
 
+export const modFetchPendingEvents = createAsyncThunk(
+  'mod/pendingEvents',
+  async (status = 'pending', { rejectWithValue }) => {
+    try {
+      const { data } = await api.get('/moderator/events', { params: { status } });
+      return data.events;
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
+export const modApproveEvent = createAsyncThunk(
+  'mod/approveEvent',
+  async (id, { rejectWithValue }) => {
+    try {
+      const { data } = await api.post(`/moderator/events/${id}/approve`);
+      return { id, message: data.message };
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
+export const modRejectEvent = createAsyncThunk(
+  'mod/rejectEvent',
+  async (id, { rejectWithValue }) => {
+    try {
+      const { data } = await api.post(`/moderator/events/${id}/reject`);
+      return { id, message: data.message };
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
 const moderatorSlice = createSlice({
   name: 'moderator',
   initialState: {
@@ -165,6 +201,7 @@ const moderatorSlice = createSlice({
     reports: [],
     requests: [],
     pendingPosts: [],
+    pendingEvents: [],
     status: 'idle',
     error: null,
     notice: null,
@@ -220,6 +257,17 @@ const moderatorSlice = createSlice({
       .addCase(modRejectPost.fulfilled, (state, action) => {
         state.pendingPosts = state.pendingPosts.filter((p) => p._id !== action.payload.id);
         state.notice = action.payload.message || 'Post rejected.';
+      })
+      .addCase(modFetchPendingEvents.fulfilled, (state, action) => {
+        state.pendingEvents = action.payload;
+      })
+      .addCase(modApproveEvent.fulfilled, (state, action) => {
+        state.pendingEvents = state.pendingEvents.filter((e) => e._id !== action.payload.id);
+        state.notice = action.payload.message || 'Event approved.';
+      })
+      .addCase(modRejectEvent.fulfilled, (state, action) => {
+        state.pendingEvents = state.pendingEvents.filter((e) => e._id !== action.payload.id);
+        state.notice = action.payload.message || 'Event rejected.';
       })
       // Generic error capture for all moderator thunks.
       .addMatcher(

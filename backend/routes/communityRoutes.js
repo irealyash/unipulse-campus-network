@@ -13,7 +13,7 @@ import { getMessages, getChatTimeline } from '../controllers/messageController.j
  * Community routes, plus the community-scoped collections nested beneath them
  * (posts / events / chat history). All require authentication.
  *
- * Creating communities and events is MODERATOR-ONLY (requireModerator). Course
+ * Creating communities is MODERATOR-ONLY (requireModerator). Course
  * communities are still auto-created from a student's calendar upload (see
  * userController.uploadScheduleFile) — that path is system-driven, not a user
  * calling createCommunity, so it is unaffected by this restriction.
@@ -25,7 +25,7 @@ import { getMessages, getChatTimeline } from '../controllers/messageController.j
  *   GET  /api/communities/:communityId/posts   -> post feed
  *   POST /api/communities/:communityId/posts   -> create post
  *   GET  /api/communities/:communityId/events  -> events list
- *   POST /api/communities/:communityId/events  -> create event (mod only)
+ *   POST /api/communities/:communityId/events  -> create event (pending approval)
  *   GET  /api/communities/:communityId/messages-> chat history
  */
 const router = Router();
@@ -41,11 +41,11 @@ router
   .get(listPosts)
   .post(requireNotBanned, createPost);
 
-// Nested events (creation is moderator-only).
+// Nested events — any member can submit; moderator approves before listing.
 router
   .route('/:communityId/events')
   .get(listEvents)
-  .post(requireModerator, createEvent);
+  .post(requireNotBanned, createEvent);
 
 // Nested chat history (sending happens over Socket.io).
 router.get('/:communityId/timeline', getChatTimeline);

@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import User from '../models/User.js';
 import Community from '../models/Community.js';
 import Post from '../models/Post.js';
+import Event from '../models/Event.js';
 import Comment from '../models/Comment.js';
 import Message from '../models/Message.js';
 import Reported from '../models/Reported.js';
@@ -443,6 +444,68 @@ export const rejectPost = asyncHandler(async (req, res) => {
   await post.save();
 
   res.json({ success: true, message: 'Post rejected.', post });
+});
+
+/* ------------------------------------------------------------------ */
+/* Event approval queue                                                */
+/* ------------------------------------------------------------------ */
+
+/**
+ * GET /api/moderator/events?status=pending&page&limit
+ */
+export const listEventsForReview = asyncHandler(async (req, res) => {
+  const status = req.query.status || 'pending';
+  const allowed = ['pending', 'approved', 'rejected', 'all'];
+  if (!allowed.includes(status)) {
+    throw new ApiError(400, `status must be one of: ${allowed.join(', ')}`);
+  }
+
+  const { page, limit, skip } = paginate(req);
+  const filter = status === 'all' ? {} : { status };
+
+  const [events, total] = await Promise.all([
+    Event.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+    Event.countDocuments(filter),
+  ]);
+
+  res.json({
+    success: true,
+    page,
+    limit,
+    total,
+    hasMore: skip + events.length < total,
+    events,
+  });
+});
+
+/**
+ * POST /api/moderator/events/:id/approve
+ */
+export const approveEvent = asyncHandler(async (req, res) => {
+  const event = await Event.findById(req.params.id);
+  if (!event) throw new ApiError(404, 'Event not found.');
+
+  event.status = 'approved';
+  event.reviewedBy = req.user._id;
+  event.reviewedAt = new Date();
+  await event.save();
+
+  res.json({ success: true, message: 'Event approved.', event });
+});
+
+/**
+ * POST /api/moderator/events/:id/reject
+ */
+export const rejectEvent = asyncHandler(async (req, res) => {
+  const event = await Event.findById(req.params.id);
+  if (!event) throw new ApiError(404, 'Event not found.');
+
+  event.status = 'rejected';
+  event.reviewedBy = req.user._id;
+  event.reviewedAt = new Date();
+  await event.save();
+
+  res.json({ success: true, message: 'Event rejected.', event });
 });
 
 /* ------------------------------------------------------------------ */

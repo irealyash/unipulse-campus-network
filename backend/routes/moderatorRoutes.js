@@ -17,7 +17,10 @@ import {
   setUserBan,
   listPostsForReview,
   approvePost,
-  rejectPost
+  rejectPost,
+  listEventsForReview,
+  approveEvent,
+  rejectEvent,
 } from '../controllers/moderatorController.js';
 
 /**
@@ -52,6 +55,11 @@ router.use(protect, requireModerator);
 router.get('/posts', listPostsForReview);
 router.post('/posts/:id/approve', approvePost);
 router.post('/posts/:id/reject', rejectPost);
+
+// --- Event approval queue ---
+router.get('/events', listEventsForReview);
+router.post('/events/:id/approve', approveEvent);
+router.post('/events/:id/reject', rejectEvent);
 
 // --- Communities & browsing (no access gate for moderators) ---
 router.get('/communities', listAllCommunities);

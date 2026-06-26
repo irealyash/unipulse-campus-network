@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { clearAuthMessages } from '../features/auth/authSlice';
 import { clearModMessages } from '../features/moderator/moderatorSlice';
 import { clearPostNotice } from '../features/posts/postsSlice';
+import { clearEventNotice } from '../features/events/eventsSlice';
 
 /**
  * Global toast layer. Watches the auth + moderator slices for transient
@@ -14,6 +15,7 @@ export default function Toasts() {
   const { notice: authNotice, error: authError } = useSelector((s) => s.auth);
   const { notice: modNotice, error: modError } = useSelector((s) => s.moderator);
   const { notice: postNotice } = useSelector((s) => s.posts);
+  const { notice: eventNotice } = useSelector((s) => s.events);
 
   useEffect(() => {
     if (authNotice || authError) {
@@ -36,12 +38,20 @@ export default function Toasts() {
     }
   }, [postNotice, dispatch]);
 
+  useEffect(() => {
+    if (eventNotice) {
+      const t = setTimeout(() => dispatch(clearEventNotice()), 4000);
+      return () => clearTimeout(t);
+    }
+  }, [eventNotice, dispatch]);
+
   const items = [
     authError && { type: 'error', msg: authError },
     authNotice && { type: 'success', msg: authNotice },
     modError && { type: 'error', msg: modError },
     modNotice && { type: 'success', msg: modNotice },
     postNotice && { type: 'info', msg: postNotice },
+    eventNotice && { type: 'info', msg: eventNotice },
   ].filter(Boolean);
 
   if (items.length === 0) return null;

@@ -20,7 +20,7 @@ export const createEvent = createAsyncThunk(
   async ({ communityId, payload }, { rejectWithValue }) => {
     try {
       const { data } = await api.post(`/communities/${encodeURIComponent(communityId)}/events`, payload);
-      return { communityId, event: data.event };
+      return { communityId, event: data.event, message: data.message };
     } catch (err) {
       return rejectWithValue(err.message);
     }
@@ -45,8 +45,13 @@ const eventsSlice = createSlice({
     byCommunity: {},
     status: 'idle',
     error: null,
+    notice: null,
   },
-  reducers: {},
+  reducers: {
+    clearEventNotice(state) {
+      state.notice = null;
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(fetchEvents.pending, (state, action) => {
@@ -60,9 +65,12 @@ const eventsSlice = createSlice({
         };
       })
       .addCase(createEvent.fulfilled, (state, action) => {
-        const { communityId, event } = action.payload;
-        const bucket = state.byCommunity[communityId];
-        if (bucket) bucket.events = [event, ...bucket.events];
+        const { communityId, event, message } = action.payload;
+        state.notice = message || 'Event submitted for moderator approval.';
+        if (event?.status === 'approved') {
+          const bucket = state.byCommunity[communityId];
+          if (bucket) bucket.events = [event, ...bucket.events];
+        }
       })
       .addCase(rsvpEvent.fulfilled, (state, action) => {
         const updated = action.payload;
@@ -74,4 +82,5 @@ const eventsSlice = createSlice({
   },
 });
 
+export const { clearEventNotice } = eventsSlice.actions;
 export default eventsSlice.reducer;

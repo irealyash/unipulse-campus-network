@@ -1,5 +1,7 @@
 import Community from '../models/Community.js';
 import Post from '../models/Post.js';
+import Event from '../models/Event.js';
+import { POST_TAGS } from '../controllers/postController.js';
 
 /** Default general communities every student can access. */
 export const GENERAL_COMMUNITIES = [
@@ -24,13 +26,14 @@ export const ensureDefaultCommunities = async () => {
           name: c.name,
           description: c.description,
           type: 'general',
-          allowedTags: ['Humour', 'Angry', 'Confession'],
+          allowedTags: POST_TAGS,
         },
       },
       { upsert: true }
     );
   }
 
-  // Legacy posts created before moderation — treat as already approved.
+  // Legacy posts/events created before moderation — treat as already approved.
   await Post.updateMany({ status: { $exists: false } }, { $set: { status: 'approved' } });
+  await Event.updateMany({ status: { $exists: false } }, { $set: { status: 'approved' } });
 };

@@ -3,23 +3,8 @@ import { useDispatch, useSelector } from 'react-redux';
 import { Link, useParams } from 'react-router-dom';
 import { fetchPosts, createPost, reactToPost } from '../../features/posts/postsSlice';
 import Loader from '../Loader';
-import { ThumbUpIcon, ThumbDownIcon } from '../icons';
+import { POST_TAGS, PostMedia, VoteColumn } from './PostCommentSection';
 import { uploadMedia } from '../../lib/media';
-import { POST_TAGS, PostMedia } from './PostCommentSection';
-
-function VoteColumn({ score, onLike, onDislike }) {
-  return (
-    <div className="flex flex-col items-center gap-0.5 pt-1 text-base-content/60">
-      <button type="button" className="btn btn-ghost btn-xs btn-square" onClick={onLike}>
-        <ThumbUpIcon />
-      </button>
-      <span className="text-sm font-bold">{score ?? 0}</span>
-      <button type="button" className="btn btn-ghost btn-xs btn-square" onClick={onDislike}>
-        <ThumbDownIcon />
-      </button>
-    </div>
-  );
-}
 
 /** Reddit-style posts feed. Post titles link to a full-page thread view. */
 export default function PostsTab() {
@@ -32,7 +17,7 @@ export default function PostsTab() {
 
   const [sort, setSort] = useState('new');
   const [createOpen, setCreateOpen] = useState(false);
-  const [form, setForm] = useState({ title: '', content: '', tag: 'Humour' });
+  const [form, setForm] = useState({ title: '', content: '', tag: 'General' });
   const [mediaFile, setMediaFile] = useState(null);
 
   useEffect(() => {
@@ -45,7 +30,7 @@ export default function PostsTab() {
     if (mediaFile) media = await uploadMedia(mediaFile);
     await dispatch(createPost({ communityId, payload: { ...form, media } }));
     setCreateOpen(false);
-    setForm({ title: '', content: '', tag: 'Humour' });
+    setForm({ title: '', content: '', tag: 'General' });
     setMediaFile(null);
     dispatch(fetchPosts({ communityId, sort }));
   };
@@ -103,8 +88,13 @@ export default function PostsTab() {
               <div className="p-3">
                 <VoteColumn
                   score={p.score}
-                  onLike={() => dispatch(reactToPost({ postId: p._id, action: 'like' }))}
-                  onDislike={() => dispatch(reactToPost({ postId: p._id, action: 'dislike' }))}
+                  myVote={p.myVote}
+                  onLike={() =>
+                    dispatch(reactToPost({ postId: p._id, action: p.myVote === 'like' ? 'none' : 'like' }))
+                  }
+                  onDislike={() =>
+                    dispatch(reactToPost({ postId: p._id, action: p.myVote === 'dislike' ? 'none' : 'dislike' }))
+                  }
                 />
               </div>
               <div className="flex-1 py-3 pr-4 min-w-0">

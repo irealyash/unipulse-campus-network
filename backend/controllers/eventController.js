@@ -1,5 +1,4 @@
 import Event from '../models/Event.js';
-import Community from '../models/Community.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import ApiError from '../utils/ApiError.js';
 import { assertCommunityAccess } from '../utils/membership.js';
@@ -9,7 +8,8 @@ import { withEventImage } from '../utils/avatars.js';
  * EVENT CONTROLLER
  * ----------------------------------------------------------------------------
  * The "events" tab of every community. Events have a profile image and RSVP
- * ("I will come" / "I am busy") with public counts.
+ * ("I will come" / "I am busy") with public counts. New events require moderator
+ * approval before they appear in the community list.
  */
 
 /** Shape an event for the API: image default, RSVP counts, caller's RSVP. */
@@ -36,7 +36,7 @@ export const listEvents = asyncHandler(async (req, res) => {
   await assertCommunityAccess(req.user, communityId);
 
   const includePast = req.query.past === 'true';
-  const filter = { communityId };
+  const filter = { communityId, status: 'approved' };
   if (!includePast) filter.eventDate = { $gte: new Date() };
 
   const events = await Event.find(filter).sort({ eventDate: 1 });
@@ -57,6 +57,11 @@ export const getEvent = asyncHandler(async (req, res) => {
 
   await assertCommunityAccess(req.user, event.communityId);
 
+  const isCreator = event.creatorId.toString() === req.user._id.toString();
+  if (event.status !== 'approved' && !isCreator && !req.user.moderator) {
+    throw new ApiError(404, 'Event not found.');
+  }
+
   res.json({ success: true, event: serializeEvent(event, req.user._id) });
 });
 
@@ -66,9 +71,7 @@ export const getEvent = asyncHandler(async (req, res) => {
  */
 export const createEvent = asyncHandler(async (req, res) => {
   const { communityId } = req.params;
-
-  const community = await Community.findById(communityId);
-  if (!community) throw new ApiError(404, `Community "${communityId}" not found.`);
+  await assertCommunityAccess(req.user, communityId);
 
   const { title, description, eventDate, imageUrl } = req.body;
 
@@ -86,9 +89,14 @@ export const createEvent = asyncHandler(async (req, res) => {
     description: description?.trim() || '',
     imageUrl: imageUrl?.trim() || null,
     eventDate: when,
+    status: 'pending',
   });
 
-  res.status(201).json({ success: true, event: serializeEvent(event, req.user._id) });
+  res.status(201).json({
+    success: true,
+    event: serializeEvent(event, req.user._id),
+    message: 'Your event has been submitted for moderator approval.',
+  });
 });
 
 /**
@@ -105,6 +113,10 @@ export const rsvpEvent = asyncHandler(async (req, res) => {
   if (!event) throw new ApiError(404, 'Event not found.');
 
   await assertCommunityAccess(req.user, event.communityId);
+
+  if (event.status !== 'approved') {
+    throw new ApiError(403, 'You can only RSVP to approved events.');
+  }
 
   const uid = req.user._id.toString();
   event.coming = event.coming.filter((id) => id.toString() !== uid);

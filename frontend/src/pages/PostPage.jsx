@@ -8,8 +8,7 @@ import {
   clearCurrentPost,
 } from '../features/posts/postsSlice';
 import Loader from '../components/Loader';
-import PostCommentSection, { PostMedia } from '../components/community/PostCommentSection';
-import { ThumbUpIcon, ThumbDownIcon } from '../components/icons';
+import PostCommentSection, { PostMedia, VoteColumn } from '../components/community/PostCommentSection';
 
 /** Full-page view for a single post and its comment thread. */
 export default function PostPage() {
@@ -78,22 +77,17 @@ export default function PostPage() {
             <p className="text-sm whitespace-pre-wrap mt-3">{post.content}</p>
             <PostMedia media={post.media} />
 
-            <div className="flex items-center gap-2 mt-4 text-base-content/60">
-              <button
-                type="button"
-                className="btn btn-ghost btn-sm gap-1"
-                onClick={() => dispatch(reactToPost({ postId: post._id, action: 'like' }))}
-              >
-                <ThumbUpIcon /> Like
-              </button>
-              <span className="text-sm font-bold">{post.score ?? 0}</span>
-              <button
-                type="button"
-                className="btn btn-ghost btn-sm gap-1"
-                onClick={() => dispatch(reactToPost({ postId: post._id, action: 'dislike' }))}
-              >
-                <ThumbDownIcon />
-              </button>
+            <div className="flex items-center gap-2 mt-4">
+              <VoteColumn
+                score={post.score}
+                myVote={post.myVote}
+                onLike={() =>
+                  dispatch(reactToPost({ postId: post._id, action: post.myVote === 'like' ? 'none' : 'like' }))
+                }
+                onDislike={() =>
+                  dispatch(reactToPost({ postId: post._id, action: post.myVote === 'dislike' ? 'none' : 'dislike' }))
+                }
+              />
             </div>
 
             <PostCommentSection

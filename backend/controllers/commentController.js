@@ -7,6 +7,7 @@ import { assertCommunityAccess } from '../utils/membership.js';
 import { applyLikeDislike } from '../utils/likeDislike.js';
 import { toggleSingleEmojiReaction } from '../utils/emojiReaction.js';
 import { deleteCommentCascade } from '../utils/contentDeletion.js';
+import { serializeVotable, serializeCommentTree } from '../utils/serializeVotes.js';
 
 /**
  * COMMENT CONTROLLER
@@ -67,7 +68,7 @@ export const listComments = asyncHandler(async (req, res) => {
     }
   });
 
-  res.json({ success: true, count: flat.length, comments: roots });
+  res.json({ success: true, count: flat.length, comments: serializeCommentTree(roots, req.user._id) });
 });
 
 /**
@@ -114,7 +115,7 @@ export const createComment = asyncHandler(async (req, res) => {
   // Keep the post's cached comment count in sync for feed display.
   await Post.updateOne({ _id: postId }, { $inc: { commentCount: 1 } });
 
-  res.status(201).json({ success: true, comment });
+  res.status(201).json({ success: true, comment: serializeVotable(comment, req.user._id) });
 });
 
 /**
@@ -131,7 +132,8 @@ export const reactToComment = asyncHandler(async (req, res) => {
   applyLikeDislike(comment, req.user._id, req.body.action);
   await comment.save();
 
-  res.json({ success: true, score: comment.score, comment });
+  const serialized = serializeVotable(comment, req.user._id);
+  res.json({ success: true, score: serialized.score, comment: serialized });
 });
 
 /**

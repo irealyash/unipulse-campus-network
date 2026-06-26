@@ -141,6 +141,19 @@ const postsSlice = createSlice({
           const i = b.posts?.findIndex((p) => p._id === postId);
           if (i >= 0) b.posts[i] = post;
         });
+      })
+      .addCase(reactToComment.fulfilled, (state, action) => {
+        const { commentId, comment } = action.payload;
+        const updateTree = (nodes) => {
+          if (!nodes) return nodes;
+          return nodes.map((n) => {
+            if (n._id === commentId) return { ...n, ...comment };
+            return { ...n, replies: updateTree(n.replies) };
+          });
+        };
+        Object.keys(state.commentsByPost).forEach((postId) => {
+          state.commentsByPost[postId] = updateTree(state.commentsByPost[postId]);
+        });
       });
   },
 });

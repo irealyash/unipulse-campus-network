@@ -38,6 +38,20 @@ const eventSchema = new mongoose.Schema({
     ref: 'User',
     default: []
   },
+  status: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending'
+  },
+  reviewedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
+  reviewedAt: {
+    type: Date,
+    default: null
+  },
   createdAt: { 
     type: Date, 
     default: Date.now 
@@ -45,6 +59,7 @@ const eventSchema = new mongoose.Schema({
 });
 
 // Index arrangement optimizes loading upcoming events while hiding or purging past ones
-eventSchema.index({ communityId: 1, eventDate: 1 });
+eventSchema.index({ communityId: 1, status: 1, eventDate: 1 });
+eventSchema.index({ status: 1, createdAt: -1 });
 
 export default mongoose.model('Event', eventSchema);
