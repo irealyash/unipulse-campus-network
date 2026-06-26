@@ -3,8 +3,8 @@ import api from '../../lib/api';
 import { CloseIcon, FlagIcon } from '../icons';
 
 /**
- * Report modal for a chat message or reply. `target` is
- * { contentType: 'message' | 'reply', contentId }.
+ * Report modal for posts, comments, replies, messages, or events.
+ * `target` is { contentType, contentId }.
  */
 export default function ReportModal({ open, onClose, target }) {
   const [reason, setReason] = useState('');
@@ -12,6 +12,12 @@ export default function ReportModal({ open, onClose, target }) {
   const [result, setResult] = useState(null);
 
   if (!open || !target) return null;
+
+  const handleClose = () => {
+    setReason('');
+    setResult(null);
+    onClose();
+  };
 
   const submit = async (e) => {
     e.preventDefault();
@@ -42,7 +48,7 @@ export default function ReportModal({ open, onClose, target }) {
             </span>
             Report {target.contentType}
           </h3>
-          <button className="btn btn-ghost btn-sm btn-circle" onClick={onClose}>
+          <button className="btn btn-ghost btn-sm btn-circle" onClick={handleClose}>
             <CloseIcon />
           </button>
         </div>
@@ -63,7 +69,7 @@ export default function ReportModal({ open, onClose, target }) {
               onChange={(e) => setReason(e.target.value)}
             />
             <div className="modal-action mt-0">
-              <button type="button" className="btn btn-ghost rounded-2xl" onClick={onClose}>
+              <button type="button" className="btn btn-ghost rounded-2xl" onClick={handleClose}>
                 Cancel
               </button>
               <button type="submit" className="btn btn-error rounded-2xl" disabled={busy}>
@@ -74,7 +80,7 @@ export default function ReportModal({ open, onClose, target }) {
           </form>
         )}
       </div>
-      <div className="modal-backdrop bg-black/40" onClick={onClose} />
+      <div className="modal-backdrop bg-black/40" onClick={handleClose} />
     </div>
   );
 }

@@ -409,6 +409,9 @@ export const resolveReport = asyncHandler(async (req, res) => {
     if (exists) await deletePostCascade(report.contentId, req.user._id);
   } else if (report.contentType === 'message') {
     await deleteMessage(report.contentId, req.user._id);
+  } else if (report.contentType === 'event') {
+    const exists = await Event.exists({ _id: report.contentId });
+    if (exists) await deleteEventById(report.contentId, req.user._id);
   } else {
     // comment or reply
     const exists = await Comment.exists({ _id: report.contentId });

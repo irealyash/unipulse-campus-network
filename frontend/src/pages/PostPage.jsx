@@ -9,6 +9,8 @@ import {
 } from '../features/posts/postsSlice';
 import Loader from '../components/Loader';
 import PostCommentSection, { PostMedia, VoteColumn } from '../components/community/PostCommentSection';
+import ReportModal from '../components/chat/ReportModal';
+import ReportFlagButton from '../components/ReportFlagButton';
 
 /** Full-page view for a single post and its comment thread. */
 export default function PostPage() {
@@ -17,6 +19,7 @@ export default function PostPage() {
   const post = useSelector((s) => s.posts.currentPost);
   const comments = useSelector((s) => s.posts.commentsByPost[postId]);
   const [commentSort, setCommentSort] = useState('new');
+  const [reportTarget, setReportTarget] = useState(null);
 
   useEffect(() => {
     dispatch(fetchPost(postId));
@@ -68,10 +71,13 @@ export default function PostPage() {
               </div>
             )}
 
-            <p className="text-xs text-base-content/50">
+            <p className="text-xs text-base-content/50 flex flex-wrap items-center gap-1">
               Posted by <span className="font-medium text-primary">{post.anonymousUsername}</span> ·{' '}
               {new Date(post.createdAt).toLocaleString()}
-              {post.tag && <span className="badge badge-outline badge-xs ml-2">{post.tag}</span>}
+              {post.tag && <span className="badge badge-outline badge-xs">{post.tag}</span>}
+              <ReportFlagButton
+                onClick={() => setReportTarget({ contentType: 'post', contentId: post._id })}
+              />
             </p>
             <h1 className="font-bold text-2xl mt-2">{post.title}</h1>
             <p className="text-sm whitespace-pre-wrap mt-3">{post.content}</p>
@@ -98,10 +104,12 @@ export default function PostPage() {
               onSortChange={setCommentSort}
               onRefresh={refreshComments}
               disabled={!approved}
+              onReport={setReportTarget}
             />
           </div>
         </article>
       </div>
+      <ReportModal open={!!reportTarget} onClose={() => setReportTarget(null)} target={reportTarget} />
     </div>
   );
 }

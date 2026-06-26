@@ -1,6 +1,8 @@
 import Post from '../models/Post.js';
 import Comment from '../models/Comment.js';
 import Message from '../models/Message.js';
+import Event from '../models/Event.js';
+import User from '../models/User.js';
 import Reported from '../models/Reported.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import ApiError from '../utils/ApiError.js';
@@ -16,7 +18,7 @@ import { assertCommunityAccess } from '../utils/membership.js';
 
 /**
  * POST /api/reports
- * Body: { contentType: "post"|"comment"|"reply"|"message", contentId, reason? }
+ * Body: { contentType: "post"|"comment"|"reply"|"message"|"event", contentId, reason? }
  * Validates the target exists, snapshots both author + reporter, and stores it.
  */
 export const createReport = asyncHandler(async (req, res) => {
@@ -25,8 +27,8 @@ export const createReport = asyncHandler(async (req, res) => {
   if (!contentType || !contentId) {
     throw new ApiError(400, 'contentType and contentId are required.');
   }
-  if (!['post', 'comment', 'reply', 'message'].includes(contentType)) {
-    throw new ApiError(400, 'contentType must be "post", "comment", "reply" or "message".');
+  if (!['post', 'comment', 'reply', 'message', 'event'].includes(contentType)) {
+    throw new ApiError(400, 'contentType must be "post", "comment", "reply", "message" or "event".');
   }
 
   // Resolve the target content and capture the author snapshot + location.
@@ -54,6 +56,14 @@ export const createReport = asyncHandler(async (req, res) => {
     communityId = target.communityId;
     authorId = target.senderId; // messages use senderId, not authorId
     authorUsername = target.anonymousUsername;
+  } else if (contentType === 'event') {
+    const target = await Event.findById(contentId);
+    if (!target) throw new ApiError(404, 'Event not found.');
+    const creator = await User.findById(target.creatorId).select('username');
+    resolvedType = 'event';
+    communityId = target.communityId;
+    authorId = target.creatorId;
+    authorUsername = creator?.username || 'unknown';
   } else {
     // comment or reply both live in the Comment collection.
     const target = await Comment.findById(contentId);

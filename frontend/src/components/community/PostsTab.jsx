@@ -5,6 +5,8 @@ import { fetchPosts, createPost, reactToPost } from '../../features/posts/postsS
 import Loader from '../Loader';
 import { POST_TAGS, PostMedia, VoteColumn } from './PostCommentSection';
 import { uploadMedia } from '../../lib/media';
+import ReportModal from '../chat/ReportModal';
+import ReportFlagButton from '../ReportFlagButton';
 
 /** Reddit-style posts feed. Post titles link to a full-page thread view. */
 export default function PostsTab() {
@@ -19,6 +21,7 @@ export default function PostsTab() {
   const [createOpen, setCreateOpen] = useState(false);
   const [form, setForm] = useState({ title: '', content: '', tag: 'General' });
   const [mediaFile, setMediaFile] = useState(null);
+  const [reportTarget, setReportTarget] = useState(null);
 
   useEffect(() => {
     dispatch(fetchPosts({ communityId, sort }));
@@ -98,10 +101,13 @@ export default function PostsTab() {
                 />
               </div>
               <div className="flex-1 py-3 pr-4 min-w-0">
-                <p className="text-xs text-base-content/50">
+                <p className="text-xs text-base-content/50 flex flex-wrap items-center gap-1">
                   Posted by <span className="font-medium text-primary">{p.anonymousUsername}</span> ·{' '}
                   {new Date(p.createdAt).toLocaleDateString()}
-                  {p.tag && <span className="badge badge-outline badge-xs ml-2">{p.tag}</span>}
+                  {p.tag && <span className="badge badge-outline badge-xs">{p.tag}</span>}
+                  <ReportFlagButton
+                    onClick={() => setReportTarget({ contentType: 'post', contentId: p._id })}
+                  />
                 </p>
                 <Link
                   to={`/c/${encodeURIComponent(communityId)}/posts/${p._id}`}
@@ -176,6 +182,7 @@ export default function PostsTab() {
           <div className="modal-backdrop bg-black/40" onClick={() => setCreateOpen(false)} />
         </div>
       )}
+      <ReportModal open={!!reportTarget} onClose={() => setReportTarget(null)} target={reportTarget} />
     </div>
   );
 }

@@ -21,7 +21,7 @@ const reportedSchema = new mongoose.Schema({
   // "message" is a group-chat message (Message collection).
   contentType: {
     type: String,
-    enum: ['post', 'comment', 'reply', 'message'],
+    enum: ['post', 'comment', 'reply', 'message', 'event'],
     required: true
   },
 

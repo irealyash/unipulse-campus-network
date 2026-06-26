@@ -3,6 +3,7 @@ import { useDispatch } from 'react-redux';
 import { createComment, reactToComment } from '../../features/posts/postsSlice';
 import { ThumbUpIcon, ThumbDownIcon, CloseIcon, GifIcon } from '../icons';
 import GifPicker from '../chat/GifPicker';
+import ReportFlagButton from '../ReportFlagButton';
 
 export const POST_TAGS = [
   'General',
@@ -63,7 +64,7 @@ function countReplies(replies) {
   return replies.reduce((n, r) => n + 1 + countReplies(r.replies), 0);
 }
 
-function CommentItem({ comment, onReply, onReact, depth = 0 }) {
+function CommentItem({ comment, onReply, onReact, onReport, depth = 0 }) {
   const [showReplies, setShowReplies] = useState(false);
   const directReplies = comment.replies?.length || 0;
   const totalReplies = countReplies(comment.replies);
@@ -78,9 +79,19 @@ function CommentItem({ comment, onReply, onReact, depth = 0 }) {
           onDislike={() => onReact(comment._id, comment.myVote === 'dislike' ? 'none' : 'dislike')}
         />
         <div className="flex-1 min-w-0">
-          <p className="text-xs text-base-content/50">
-            <span className="font-semibold text-primary">{comment.anonymousUsername}</span> ·{' '}
-            {new Date(comment.createdAt).toLocaleString()}
+          <p className="text-xs text-base-content/50 flex flex-wrap items-center gap-1">
+            <span className="font-semibold text-primary">{comment.anonymousUsername}</span>
+            <span>· {new Date(comment.createdAt).toLocaleString()}</span>
+            {onReport && (
+              <ReportFlagButton
+                onClick={() =>
+                  onReport({
+                    contentType: comment.parentId ? 'reply' : 'comment',
+                    contentId: comment._id,
+                  })
+                }
+              />
+            )}
           </p>
           {comment.content && <p className="text-sm mt-0.5 whitespace-pre-wrap">{comment.content}</p>}
           <CommentMedia media={comment.media} />
@@ -103,19 +114,26 @@ function CommentItem({ comment, onReply, onReact, depth = 0 }) {
       </div>
       {showReplies && directReplies > 0 && (
         <div className="mt-2 ml-4 border-l-2 border-base-300 pl-3">
-          <CommentTree comments={comment.replies} onReply={onReply} onReact={onReact} depth={depth + 1} />
+          <CommentTree comments={comment.replies} onReply={onReply} onReact={onReact} onReport={onReport} depth={depth + 1} />
         </div>
       )}
     </li>
   );
 }
 
-function CommentTree({ comments, onReply, onReact, depth = 0 }) {
+function CommentTree({ comments, onReply, onReact, onReport, depth = 0 }) {
   if (!comments?.length) return null;
   return (
     <ul className={`space-y-3 ${depth ? '' : ''}`}>
       {comments.map((c) => (
-        <CommentItem key={c._id} comment={c} onReply={onReply} onReact={onReact} depth={depth} />
+        <CommentItem
+          key={c._id}
+          comment={c}
+          onReply={onReply}
+          onReact={onReact}
+          onReport={onReport}
+          depth={depth}
+        />
       ))}
     </ul>
   );
@@ -129,6 +147,7 @@ export default function PostCommentSection({
   onSortChange,
   onRefresh,
   disabled = false,
+  onReport,
 }) {
   const dispatch = useDispatch();
   const [replyParent, setReplyParent] = useState(null);
@@ -188,6 +207,7 @@ export default function PostCommentSection({
         comments={comments}
         onReply={(c) => setReplyParent(c)}
         onReact={(id, action) => dispatch(reactToComment({ commentId: id, action }))}
+        onReport={onReport}
       />
 
       {!disabled && (
