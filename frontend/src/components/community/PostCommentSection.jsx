@@ -22,21 +22,29 @@ function CommentMedia({ media }) {
   return <img src={media.url} alt="" className="rounded-xl max-h-48 mt-2 object-contain" />;
 }
 
-export function VoteColumn({ score, myVote, onLike, onDislike }) {
+export function VoteColumn({ score, myVote, onLike, onDislike, horizontal = false }) {
+  const btnClass = horizontal ? 'btn-sm' : 'btn-xs btn-square';
+
   return (
-    <div className="flex flex-col items-center gap-0.5 pt-1 text-base-content/60">
+    <div
+      className={`flex items-center text-base-content/60 ${
+        horizontal ? 'flex-row gap-2' : 'flex-col gap-0.5 pt-1'
+      }`}
+    >
       <button
         type="button"
-        className={`btn btn-ghost btn-xs btn-square ${myVote === 'like' ? 'text-primary bg-primary/10' : ''}`}
+        className={`btn btn-ghost ${btnClass} ${myVote === 'like' ? 'text-primary bg-primary/10' : ''}`}
         onClick={onLike}
         aria-pressed={myVote === 'like'}
       >
         <ThumbUpIcon />
       </button>
-      <span className="text-sm font-bold">{score ?? 0}</span>
+      <span className={`font-bold ${horizontal ? 'text-base min-w-[1.5rem] text-center' : 'text-sm'}`}>
+        {score ?? 0}
+      </span>
       <button
         type="button"
-        className={`btn btn-ghost btn-xs btn-square ${myVote === 'dislike' ? 'text-error bg-error/10' : ''}`}
+        className={`btn btn-ghost ${btnClass} ${myVote === 'dislike' ? 'text-error bg-error/10' : ''}`}
         onClick={onDislike}
         aria-pressed={myVote === 'dislike'}
       >

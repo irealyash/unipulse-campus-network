@@ -79,6 +79,7 @@ export default function PostPage() {
 
             <div className="flex items-center gap-2 mt-4">
               <VoteColumn
+                horizontal
                 score={post.score}
                 myVote={post.myVote}
                 onLike={() =>
