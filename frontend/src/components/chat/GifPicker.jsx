@@ -2,6 +2,19 @@ import { useEffect, useState } from 'react';
 import { CloseIcon, SearchIcon } from '../icons';
 import { searchGifs, trendingGifs } from '../../lib/media';
 
+function gifPreviewUrl(g) {
+  return (
+    g.images?.fixed_height_small?.url ||
+    g.images?.fixed_height?.url ||
+    g.images?.downsized?.url ||
+    g.images?.original?.url
+  );
+}
+
+function gifSelectUrl(g) {
+  return g.images?.fixed_height?.url || g.images?.original?.url;
+}
+
 /** Inner picker — remounts when opened so trending GIFs load automatically. */
 function GifPickerPanel({ onClose, onSelect }) {
   const [query, setQuery] = useState('');
@@ -45,11 +58,16 @@ function GifPickerPanel({ onClose, onSelect }) {
   };
 
   return (
-    <div className="absolute bottom-full right-0 mb-2 w-80 max-h-96 bg-base-200 border border-base-content/10 rounded-2xl shadow-xl z-50 flex flex-col overflow-hidden">
-      <div className="p-2 border-b border-base-content/10 flex items-center gap-2">
-        <div className="flex-1 flex gap-1">
+    <div
+      className="absolute bottom-full right-0 z-50 mb-2 flex w-80 max-h-96 flex-col overflow-hidden rounded-2xl border border-base-content/10 bg-base-200 shadow-xl"
+      role="dialog"
+      aria-label="GIF picker"
+    >
+      {/* Header — fixed, never scrolls */}
+      <div className="flex shrink-0 items-center gap-2 border-b border-base-content/10 p-2">
+        <div className="flex flex-1 gap-1">
           <input
-            className="input input-bordered input-xs rounded-full flex-1"
+            className="input input-bordered input-xs flex-1 rounded-full"
             placeholder="Search GIFs…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -64,44 +82,40 @@ function GifPickerPanel({ onClose, onSelect }) {
             <SearchIcon />
           </button>
         </div>
-        <button type="button" className="btn btn-ghost btn-xs btn-circle" onClick={onClose}>
+        <button type="button" className="btn btn-ghost btn-xs btn-circle" onClick={onClose} aria-label="Close">
           <CloseIcon />
         </button>
       </div>
-      <div className="flex-1 overflow-y-auto p-2 grid grid-cols-2 gap-2 content-start">
-        {loading && <p className="col-span-2 text-center text-xs opacity-50 py-4">Loading…</p>}
-        {!loading && gifs.length === 0 && (
-          <p className="col-span-2 text-center text-xs opacity-50 py-4">No GIFs found.</p>
-        )}
-        {!loading &&
-          gifs.map((g) => {
-            const preview =
-              g.images?.fixed_height_small || g.images?.fixed_height || g.images?.downsized;
-            const aspect =
-              preview?.width && preview?.height
-                ? `${preview.width} / ${preview.height}`
-                : '4 / 3';
 
-            return (
+      {/* Grid — scroll contained inside the picker */}
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2">
+        {loading && <p className="py-6 text-center text-xs opacity-50">Loading…</p>}
+        {!loading && gifs.length === 0 && (
+          <p className="py-6 text-center text-xs opacity-50">No GIFs found.</p>
+        )}
+        {!loading && gifs.length > 0 && (
+          <div className="grid grid-cols-2 gap-2">
+            {gifs.map((g) => (
               <button
                 key={g.id}
                 type="button"
-                className="rounded-lg overflow-hidden hover:ring-2 ring-primary bg-base-300/50 w-full"
-                style={{ aspectRatio: aspect }}
+                className="block h-24 w-full overflow-hidden rounded-lg bg-base-300/60 hover:ring-2 hover:ring-primary"
                 onClick={() => {
-                  onSelect(g.images?.fixed_height?.url || g.images?.original?.url);
+                  onSelect(gifSelectUrl(g));
                   onClose();
                 }}
               >
                 <img
-                  src={preview?.url}
-                  alt={g.title}
-                  className="w-full h-full object-contain"
+                  src={gifPreviewUrl(g)}
+                  alt={g.title || 'GIF'}
+                  className="h-24 w-full object-cover"
                   loading="lazy"
+                  draggable={false}
                 />
               </button>
-            );
-          })}
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
