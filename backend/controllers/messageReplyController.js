@@ -150,6 +150,6 @@ export const deleteReply = asyncHandler(async (req, res) => {
     throw new ApiError(403, 'You can only delete your own replies.');
   }
 
-  const deleted = await deleteMessageReplyCascade(reply._id);
-  res.json({ success: true, message: `Deleted ${deleted} repl(y/ies).` });
+  const { count, removedIds } = await deleteMessageReplyCascade(reply._id);
+  res.json({ success: true, message: `Deleted ${count} repl(y/ies).`, removedIds });
 });

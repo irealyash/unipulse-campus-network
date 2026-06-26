@@ -99,6 +99,13 @@ export const MenuIcon = (p) => (
   </svg>
 );
 
+/** Chevron (▼) — rotate for sidebar toggle */
+export const ChevronIcon = (p) => (
+  <svg {...base(p)}>
+    <polyline points="6 9 12 15 18 9" />
+  </svg>
+);
+
 export const CalendarIcon = (p) => (
   <svg {...base(p)}>
     <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />

@@ -8,6 +8,7 @@ import {
   replyReceived,
   reactionReceived,
   setMyReaction,
+  messagesDeleted,
 } from '../../features/chat/chatSlice';
 import { getSocket } from '../../lib/socket';
 import Loader from '../Loader';
@@ -56,6 +57,10 @@ export default function ChatTab() {
       typingTimeout.current = setTimeout(() => setTypingUser(''), 2500);
     };
 
+    const onDeleted = ({ communityId: cid, removedIds }) => {
+      if (cid === communityId) dispatch(messagesDeleted({ communityId: cid, removedIds }));
+    };
+
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
     socket.on('chat:joined', onJoined);
@@ -64,6 +69,7 @@ export default function ChatTab() {
     socket.on('chat:reaction', onReaction);
     socket.on('chat:error', onError);
     socket.on('chat:typing', onTyping);
+    socket.on('chat:deleted', onDeleted);
     socket.emit('chat:join', { communityId });
 
     return () => {
@@ -76,6 +82,7 @@ export default function ChatTab() {
       socket.off('chat:reaction', onReaction);
       socket.off('chat:error', onError);
       socket.off('chat:typing', onTyping);
+      socket.off('chat:deleted', onDeleted);
     };
   }, [dispatch, communityId]);
 
@@ -113,6 +120,10 @@ export default function ChatTab() {
 
   const handleEmoji = useCallback((targetType, targetId, emoji) => {
     getSocket().emit('chat:emoji', { targetType, targetId, emoji });
+  }, []);
+
+  const handleDelete = useCallback((targetType, targetId) => {
+    getSocket().emit('chat:delete', { targetType, targetId });
   }, []);
 
   const handleTyping = useCallback(() => {
@@ -161,6 +172,7 @@ export default function ChatTab() {
                 onEmoji={handleEmoji}
                 onReport={setReportTarget}
                 onReply={setReplyTo}
+                onDelete={handleDelete}
                 onScrollToParent={scrollToParent}
                 messageRef={(el) => {
                   msgRefs.current[m._id] = el;

@@ -137,7 +137,7 @@ export const deleteMessage = async (messageId, resolvedBy = null) => {
     { status: 'resolved', resolvedBy, resolvedAt: new Date() }
   );
 
-  return { deletedReplies: replyIds.length };
+  return { deletedReplies: replyIds.length, removedIds: [messageId, ...replyIds] };
 };
 
 /**
@@ -159,5 +159,5 @@ export const deleteMessageReplyCascade = async (replyId, resolvedBy = null) => {
     { status: 'resolved', resolvedBy, resolvedAt: new Date() }
   );
 
-  return allIds.length;
+  return { count: allIds.length, removedIds: allIds };
 };

@@ -71,6 +71,14 @@ const chatSlice = createSlice({
     setMyReaction(state, action) {
       state.myReactions[action.payload.id] = action.payload.value;
     },
+    messagesDeleted(state, action) {
+      const { communityId, removedIds } = action.payload;
+      const bucket = state.byCommunity[communityId];
+      if (!bucket?.timeline) return;
+      const gone = new Set(removedIds.map(String));
+      bucket.timeline = bucket.timeline.filter((t) => !gone.has(String(t._id)));
+      removedIds.forEach((id) => delete state.myReactions[id]);
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -90,6 +98,6 @@ const chatSlice = createSlice({
   },
 });
 
-export const { messageReceived, replyReceived, reactionReceived, setMyReaction } =
+export const { messageReceived, replyReceived, reactionReceived, setMyReaction, messagesDeleted } =
   chatSlice.actions;
 export default chatSlice.reducer;

@@ -4,7 +4,7 @@ import CommunityRail from './CommunityRail';
 import ChannelSidebar from './ChannelSidebar';
 import ThemeToggle from '../ThemeToggle';
 import RequestModeratorModal from '../RequestModeratorModal';
-import { InboxIcon, MenuIcon } from '../icons';
+import { InboxIcon } from '../icons';
 
 const SIDEBAR_KEY = 'unipulse_channel_sidebar';
 
@@ -31,20 +31,11 @@ export default function CommunityShell() {
         <ThemeToggle />
       </header>
 
-      <div className="flex flex-1 min-h-0 relative">
-        <CommunityRail />
-
-        {/* Hamburger toggle — top of channel sidebar, right of community rail */}
-        <button
-          type="button"
-          className="absolute top-2 left-[72px] z-40 btn btn-circle btn-sm bg-base-300 border border-base-content/10 shadow-sm"
-          onClick={() => setSidebarOpen((o) => !o)}
-          title={sidebarOpen ? 'Hide channels' : 'Show channels'}
-          aria-label="Toggle channel sidebar"
-        >
-          <MenuIcon />
-        </button>
-
+      <div className="flex flex-1 min-h-0">
+        <CommunityRail
+          sidebarOpen={sidebarOpen}
+          onToggleSidebar={() => setSidebarOpen((o) => !o)}
+        />
         {sidebarOpen && <ChannelSidebar />}
         <main className="flex-1 flex flex-col min-w-0 min-h-0 bg-base-100 overflow-hidden">
           <Outlet />

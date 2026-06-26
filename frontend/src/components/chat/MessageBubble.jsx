@@ -1,4 +1,4 @@
-import { EmojiIcon, ReplyIcon, FlagIcon, ThumbUpIcon, ThumbDownIcon } from '../icons';
+import { EmojiIcon, ReplyIcon, FlagIcon, ThumbUpIcon, ThumbDownIcon, TrashIcon } from '../icons';
 import UserAvatar from '../UserAvatar';
 
 const QUICK_EMOJIS = ['👍', '❤️', '😂', '🔥', '🎉', '😮', '😢'];
@@ -19,31 +19,29 @@ const groupReactions = (reactions, myId) => {
 function MediaContent({ media, content }) {
   if (media?.url) {
     if (media.mediaType === 'video') {
-      return (
-        <video
-          src={media.url}
-          controls
-          className="max-w-full max-h-72 w-auto block"
-        />
-      );
+      return <video src={media.url} controls className="max-w-full max-h-72 w-auto block" />;
     }
     return (
-      <img
-        src={media.url}
-        alt=""
-        className="max-w-full max-h-72 w-auto block object-contain"
-      />
+      <img src={media.url} alt="" className="max-w-full max-h-72 w-auto block object-contain" />
     );
   }
   if (!content) return null;
   return <p className="text-sm whitespace-pre-wrap break-words px-3 py-2">{content}</p>;
 }
 
-function MessageActions({ targetType, message, onEmoji, onReply, onReport, vertical = true }) {
+function MessageActions({ targetType, message, isOwn, onEmoji, onReply, onReport, onDelete }) {
   return (
-    <div
-      className={`msg-actions flex ${vertical ? 'flex-col' : 'flex-row'} items-center gap-0 bg-base-100 rounded-full shadow border border-base-200 px-0.5 py-0.5 shrink-0`}
-    >
+    <div className="msg-actions flex flex-col items-center gap-0 bg-base-100 rounded-full shadow border border-base-200 px-0.5 py-0.5 shrink-0 self-start">
+      {isOwn && (
+        <button
+          type="button"
+          className="btn btn-ghost btn-xs btn-square text-error"
+          title="Delete"
+          onClick={() => onDelete?.(targetType, message._id)}
+        >
+          <TrashIcon />
+        </button>
+      )}
       <div className="dropdown dropdown-top">
         <button tabIndex={0} className="btn btn-ghost btn-xs btn-square" type="button" title="React">
           <EmojiIcon />
@@ -99,6 +97,7 @@ export default function MessageBubble({
   onEmoji,
   onReport,
   onReply,
+  onDelete,
   onScrollToParent,
   messageRef,
 }) {
@@ -110,7 +109,9 @@ export default function MessageBubble({
   const hasText = Boolean(message.content?.trim());
   const hasReply = Boolean(message.parentMessageId);
 
-  const bubbleBg = isOwn ? 'bg-[#005c4b] text-[#e9edef]' : 'bg-base-300 text-base-content';
+  const bubbleClass = isOwn
+    ? 'bg-primary text-primary-content'
+    : 'bg-base-200 text-base-content';
 
   return (
     <div
@@ -129,93 +130,99 @@ export default function MessageBubble({
         />
 
         <div className={`flex flex-wrap items-end gap-1 min-w-0 max-w-full ${isOwn ? 'flex-row-reverse' : ''}`}>
-          {/* Actions — left of bubble; wraps below on narrow/full-width messages */}
           <MessageActions
             targetType={targetType}
             message={message}
+            isOwn={isOwn}
             onEmoji={onEmoji}
             onReply={onReply}
             onReport={onReport}
+            onDelete={onDelete}
           />
 
-          <div className={`min-w-0 max-w-full rounded-xl overflow-hidden shadow-sm ${bubbleBg}`}>
-            {/* WhatsApp-style quoted reply inside bubble */}
-            {hasReply && (
+          <div className="flex flex-col min-w-0 max-w-full">
+            <div className={`min-w-0 max-w-full rounded-xl overflow-hidden shadow-sm ${bubbleClass}`}>
+              {hasReply && (
+                <button
+                  type="button"
+                  className={`block w-full text-left px-2 pt-2 pb-1 border-l-[3px] ${
+                    isOwn
+                      ? 'border-primary-content/80 bg-primary-content/10'
+                      : 'border-primary bg-base-content/5'
+                  }`}
+                  onClick={() => onScrollToParent?.(message.parentMessageId)}
+                >
+                  <span
+                    className={`text-xs font-semibold block ${
+                      isOwn ? 'text-primary-content' : 'text-primary'
+                    }`}
+                  >
+                    {message.parentAuthor || 'User'}
+                  </span>
+                  <span
+                    className={`text-xs line-clamp-2 block mt-0.5 ${
+                      isOwn ? 'text-primary-content/70' : 'opacity-70'
+                    }`}
+                  >
+                    {message.parentPreview}
+                  </span>
+                </button>
+              )}
+
+              <MediaContent media={message.media} content={hasMedia ? '' : message.content} />
+
+              {hasText && hasMedia && (
+                <p className="text-sm whitespace-pre-wrap break-words px-3 pb-2">{message.content}</p>
+              )}
+
+              <div
+                className={`flex justify-end items-center gap-1 px-2 pb-1 ${
+                  hasMedia || hasText || hasReply ? '' : 'pt-2'
+                }`}
+              >
+                <time className={`text-[10px] ${isOwn ? 'text-primary-content/70' : 'opacity-60'}`}>
+                  {formatTime(message.createdAt)}
+                </time>
+              </div>
+            </div>
+
+            {/* Like / dislike aligned with bubble left edge */}
+            <div className="flex items-center gap-0 mt-0.5">
               <button
                 type="button"
-                className={`block w-full text-left px-2 pt-2 pb-1 border-l-[3px] ${
-                  isOwn ? 'border-[#53bdeb] bg-black/15' : 'border-primary bg-base-content/5'
-                } mx-0`}
-                onClick={() => onScrollToParent?.(message.parentMessageId)}
+                className={`btn btn-xs rounded-full gap-0 px-1.5 min-h-0 h-6 ${
+                  myReaction === 'dislike' ? 'btn-error' : 'btn-ghost'
+                }`}
+                onClick={() =>
+                  onReact(targetType, message._id, myReaction === 'dislike' ? 'none' : 'dislike')
+                }
               >
-                <span
-                  className={`text-xs font-semibold block ${
-                    isOwn ? 'text-[#53bdeb]' : 'text-primary'
-                  }`}
-                >
-                  {message.parentAuthor || 'User'}
-                </span>
-                <span className="text-xs opacity-70 line-clamp-2 block mt-0.5">
-                  {message.parentPreview}
-                </span>
+                <ThumbDownIcon /> <span className="text-xs">{message.dislikeCount || 0}</span>
               </button>
-            )}
-
-            <MediaContent media={message.media} content={hasMedia ? '' : message.content} />
-
-            {hasText && hasMedia && (
-              <p className="text-sm whitespace-pre-wrap break-words px-3 pb-2">{message.content}</p>
-            )}
-
-            <div
-              className={`flex justify-end items-center gap-1 px-2 pb-1 ${
-                hasMedia || hasText || hasReply ? '' : 'pt-2'
-              }`}
-            >
-              <time className="text-[10px] opacity-60">{formatTime(message.createdAt)}</time>
+              <button
+                type="button"
+                className={`btn btn-xs rounded-full gap-0 px-1.5 min-h-0 h-6 -ml-0.5 ${
+                  myReaction === 'like' ? 'btn-primary' : 'btn-ghost'
+                }`}
+                onClick={() =>
+                  onReact(targetType, message._id, myReaction === 'like' ? 'none' : 'like')
+                }
+              >
+                <ThumbUpIcon /> <span className="text-xs">{message.likeCount || 0}</span>
+              </button>
+              {Object.entries(grouped).map(([emoji, { count, mine }]) => (
+                <button
+                  key={emoji}
+                  type="button"
+                  className={`btn btn-xs rounded-full ml-1 min-h-0 h-6 ${mine ? 'btn-secondary' : 'btn-ghost'}`}
+                  onClick={() => onEmoji(targetType, message._id, emoji)}
+                >
+                  {emoji} {count}
+                </button>
+              ))}
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Reactions row */}
-      <div
-        className={`flex items-center gap-0 mt-0.5 w-full ${
-          isOwn ? 'justify-end pr-11' : 'justify-start pl-11'
-        }`}
-      >
-        <button
-          type="button"
-          className={`btn btn-xs rounded-full gap-0 px-1.5 min-h-0 h-6 ${
-            myReaction === 'like' ? 'btn-primary' : 'btn-ghost'
-          }`}
-          onClick={() =>
-            onReact(targetType, message._id, myReaction === 'like' ? 'none' : 'like')
-          }
-        >
-          <ThumbUpIcon /> <span className="text-xs">{message.likeCount || 0}</span>
-        </button>
-        <button
-          type="button"
-          className={`btn btn-xs rounded-full gap-0 px-1.5 min-h-0 h-6 -ml-1 ${
-            myReaction === 'dislike' ? 'btn-error' : 'btn-ghost'
-          }`}
-          onClick={() =>
-            onReact(targetType, message._id, myReaction === 'dislike' ? 'none' : 'dislike')
-          }
-        >
-          <ThumbDownIcon /> <span className="text-xs">{message.dislikeCount || 0}</span>
-        </button>
-        {Object.entries(grouped).map(([emoji, { count, mine }]) => (
-          <button
-            key={emoji}
-            type="button"
-            className={`btn btn-xs rounded-full ml-1 min-h-0 h-6 ${mine ? 'btn-secondary' : 'btn-ghost'}`}
-            onClick={() => onEmoji(targetType, message._id, emoji)}
-          >
-            {emoji} {count}
-          </button>
-        ))}
       </div>
     </div>
   );

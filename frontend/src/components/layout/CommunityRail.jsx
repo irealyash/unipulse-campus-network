@@ -5,9 +5,9 @@ import { NavLink, useParams } from 'react-router-dom';
 import { fetchCommunities } from '../../features/communities/communitiesSlice';
 import { communityAvatar } from '../../lib/avatars';
 import UserAvatar from '../UserAvatar';
-import { SparkleIcon, ShieldIcon } from '../icons';
+import { ShieldIcon, ChevronIcon } from '../icons';
 
-export default function CommunityRail() {
+export default function CommunityRail({ sidebarOpen, onToggleSidebar }) {
   const dispatch = useDispatch();
   const { communityId, tab } = useParams();
   const currentTab = tab || 'chat';
@@ -98,17 +98,24 @@ export default function CommunityRail() {
 
   return (
     <aside className="w-[72px] bg-base-200 flex flex-col border-r border-base-content/10 shrink-0">
-      <div className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col items-center py-3 gap-2">
-        <NavLink
-          to="/c/general/chat"
-          className="btn btn-ghost btn-circle btn-sm text-primary mb-1"
-          title="UniPulse home"
+      <div className="shrink-0 py-2 flex justify-center">
+        <button
+          type="button"
+          className="btn btn-ghost btn-circle btn-sm"
+          onClick={onToggleSidebar}
+          title={sidebarOpen ? 'Hide channels' : 'Show channels'}
+          aria-label="Toggle channel sidebar"
+          aria-expanded={sidebarOpen}
         >
-          <SparkleIcon className="text-xl" />
-        </NavLink>
+          <ChevronIcon
+            className={`text-lg transition-transform duration-200 ${
+              sidebarOpen ? 'rotate-90' : '-rotate-90'
+            }`}
+          />
+        </button>
+      </div>
 
-        <div className="w-8 h-0.5 bg-base-content/10 rounded-full" />
-
+      <div className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col items-center py-1 gap-2">
         {general.map((c) => (
           <Item key={c._id} c={c} />
         ))}

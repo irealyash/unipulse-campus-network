@@ -20,7 +20,7 @@ export default function ChannelSidebar() {
 
   if (isModeratorRoute) {
     return (
-      <aside className="w-60 bg-base-300 flex flex-col min-h-0 border-r border-base-content/10 shrink-0 pt-10">
+      <aside className="w-60 bg-base-300 flex flex-col min-h-0 border-r border-base-content/10 shrink-0">
         <div className="h-12 px-3 flex items-center border-b border-base-content/10">
           <span className="font-bold text-sm flex items-center gap-2">
             <ShieldIcon className="text-secondary" /> Moderator
