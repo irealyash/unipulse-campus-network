@@ -37,32 +37,42 @@ const splitCourseSection = (sectionId) => {
   return [raw];
 };
 
-const courseFontSize = (lines) => {
-  const maxLen = Math.max(...lines.map((l) => l.length));
-  const size = 256;
-  const pad = 18;
-  const lineFactor = lines.length > 1 ? 1.05 : 1;
-  return Math.min(56, Math.max(34, Math.round(((size - pad * 2) / (maxLen * 0.56)) * lineFactor)));
+const COURSE_AVATAR_PAD_RATIO = 0.06;
+const CHAR_WIDTH_EM = 0.52;
+
+const courseAvatarLayout = (sectionId, boxPx = 256) => {
+  const lines = splitCourseSection(sectionId);
+  const pad = Math.max(2, Math.round(boxPx * COURSE_AVATAR_PAD_RATIO));
+  const inner = boxPx - pad * 2;
+  const maxLen = Math.max(...lines.map((l) => l.length), 1);
+  const lineCount = lines.length;
+
+  const fromWidth = inner / (maxLen * CHAR_WIDTH_EM);
+  const fromHeight = inner / (lineCount * 1.02 + Math.max(0, lineCount - 1) * 0.02);
+  const fontSize = Math.min(fromWidth, fromHeight);
+
+  return {
+    lines,
+    fontSize: Math.round(Math.max(boxPx * 0.1, fontSize) * 10) / 10,
+    pad,
+  };
 };
 
 /** White background with the section label centred — used for course communities. */
 export const courseCommunityImage = (sectionId) => {
-  const lines = splitCourseSection(sectionId);
+  const { lines, fontSize, pad } = courseAvatarLayout(sectionId, 256);
   const size = 256;
-  const fontSize = courseFontSize(lines);
   const cx = size / 2;
-  const cy = size / 2;
-  const lineHeight = fontSize * 1.1;
+  const innerTop = pad;
+  const innerBottom = size - pad;
+  const lineHeight = (innerBottom - innerTop) / lines.length;
 
-  const textNodes =
-    lines.length === 1
-      ? `<text x="${cx}" y="${cy}" dominant-baseline="middle" text-anchor="middle" fill="#111111" font-family="${FONT_STACK}" font-size="${fontSize}" font-weight="700">${escapeXml(lines[0])}</text>`
-      : lines
-          .map((line, i) => {
-            const y = cy - lineHeight / 2 + i * lineHeight;
-            return `<text x="${cx}" y="${y}" dominant-baseline="middle" text-anchor="middle" fill="#111111" font-family="${FONT_STACK}" font-size="${fontSize}" font-weight="700">${escapeXml(line)}</text>`;
-          })
-          .join('');
+  const textNodes = lines
+    .map((line, i) => {
+      const y = innerTop + lineHeight * (i + 0.5);
+      return `<text x="${cx}" y="${y}" dominant-baseline="middle" text-anchor="middle" fill="#111111" font-family="${FONT_STACK}" font-size="${fontSize}" font-weight="700">${escapeXml(line)}</text>`;
+    })
+    .join('');
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><rect width="${size}" height="${size}" fill="#ffffff"/>${textNodes}</svg>`;
   return `data:image/svg+xml,${encodeURIComponent(svg)}`;
