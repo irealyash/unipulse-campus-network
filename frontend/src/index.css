@@ -34,7 +34,7 @@ body {
   border-radius: 9999px;
 }
 
-/* Reveal hover-only message actions (used by the chat bubbles). */
+/* Reveal hover-only message actions on the side of bubbles. */
 .msg-row .msg-actions {
   opacity: 0;
   transition: opacity 0.15s ease;
@@ -44,15 +44,10 @@ body {
   opacity: 1;
 }
 
-/* Discord-style reply quote bar */
-.reply-quote {
-  border-left: 3px solid oklch(var(--p));
-  padding-left: 0.5rem;
-  cursor: pointer;
-  opacity: 0.85;
-}
-.reply-quote:hover {
-  opacity: 1;
+@media (max-width: 640px) {
+  .msg-row .msg-actions {
+    opacity: 1;
+  }
 }
 
 /* Gentle entrance animation for new chat bubbles. */

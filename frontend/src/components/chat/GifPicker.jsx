@@ -1,22 +1,31 @@
-import { useState } from 'react';
-import { CloseIcon } from '../icons';
+import { useEffect, useState } from 'react';
+import { CloseIcon, SearchIcon } from '../icons';
 import { searchGifs, trendingGifs } from '../../lib/media';
 
-export default function GifPicker({ open, onClose, onSelect }) {
+/** Inner picker — remounts when opened so trending GIFs load automatically. */
+function GifPickerPanel({ onClose, onSelect }) {
   const [query, setQuery] = useState('');
   const [gifs, setGifs] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const loadTrending = () => {
-    setLoading(true);
+  useEffect(() => {
+    let cancelled = false;
     trendingGifs()
-      .then(setGifs)
-      .catch(() => setGifs([]))
-      .finally(() => setLoading(false));
-  };
+      .then((data) => {
+        if (!cancelled) setGifs(data);
+      })
+      .catch(() => {
+        if (!cancelled) setGifs([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-  const runSearch = async (e) => {
-    e?.preventDefault();
+  const runSearch = async () => {
     setLoading(true);
     try {
       setGifs(await searchGifs(query.trim()));
@@ -27,35 +36,43 @@ export default function GifPicker({ open, onClose, onSelect }) {
     }
   };
 
-  if (!open) return null;
+  const onKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      runSearch();
+    }
+  };
 
   return (
     <div className="absolute bottom-full right-0 mb-2 w-72 max-h-80 bg-base-200 border border-base-content/10 rounded-2xl shadow-xl z-50 flex flex-col overflow-hidden">
       <div className="p-2 border-b border-base-content/10 flex items-center gap-2">
-        <form onSubmit={runSearch} className="flex-1 flex gap-1">
+        <div className="flex-1 flex gap-1">
           <input
             className="input input-bordered input-xs rounded-full flex-1"
             placeholder="Search GIFs…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={onKeyDown}
           />
-          <button type="submit" className="btn btn-primary btn-xs rounded-full">
-            Go
+          <button
+            type="button"
+            className="btn btn-primary btn-xs btn-circle"
+            onClick={runSearch}
+            aria-label="Search GIFs"
+          >
+            <SearchIcon />
           </button>
-        </form>
+        </div>
         <button type="button" className="btn btn-ghost btn-xs btn-circle" onClick={onClose}>
           <CloseIcon />
         </button>
       </div>
-      {gifs.length === 0 && !loading && (
-        <div className="p-2">
-          <button type="button" className="btn btn-ghost btn-xs w-full" onClick={loadTrending}>
-            Load trending GIFs
-          </button>
-        </div>
-      )}
       <div className="flex-1 overflow-y-auto p-2 grid grid-cols-2 gap-1">
         {loading && <p className="col-span-2 text-center text-xs opacity-50 py-4">Loading…</p>}
+        {!loading && gifs.length === 0 && (
+          <p className="col-span-2 text-center text-xs opacity-50 py-4">No GIFs found.</p>
+        )}
         {!loading &&
           gifs.map((g) => (
             <button
@@ -77,4 +94,9 @@ export default function GifPicker({ open, onClose, onSelect }) {
       </div>
     </div>
   );
+}
+
+export default function GifPicker({ open, onClose, onSelect }) {
+  if (!open) return null;
+  return <GifPickerPanel onClose={onClose} onSelect={onSelect} />;
 }

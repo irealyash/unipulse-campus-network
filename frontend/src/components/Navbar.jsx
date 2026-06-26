@@ -54,7 +54,7 @@ export default function Navbar() {
         {user && (
           <div className="dropdown dropdown-end">
             <div tabIndex={0} role="button" className="btn btn-ghost btn-sm gap-2 rounded-full">
-              <UserAvatar user={user} className="w-8 rounded-full" />
+              <UserAvatar user={user} className="w-8 h-8" />
               <span className="hidden sm:inline font-medium">{user.username}</span>
             </div>
             <ul

@@ -134,22 +134,22 @@ export default function ChatTab() {
 
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-3 min-h-0 flex flex-col justify-end"
+        className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-3 min-h-0"
       >
         {chatError && (
-          <div className="alert alert-warning py-2 text-sm mb-2 shrink-0">
+          <div className="alert alert-warning py-2 text-sm mb-2">
             <span>{chatError}</span>
           </div>
         )}
         {loading ? (
           <Loader label="Loading messages…" />
         ) : timeline.length === 0 ? (
-          <div className="text-center text-base-content/50 py-12 shrink-0">
+          <div className="text-center text-base-content/50 py-12">
             <div className="text-4xl mb-2">👋</div>
             <p className="font-medium">No messages yet</p>
           </div>
         ) : (
-          <div className="space-y-3 shrink-0">
+          <div className="space-y-4 pb-2">
             {timeline.map((m) => (
               <MessageBubble
                 key={m._id}

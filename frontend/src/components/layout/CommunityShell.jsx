@@ -4,13 +4,10 @@ import CommunityRail from './CommunityRail';
 import ChannelSidebar from './ChannelSidebar';
 import ThemeToggle from '../ThemeToggle';
 import RequestModeratorModal from '../RequestModeratorModal';
-import { InboxIcon } from '../icons';
+import { InboxIcon, MenuIcon } from '../icons';
 
 const SIDEBAR_KEY = 'unipulse_channel_sidebar';
 
-/**
- * Discord-inspired shell: community rail (left) + channel sidebar + main pane.
- */
 export default function CommunityShell() {
   const [sidebarOpen, setSidebarOpen] = useState(
     () => localStorage.getItem(SIDEBAR_KEY) !== 'closed'
@@ -23,7 +20,6 @@ export default function CommunityShell() {
 
   return (
     <div className="h-screen flex flex-col bg-base-300 overflow-hidden">
-      {/* Thin top utility bar */}
       <header className="h-10 shrink-0 bg-base-200 border-b border-base-content/10 flex items-center justify-end px-3 gap-2">
         <button
           type="button"
@@ -35,9 +31,21 @@ export default function CommunityShell() {
         <ThemeToggle />
       </header>
 
-      <div className="flex flex-1 min-h-0">
+      <div className="flex flex-1 min-h-0 relative">
         <CommunityRail />
-        <ChannelSidebar open={sidebarOpen} onToggle={() => setSidebarOpen((o) => !o)} />
+
+        {/* Hamburger toggle — top of channel sidebar, right of community rail */}
+        <button
+          type="button"
+          className="absolute top-2 left-[72px] z-40 btn btn-circle btn-sm bg-base-300 border border-base-content/10 shadow-sm"
+          onClick={() => setSidebarOpen((o) => !o)}
+          title={sidebarOpen ? 'Hide channels' : 'Show channels'}
+          aria-label="Toggle channel sidebar"
+        >
+          <MenuIcon />
+        </button>
+
+        {sidebarOpen && <ChannelSidebar />}
         <main className="flex-1 flex flex-col min-w-0 min-h-0 bg-base-100 overflow-hidden">
           <Outlet />
         </main>

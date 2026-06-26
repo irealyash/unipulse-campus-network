@@ -56,14 +56,16 @@ export default function ChatInput({
   return (
     <div className="shrink-0 border-t border-base-200 bg-base-100">
       {replyTo && (
-        <div className="px-3 pt-2 flex items-start gap-2 border-l-4 border-primary ml-3 mr-3 mt-2 bg-base-200/50 rounded-r-lg py-2">
-          <div className="flex-1 min-w-0 text-sm">
-            <p className="text-primary font-medium text-xs">Replying to {replyTo.author}</p>
-            <p className="text-base-content/60 truncate text-xs">{replyTo.preview}</p>
+        <div className="mx-3 mt-2 mb-0 rounded-lg overflow-hidden bg-base-300 border-l-[3px] border-primary">
+          <div className="flex items-start gap-2 px-3 py-2">
+            <div className="flex-1 min-w-0 text-sm">
+              <p className="text-primary font-semibold text-xs">{replyTo.author}</p>
+              <p className="text-base-content/60 truncate text-xs mt-0.5">{replyTo.preview}</p>
+            </div>
+            <button type="button" className="btn btn-ghost btn-xs btn-circle shrink-0" onClick={onCancelReply}>
+              <CloseIcon />
+            </button>
           </div>
-          <button type="button" className="btn btn-ghost btn-xs btn-circle" onClick={onCancelReply}>
-            <CloseIcon />
-          </button>
         </div>
       )}
 
