@@ -50,33 +50,64 @@ function VoteColumnLocal(props) {
   return <VoteColumn {...props} />;
 }
 
+function countReplies(replies) {
+  if (!replies?.length) return 0;
+  return replies.reduce((n, r) => n + 1 + countReplies(r.replies), 0);
+}
+
+function CommentItem({ comment, onReply, onReact, depth = 0 }) {
+  const [showReplies, setShowReplies] = useState(false);
+  const directReplies = comment.replies?.length || 0;
+  const totalReplies = countReplies(comment.replies);
+
+  return (
+    <li>
+      <div className="flex gap-2">
+        <VoteColumnLocal
+          score={comment.score}
+          myVote={comment.myVote}
+          onLike={() => onReact(comment._id, comment.myVote === 'like' ? 'none' : 'like')}
+          onDislike={() => onReact(comment._id, comment.myVote === 'dislike' ? 'none' : 'dislike')}
+        />
+        <div className="flex-1 min-w-0">
+          <p className="text-xs text-base-content/50">
+            <span className="font-semibold text-primary">{comment.anonymousUsername}</span> ·{' '}
+            {new Date(comment.createdAt).toLocaleString()}
+          </p>
+          {comment.content && <p className="text-sm mt-0.5 whitespace-pre-wrap">{comment.content}</p>}
+          <CommentMedia media={comment.media} />
+          <div className="flex flex-wrap items-center gap-2 mt-1">
+            <button type="button" className="btn btn-ghost btn-xs" onClick={() => onReply(comment)}>
+              Reply
+            </button>
+            {directReplies > 0 && (
+              <button
+                type="button"
+                className="btn btn-ghost btn-xs text-primary"
+                onClick={() => setShowReplies((v) => !v)}
+              >
+                {showReplies ? '▲ Hide' : '▼ View'} {totalReplies}{' '}
+                {totalReplies === 1 ? 'reply' : 'replies'}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+      {showReplies && directReplies > 0 && (
+        <div className="mt-2 ml-4 border-l-2 border-base-300 pl-3">
+          <CommentTree comments={comment.replies} onReply={onReply} onReact={onReact} depth={depth + 1} />
+        </div>
+      )}
+    </li>
+  );
+}
+
 function CommentTree({ comments, onReply, onReact, depth = 0 }) {
   if (!comments?.length) return null;
   return (
-    <ul className={`space-y-3 ${depth ? 'ml-4 border-l-2 border-base-300 pl-3' : ''}`}>
+    <ul className={`space-y-3 ${depth ? '' : ''}`}>
       {comments.map((c) => (
-        <li key={c._id}>
-          <div className="flex gap-2">
-            <VoteColumnLocal
-              score={c.score}
-              myVote={c.myVote}
-              onLike={() => onReact(c._id, c.myVote === 'like' ? 'none' : 'like')}
-              onDislike={() => onReact(c._id, c.myVote === 'dislike' ? 'none' : 'dislike')}
-            />
-            <div className="flex-1 min-w-0">
-              <p className="text-xs text-base-content/50">
-                <span className="font-semibold text-primary">{c.anonymousUsername}</span> ·{' '}
-                {new Date(c.createdAt).toLocaleString()}
-              </p>
-              {c.content && <p className="text-sm mt-0.5 whitespace-pre-wrap">{c.content}</p>}
-              <CommentMedia media={c.media} />
-              <button type="button" className="btn btn-ghost btn-xs mt-1" onClick={() => onReply(c)}>
-                Reply
-              </button>
-            </div>
-          </div>
-          <CommentTree comments={c.replies} onReply={onReply} onReact={onReact} depth={depth + 1} />
-        </li>
+        <CommentItem key={c._id} comment={c} onReply={onReply} onReact={onReact} depth={depth} />
       ))}
     </ul>
   );

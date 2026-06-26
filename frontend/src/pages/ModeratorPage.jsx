@@ -10,6 +10,8 @@ import {
   modFetchCommunities,
   modDeleteContent,
   modUpdateCommunity,
+  modCreateCommunity,
+  modDeleteCommunity,
   modFetchPendingPosts,
   modApprovePost,
   modRejectPost,
@@ -17,6 +19,7 @@ import {
   modApproveEvent,
   modRejectEvent,
 } from '../features/moderator/moderatorSlice';
+import { fetchCommunities } from '../features/communities/communitiesSlice';
 import { Link } from 'react-router-dom';
 import UserAvatar from '../components/UserAvatar';
 import { communityAvatar, eventAvatar } from '../lib/avatars';
@@ -32,6 +35,8 @@ import {
   CalendarIcon,
   ChatIcon,
 } from '../components/icons';
+
+const PROTECTED_COMMUNITY_IDS = new Set(['general', 'housing', 'marketplace', 'events', 'chess']);
 
 const TABS = [
   { id: 'reports', label: 'Reports', icon: <FlagIcon /> },
@@ -123,15 +128,22 @@ function PostsTab() {
   const dispatch = useDispatch();
   const pendingPosts = useSelector((s) => s.moderator.pendingPosts);
   const [status, setStatus] = useState('pending');
+  const [search, setSearch] = useState('');
+  const [query, setQuery] = useState('');
 
   useEffect(() => {
-    dispatch(modFetchPendingPosts(status));
-  }, [dispatch, status]);
+    dispatch(modFetchPendingPosts({ status, search: query }));
+  }, [dispatch, status, query]);
+
+  const runSearch = (e) => {
+    e.preventDefault();
+    setQuery(search.trim());
+  };
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-bold">Post approvals</h2>
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+        <h2 className="text-lg font-bold">Posts</h2>
         <select
           className="select select-bordered select-sm rounded-full"
           value={status}
@@ -144,8 +156,20 @@ function PostsTab() {
         </select>
       </div>
 
+      <form onSubmit={runSearch} className="flex gap-2 mb-4">
+        <input
+          className="input input-bordered rounded-full flex-1 input-sm"
+          placeholder="Search posts by title, content, author, tag…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <button type="submit" className="btn btn-primary btn-sm rounded-full gap-1">
+          <SearchIcon /> Search
+        </button>
+      </form>
+
       {pendingPosts.length === 0 ? (
-        <EmptyState text="No posts in this queue." />
+        <EmptyState text="No posts found." />
       ) : (
         <div className="grid gap-3">
           {pendingPosts.map((p) => (
@@ -166,22 +190,30 @@ function PostsTab() {
                   by <span className="font-medium">{p.anonymousUsername}</span>
                 </p>
 
-                {p.status === 'pending' && (
-                  <div className="card-actions justify-end mt-2">
-                    <button
-                      className="btn btn-ghost btn-sm rounded-full"
-                      onClick={() => dispatch(modRejectPost(p._id))}
-                    >
-                      Reject
-                    </button>
-                    <button
-                      className="btn btn-primary btn-sm rounded-full"
-                      onClick={() => dispatch(modApprovePost(p._id))}
-                    >
-                      Approve
-                    </button>
-                  </div>
-                )}
+                <div className="card-actions justify-end mt-2 gap-2">
+                  {p.status === 'pending' && (
+                    <>
+                      <button
+                        className="btn btn-ghost btn-sm rounded-full"
+                        onClick={() => dispatch(modRejectPost(p._id))}
+                      >
+                        Reject
+                      </button>
+                      <button
+                        className="btn btn-primary btn-sm rounded-full"
+                        onClick={() => dispatch(modApprovePost(p._id))}
+                      >
+                        Approve
+                      </button>
+                    </>
+                  )}
+                  <button
+                    className="btn btn-error btn-sm rounded-full gap-1"
+                    onClick={() => dispatch(modDeleteContent({ kind: 'posts', id: p._id }))}
+                  >
+                    <TrashIcon /> Delete
+                  </button>
+                </div>
               </div>
             </div>
           ))}
@@ -196,15 +228,22 @@ function ModEventsTab() {
   const dispatch = useDispatch();
   const pendingEvents = useSelector((s) => s.moderator.pendingEvents);
   const [status, setStatus] = useState('pending');
+  const [search, setSearch] = useState('');
+  const [query, setQuery] = useState('');
 
   useEffect(() => {
-    dispatch(modFetchPendingEvents(status));
-  }, [dispatch, status]);
+    dispatch(modFetchPendingEvents({ status, search: query }));
+  }, [dispatch, status, query]);
+
+  const runSearch = (e) => {
+    e.preventDefault();
+    setQuery(search.trim());
+  };
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-bold">Event approvals</h2>
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+        <h2 className="text-lg font-bold">Events</h2>
         <select
           className="select select-bordered select-sm rounded-full"
           value={status}
@@ -217,8 +256,20 @@ function ModEventsTab() {
         </select>
       </div>
 
+      <form onSubmit={runSearch} className="flex gap-2 mb-4">
+        <input
+          className="input input-bordered rounded-full flex-1 input-sm"
+          placeholder="Search events by title or description…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <button type="submit" className="btn btn-primary btn-sm rounded-full gap-1">
+          <SearchIcon /> Search
+        </button>
+      </form>
+
       {pendingEvents.length === 0 ? (
-        <EmptyState text="No events in this queue." />
+        <EmptyState text="No events found." />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           {pendingEvents.map((ev) => (
@@ -242,22 +293,30 @@ function ModEventsTab() {
                   <p className="text-sm text-base-content/80 line-clamp-3">{ev.description}</p>
                 )}
 
-                {ev.status === 'pending' && (
-                  <div className="card-actions justify-end mt-2">
-                    <button
-                      className="btn btn-ghost btn-sm rounded-full"
-                      onClick={() => dispatch(modRejectEvent(ev._id))}
-                    >
-                      Reject
-                    </button>
-                    <button
-                      className="btn btn-primary btn-sm rounded-full"
-                      onClick={() => dispatch(modApproveEvent(ev._id))}
-                    >
-                      Approve
-                    </button>
-                  </div>
-                )}
+                <div className="card-actions justify-end mt-2 gap-2">
+                  {ev.status === 'pending' && (
+                    <>
+                      <button
+                        className="btn btn-ghost btn-sm rounded-full"
+                        onClick={() => dispatch(modRejectEvent(ev._id))}
+                      >
+                        Reject
+                      </button>
+                      <button
+                        className="btn btn-primary btn-sm rounded-full"
+                        onClick={() => dispatch(modApproveEvent(ev._id))}
+                      >
+                        Approve
+                      </button>
+                    </>
+                  )}
+                  <button
+                    className="btn btn-error btn-sm rounded-full gap-1"
+                    onClick={() => dispatch(modDeleteContent({ kind: 'events', id: ev._id }))}
+                  >
+                    <TrashIcon /> Delete
+                  </button>
+                </div>
               </div>
             </div>
           ))}
@@ -473,6 +532,9 @@ function CommunitiesTab() {
   const [editId, setEditId] = useState(null);
   const [editForm, setEditForm] = useState({ name: '', imageUrl: '' });
   const [iconFile, setIconFile] = useState(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createForm, setCreateForm] = useState({ name: '', description: '', id: '' });
+  const [createIconFile, setCreateIconFile] = useState(null);
 
   useEffect(() => {
     dispatch(modFetchCommunities(''));
@@ -499,11 +561,47 @@ function CommunitiesTab() {
     await dispatch(modUpdateCommunity({ communityId: editId, payload: { name: editForm.name, imageUrl } }));
     setEditId(null);
     dispatch(modFetchCommunities(search.trim()));
+    dispatch(fetchCommunities());
   };
+
+  const submitCreate = async (e) => {
+    e.preventDefault();
+    let imageUrl;
+    if (createIconFile) {
+      const up = await uploadMedia(createIconFile);
+      imageUrl = up.url;
+    }
+    await dispatch(
+      modCreateCommunity({
+        name: createForm.name,
+        description: createForm.description,
+        id: createForm.id.trim() || undefined,
+        imageUrl,
+      })
+    );
+    setCreateOpen(false);
+    setCreateForm({ name: '', description: '', id: '' });
+    setCreateIconFile(null);
+    dispatch(modFetchCommunities(search.trim()));
+    dispatch(fetchCommunities());
+  };
+
+  const handleDelete = async (c) => {
+    if (!window.confirm(`Delete community "${c.name}" and all of its content? This cannot be undone.`)) return;
+    await dispatch(modDeleteCommunity(c._id));
+    dispatch(fetchCommunities());
+  };
+
+  const canDelete = (c) => c.type === 'general' && !PROTECTED_COMMUNITY_IDS.has(c._id);
 
   return (
     <div>
-      <h2 className="text-lg font-bold mb-3">All communities</h2>
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+        <h2 className="text-lg font-bold">Communities</h2>
+        <button type="button" className="btn btn-primary btn-sm rounded-full" onClick={() => setCreateOpen(true)}>
+          + New community
+        </button>
+      </div>
       <form onSubmit={doSearch} className="flex gap-2 mb-4">
         <input
           className="input input-bordered rounded-full flex-1"
@@ -539,10 +637,19 @@ function CommunitiesTab() {
                   {c.type}
                 </span>
               </div>
-              <div className="card-actions justify-end mt-2">
+              <div className="card-actions justify-end mt-2 flex-wrap">
                 <button type="button" className="btn btn-ghost btn-xs rounded-full" onClick={() => openEdit(c)}>
                   Edit
                 </button>
+                {canDelete(c) && (
+                  <button
+                    type="button"
+                    className="btn btn-error btn-xs rounded-full gap-1"
+                    onClick={() => handleDelete(c)}
+                  >
+                    <TrashIcon /> Delete
+                  </button>
+                )}
                 <Link to={`/c/${encodeURIComponent(c._id)}/posts`} className="btn btn-primary btn-xs rounded-full">
                   Open
                 </Link>
@@ -551,6 +658,50 @@ function CommunitiesTab() {
           </div>
         ))}
       </div>
+
+      {createOpen && (
+        <div className="modal modal-open">
+          <div className="modal-box rounded-3xl">
+            <h3 className="font-bold">Create community</h3>
+            <form onSubmit={submitCreate} className="flex flex-col gap-3 mt-3">
+              <input
+                className="input input-bordered rounded-2xl"
+                placeholder="Community name"
+                required
+                value={createForm.name}
+                onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+              />
+              <input
+                className="input input-bordered rounded-2xl"
+                placeholder="Custom id (optional, e.g. debate-club)"
+                value={createForm.id}
+                onChange={(e) => setCreateForm({ ...createForm, id: e.target.value })}
+              />
+              <textarea
+                className="textarea textarea-bordered rounded-2xl"
+                placeholder="Description"
+                value={createForm.description}
+                onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
+              />
+              <input
+                type="file"
+                accept="image/*"
+                className="file-input file-input-bordered rounded-2xl w-full"
+                onChange={(e) => setCreateIconFile(e.target.files?.[0] || null)}
+              />
+              <div className="modal-action">
+                <button type="button" className="btn btn-ghost rounded-2xl" onClick={() => setCreateOpen(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary rounded-2xl">
+                  Create
+                </button>
+              </div>
+            </form>
+          </div>
+          <div className="modal-backdrop bg-black/40" onClick={() => setCreateOpen(false)} />
+        </div>
+      )}
 
       {editId && (
         <div className="modal modal-open">

@@ -108,10 +108,34 @@ export const modUpdateCommunity = createAsyncThunk(
   }
 );
 
+export const modCreateCommunity = createAsyncThunk(
+  'mod/createCommunity',
+  async (payload, { rejectWithValue }) => {
+    try {
+      const { data } = await api.post('/moderator/communities', payload);
+      return data.community;
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
+export const modDeleteCommunity = createAsyncThunk(
+  'mod/deleteCommunity',
+  async (communityId, { rejectWithValue }) => {
+    try {
+      const { data } = await api.delete(`/moderator/communities/${encodeURIComponent(communityId)}`);
+      return { communityId, message: data.message };
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
 export const modDeleteContent = createAsyncThunk(
   'mod/deleteContent',
   async ({ kind, id }, { rejectWithValue }) => {
-    // kind: 'posts' | 'comments' | 'messages'
+    // kind: 'posts' | 'comments' | 'messages' | 'events'
     try {
       const { data } = await api.delete(`/moderator/${kind}/${id}`);
       return { kind, id, message: data.message };
@@ -123,9 +147,9 @@ export const modDeleteContent = createAsyncThunk(
 
 export const modFetchPendingPosts = createAsyncThunk(
   'mod/pendingPosts',
-  async (status = 'pending', { rejectWithValue }) => {
+  async ({ status = 'pending', search = '' } = {}, { rejectWithValue }) => {
     try {
-      const { data } = await api.get('/moderator/posts', { params: { status } });
+      const { data } = await api.get('/moderator/posts', { params: { status, search } });
       return data.posts;
     } catch (err) {
       return rejectWithValue(err.message);
@@ -159,9 +183,9 @@ export const modRejectPost = createAsyncThunk(
 
 export const modFetchPendingEvents = createAsyncThunk(
   'mod/pendingEvents',
-  async (status = 'pending', { rejectWithValue }) => {
+  async ({ status = 'pending', search = '' } = {}, { rejectWithValue }) => {
     try {
-      const { data } = await api.get('/moderator/events', { params: { status } });
+      const { data } = await api.get('/moderator/events', { params: { status, search } });
       return data.events;
     } catch (err) {
       return rejectWithValue(err.message);
@@ -221,6 +245,14 @@ const moderatorSlice = createSlice({
         const i = state.communities.findIndex((c) => c._id === action.payload._id);
         if (i >= 0) state.communities[i] = action.payload;
       })
+      .addCase(modCreateCommunity.fulfilled, (state, action) => {
+        state.communities = [action.payload, ...state.communities];
+        state.notice = 'Community created.';
+      })
+      .addCase(modDeleteCommunity.fulfilled, (state, action) => {
+        state.communities = state.communities.filter((c) => c._id !== action.payload.communityId);
+        state.notice = action.payload.message || 'Community deleted.';
+      })
       .addCase(modLookupUser.fulfilled, (state, action) => {
         state.userLookup = action.payload;
       })
@@ -245,6 +277,13 @@ const moderatorSlice = createSlice({
         state.notice = action.payload.isBanned ? 'User banned.' : 'User unbanned.';
       })
       .addCase(modDeleteContent.fulfilled, (state, action) => {
+        const { kind, id } = action.payload;
+        if (kind === 'posts') {
+          state.pendingPosts = state.pendingPosts.filter((p) => p._id !== id);
+        }
+        if (kind === 'events') {
+          state.pendingEvents = state.pendingEvents.filter((e) => e._id !== id);
+        }
         state.notice = action.payload.message || 'Content deleted.';
       })
       .addCase(modFetchPendingPosts.fulfilled, (state, action) => {

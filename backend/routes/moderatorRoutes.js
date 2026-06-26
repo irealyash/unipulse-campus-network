@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { protect, requireModerator } from '../middleware/auth.js';
 import {
   updateCommunity,
+  createCommunity,
+  deleteCommunity,
   listAllCommunities,
   browseCommunityPosts,
   browseCommunityMessages,
@@ -21,6 +23,7 @@ import {
   listEventsForReview,
   approveEvent,
   rejectEvent,
+  deleteAnyEvent,
 } from '../controllers/moderatorController.js';
 
 /**
@@ -63,7 +66,9 @@ router.post('/events/:id/reject', rejectEvent);
 
 // --- Communities & browsing (no access gate for moderators) ---
 router.get('/communities', listAllCommunities);
+router.post('/communities', createCommunity);
 router.patch('/communities/:communityId', updateCommunity);
+router.delete('/communities/:communityId', deleteCommunity);
 router.get('/communities/:communityId/posts', browseCommunityPosts);
 router.get('/communities/:communityId/messages', browseCommunityMessages);
 router.get('/posts/:postId/comments', browsePostComments);
@@ -76,6 +81,7 @@ router.patch('/users/:id/ban', setUserBan);
 router.delete('/posts/:id', deleteAnyPost);
 router.delete('/comments/:id', deleteAnyComment);
 router.delete('/messages/:id', deleteAnyMessage);
+router.delete('/events/:id', deleteAnyEvent);
 
 // --- Reports queue ---
 router.get('/reports', listReports);

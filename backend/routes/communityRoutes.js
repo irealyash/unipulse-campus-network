@@ -1,9 +1,8 @@
 import { Router } from 'express';
-import { protect, requireNotBanned, requireModerator } from '../middleware/auth.js';
+import { protect, requireNotBanned } from '../middleware/auth.js';
 import {
   listCommunities,
   getCommunity,
-  createCommunity
 } from '../controllers/communityController.js';
 import { listPosts, createPost } from '../controllers/postController.js';
 import { listEvents, createEvent } from '../controllers/eventController.js';
@@ -19,7 +18,6 @@ import { getMessages, getChatTimeline } from '../controllers/messageController.j
  * calling createCommunity, so it is unaffected by this restriction.
  *
  *   GET  /api/communities                      -> rooms this user can see
- *   POST /api/communities                      -> create a general community (mod only)
  *   GET  /api/communities/:id                  -> one community (access-gated)
  *
  *   GET  /api/communities/:communityId/posts   -> post feed
@@ -33,7 +31,7 @@ const router = Router();
 router.use(protect);
 
 // Community collection + creation (creation is moderator-only).
-router.route('/').get(listCommunities).post(requireModerator, createCommunity);
+router.route('/').get(listCommunities);
 
 // Nested post feed (declared before "/:id" is fine since paths are distinct).
 router

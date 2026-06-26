@@ -12,6 +12,9 @@ export const GENERAL_COMMUNITIES = [
   { _id: 'chess', name: 'Chess Club', description: 'Casual chess matches and meetups.' },
 ];
 
+/** Built-in communities that cannot be deleted by moderators. */
+export const PROTECTED_COMMUNITY_IDS = new Set(GENERAL_COMMUNITIES.map((c) => c._id));
+
 /**
  * Idempotently ensures the default general communities exist.
  * Called on server boot so a fresh DB never returns 404 for /c/general/...

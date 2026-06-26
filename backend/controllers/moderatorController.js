@@ -9,9 +9,17 @@ import Reported from '../models/Reported.js';
 import ModeratorRequest from '../models/ModeratorRequest.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import ApiError from '../utils/ApiError.js';
-import { deletePostCascade, deleteCommentCascade, deleteMessage } from '../utils/contentDeletion.js';
+import {
+  deletePostCascade,
+  deleteCommentCascade,
+  deleteMessage,
+  deleteCommunityCascade,
+  deleteEventById,
+} from '../utils/contentDeletion.js';
 import { withCommunityImage } from '../utils/avatars.js';
 import MessageReply from '../models/MessageReply.js';
+import { POST_TAGS } from './postController.js';
+import { PROTECTED_COMMUNITY_IDS } from '../utils/ensureCommunities.js';
 
 /**
  * MODERATOR CONTROLLER
@@ -67,6 +75,65 @@ export const updateCommunity = asyncHandler(async (req, res) => {
 
   await community.save();
   res.json({ success: true, community: withCommunityImage(community) });
+});
+
+/**
+ * POST /api/moderator/communities
+ * Body: { name, description?, imageUrl?, id? }
+ * Creates a new general community (moderator tab only).
+ */
+export const createCommunity = asyncHandler(async (req, res) => {
+  const { name, description, imageUrl } = req.body;
+
+  if (!name || !name.trim()) {
+    throw new ApiError(400, 'Community name is required.');
+  }
+
+  const rawId = (req.body.id || name).toString().trim().toLowerCase();
+  const id = rawId.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+
+  if (!id) {
+    throw new ApiError(400, 'Could not derive a valid community id from the name.');
+  }
+
+  const exists = await Community.findById(id);
+  if (exists) {
+    throw new ApiError(409, `A community with id "${id}" already exists.`);
+  }
+
+  const community = await Community.create({
+    _id: id,
+    name: name.trim(),
+    description: description?.trim() || '',
+    imageUrl: imageUrl?.trim() || null,
+    type: 'general',
+    allowedTags: POST_TAGS,
+  });
+
+  res.status(201).json({ success: true, community: withCommunityImage(community) });
+});
+
+/**
+ * DELETE /api/moderator/communities/:communityId
+ * Removes a user-created general community and all of its content.
+ */
+export const deleteCommunity = asyncHandler(async (req, res) => {
+  const community = await Community.findById(req.params.communityId);
+  if (!community) throw new ApiError(404, 'Community not found.');
+
+  if (community.type === 'course') {
+    throw new ApiError(403, 'Course communities cannot be deleted.');
+  }
+  if (PROTECTED_COMMUNITY_IDS.has(community._id)) {
+    throw new ApiError(403, 'Default communities cannot be deleted.');
+  }
+
+  const stats = await deleteCommunityCascade(community._id, req.user._id);
+  res.json({
+    success: true,
+    message: `Community "${community.name}" deleted.`,
+    ...stats,
+  });
 });
 
 /**
@@ -224,6 +291,18 @@ export const deleteAnyMessage = asyncHandler(async (req, res) => {
 
   await deleteMessage(message._id, req.user._id);
   res.json({ success: true, message: 'Message deleted.' });
+});
+
+/**
+ * DELETE /api/moderator/events/:id
+ * Deletes any event.
+ */
+export const deleteAnyEvent = asyncHandler(async (req, res) => {
+  const event = await Event.findById(req.params.id);
+  if (!event) throw new ApiError(404, 'Event not found.');
+
+  await deleteEventById(event._id, req.user._id);
+  res.json({ success: true, message: 'Event deleted.' });
 });
 
 /* ------------------------------------------------------------------ */
@@ -399,6 +478,12 @@ export const listPostsForReview = asyncHandler(async (req, res) => {
   const { page, limit, skip } = paginate(req);
   const filter = status === 'all' ? {} : { status };
 
+  const { search } = req.query;
+  if (search && search.trim()) {
+    const rx = new RegExp(escapeRegex(search.trim()), 'i');
+    filter.$or = [{ title: rx }, { content: rx }, { anonymousUsername: rx }, { tag: rx }];
+  }
+
   const [posts, total] = await Promise.all([
     Post.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean({ virtuals: true }),
     Post.countDocuments(filter)
@@ -462,6 +547,12 @@ export const listEventsForReview = asyncHandler(async (req, res) => {
 
   const { page, limit, skip } = paginate(req);
   const filter = status === 'all' ? {} : { status };
+
+  const { search } = req.query;
+  if (search && search.trim()) {
+    const rx = new RegExp(escapeRegex(search.trim()), 'i');
+    filter.$or = [{ title: rx }, { description: rx }];
+  }
 
   const [events, total] = await Promise.all([
     Event.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),

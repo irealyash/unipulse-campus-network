@@ -2,6 +2,8 @@ import Post from '../models/Post.js';
 import Comment from '../models/Comment.js';
 import Message from '../models/Message.js';
 import MessageReply from '../models/MessageReply.js';
+import Event from '../models/Event.js';
+import Community from '../models/Community.js';
 import Reported from '../models/Reported.js';
 
 /**
@@ -160,4 +162,42 @@ export const deleteMessageReplyCascade = async (replyId, resolvedBy = null) => {
   );
 
   return { count: allIds.length, removedIds: allIds };
+};
+
+/**
+ * Deletes a community and all of its posts, events, and chat history.
+ */
+export const deleteCommunityCascade = async (communityId, resolvedBy = null) => {
+  const posts = await Post.find({ communityId }).select('_id').lean();
+  for (const p of posts) {
+    await deletePostCascade(p._id, resolvedBy);
+  }
+
+  await Event.deleteMany({ communityId });
+
+  const messages = await Message.find({ communityId }).select('_id').lean();
+  for (const m of messages) {
+    await deleteMessage(m._id, resolvedBy);
+  }
+
+  await MessageReply.deleteMany({ communityId });
+  await Community.deleteOne({ _id: communityId });
+
+  return {
+    deletedPosts: posts.length,
+    deletedMessages: messages.length,
+  };
+};
+
+/**
+ * Deletes an event and resolves any pending reports targeting it.
+ */
+export const deleteEventById = async (eventId, resolvedBy = null) => {
+  const exists = await Event.exists({ _id: eventId });
+  if (exists) await Event.deleteOne({ _id: eventId });
+
+  await Reported.updateMany(
+    { contentId: eventId, status: 'pending' },
+    { status: 'resolved', resolvedBy, resolvedAt: new Date() }
+  );
 };
