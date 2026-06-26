@@ -93,7 +93,7 @@ export default function LandingPage() {
       </section>
 
       <footer className="relative z-10 text-center pb-8 text-sm text-base-content/50">
-        Built for UBC · Anonymous by design · Be kind ✨
+        Built for University · Anonymous by design · Be kind ✨
       </footer>
     </div>
   );
