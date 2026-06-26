@@ -40,14 +40,14 @@ export default function LandingPage() {
       {/* Hero */}
       <section className="relative z-10 max-w-4xl mx-auto px-4 text-center pt-16 pb-12">
         <div className="badge badge-secondary badge-lg gap-1 mb-6">
-          <SparkleIcon /> For UBC students only
+          <SparkleIcon /> For University students only
         </div>
         <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight leading-tight">
           Your campus, <span className="text-primary">anonymously</span> connected.
         </h1>
         <p className="mt-5 text-base sm:text-lg text-base-content/70 max-w-2xl mx-auto">
-          Verify with your <span className="font-semibold">@student.ubc.ca</span> email, drop in
-          your class schedule, and instantly join anonymous communities for every course you take —
+          Verify with your <span className="font-semibold">student</span> email, drop in
+          your class schedule, and instantly join anonymous communities for every course you take,
           plus campus-wide rooms for everything else.
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
