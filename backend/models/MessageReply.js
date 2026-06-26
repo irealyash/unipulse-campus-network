@@ -47,7 +47,11 @@ const messageReplySchema = new mongoose.Schema({
   },
   content: {
     type: String,
-    required: true
+    default: ''
+  },
+  media: {
+    url: { type: String, default: null },
+    mediaType: { type: String, enum: ['image', 'video', 'gif', null], default: null },
   },
 
   // Reactions, identical to Message so replies are like/dislike/emoji-able too.

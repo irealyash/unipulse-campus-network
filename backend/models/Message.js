@@ -17,7 +17,11 @@ const messageSchema = new mongoose.Schema({
   },
   content: { 
     type: String, 
-    required: true 
+    default: ''
+  },
+  media: {
+    url: { type: String, default: null },
+    mediaType: { type: String, enum: ['image', 'video', 'gif', null], default: null },
   },
   // Like/dislike reactions (same model as posts/comments): sets of user ids.
   likes: {

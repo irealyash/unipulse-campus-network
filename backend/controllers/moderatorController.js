@@ -9,6 +9,8 @@ import ModeratorRequest from '../models/ModeratorRequest.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import ApiError from '../utils/ApiError.js';
 import { deletePostCascade, deleteCommentCascade, deleteMessage } from '../utils/contentDeletion.js';
+import { withCommunityImage } from '../utils/avatars.js';
+import MessageReply from '../models/MessageReply.js';
 
 /**
  * MODERATOR CONTROLLER
@@ -43,7 +45,27 @@ export const listAllCommunities = asyncHandler(async (req, res) => {
   }
 
   const communities = await Community.find(filter).sort({ type: 1, _id: 1 });
-  res.json({ success: true, count: communities.length, communities });
+  res.json({
+    success: true,
+    count: communities.length,
+    communities: communities.map((c) => withCommunityImage(c)),
+  });
+});
+
+/**
+ * PATCH /api/moderator/communities/:communityId
+ * Body: { name?, imageUrl? }
+ */
+export const updateCommunity = asyncHandler(async (req, res) => {
+  const community = await Community.findById(req.params.communityId);
+  if (!community) throw new ApiError(404, 'Community not found.');
+
+  const { name, imageUrl } = req.body;
+  if (name?.trim()) community.name = name.trim();
+  if (imageUrl !== undefined) community.imageUrl = imageUrl?.trim() || null;
+
+  await community.save();
+  res.json({ success: true, community: withCommunityImage(community) });
 });
 
 /**
@@ -133,12 +155,21 @@ export const lookupUser = asyncHandler(async (req, res) => {
 
   const { page, limit, skip } = paginate(req);
 
-  const [posts, postCount, comments, commentCount] = await Promise.all([
-    Post.find({ authorId: user._id }).sort({ createdAt: -1 }).skip(skip).limit(limit).lean({ virtuals: true }),
-    Post.countDocuments({ authorId: user._id }),
-    Comment.find({ authorId: user._id }).sort({ createdAt: -1 }).skip(skip).limit(limit).lean({ virtuals: true }),
-    Comment.countDocuments({ authorId: user._id })
-  ]);
+  const [posts, postCount, comments, commentCount, messages, messageCount, replies, replyCount] =
+    await Promise.all([
+      Post.find({ authorId: user._id }).sort({ createdAt: -1 }).skip(skip).limit(limit).lean({ virtuals: true }),
+      Post.countDocuments({ authorId: user._id }),
+      Comment.find({ authorId: user._id }).sort({ createdAt: -1 }).skip(skip).limit(limit).lean({ virtuals: true }),
+      Comment.countDocuments({ authorId: user._id }),
+      Message.find({ senderId: user._id }).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+      Message.countDocuments({ senderId: user._id }),
+      MessageReply.find({ senderId: user._id }).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+      MessageReply.countDocuments({ senderId: user._id }),
+    ]);
+
+  const chatItems = [...messages, ...replies]
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .slice(0, limit);
 
   res.json({
     success: true,
@@ -146,7 +177,8 @@ export const lookupUser = asyncHandler(async (req, res) => {
     page,
     limit,
     posts: { total: postCount, items: posts },
-    comments: { total: commentCount, items: comments }
+    comments: { total: commentCount, items: comments },
+    messages: { total: messageCount + replyCount, items: chatItems },
   });
 });
 

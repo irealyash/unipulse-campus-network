@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { protect, requireModerator } from '../middleware/auth.js';
 import {
+  updateCommunity,
   listAllCommunities,
   browseCommunityPosts,
   browseCommunityMessages,
@@ -46,6 +47,7 @@ router.use(protect, requireModerator);
 
 // --- Communities & browsing (no access gate for moderators) ---
 router.get('/communities', listAllCommunities);
+router.patch('/communities/:communityId', updateCommunity);
 router.get('/communities/:communityId/posts', browseCommunityPosts);
 router.get('/communities/:communityId/messages', browseCommunityMessages);
 router.get('/posts/:postId/comments', browsePostComments);

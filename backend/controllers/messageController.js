@@ -1,4 +1,5 @@
 import Message from '../models/Message.js';
+import MessageReply from '../models/MessageReply.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import ApiError from '../utils/ApiError.js';
 import { assertCommunityAccess } from '../utils/membership.js';
@@ -40,9 +41,48 @@ export const getMessages = asyncHandler(async (req, res) => {
   res.json({
     success: true,
     count: messages.length,
-    // Return chronological (oldest -> newest) so the client can append directly.
     messages: messages.reverse()
   });
+});
+
+/**
+ * GET /api/communities/:communityId/timeline?limit=100
+ * Merged chronological feed of messages + replies for the chat UI.
+ */
+export const getChatTimeline = asyncHandler(async (req, res) => {
+  const { communityId } = req.params;
+  await assertCommunityAccess(req.user, communityId);
+
+  const limit = Math.min(Math.max(parseInt(req.query.limit || '100', 10), 1), 200);
+
+  const [messages, replies] = await Promise.all([
+    Message.find({ communityId }).sort({ createdAt: 1 }).limit(limit).lean({ virtuals: true }),
+    MessageReply.find({ communityId }).sort({ createdAt: 1 }).limit(limit * 2).lean({ virtuals: true }),
+  ]);
+
+  const byId = new Map();
+  messages.forEach((m) => byId.set(m._id.toString(), m));
+  replies.forEach((r) => byId.set(r._id.toString(), r));
+
+  const parentMeta = (parentId) => {
+    const p = byId.get(parentId?.toString());
+    if (!p) return { parentAuthor: null, parentPreview: '' };
+    return {
+      parentAuthor: p.anonymousUsername,
+      parentPreview: p.content?.slice(0, 120) || (p.media?.url ? '[media]' : ''),
+    };
+  };
+
+  const items = [
+    ...messages.map((m) => ({ ...m, itemType: 'message' })),
+    ...replies.map((r) => ({
+      ...r,
+      itemType: 'reply',
+      ...parentMeta(r.parentMessageId),
+    })),
+  ].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
+  res.json({ success: true, count: items.length, items });
 });
 
 /**

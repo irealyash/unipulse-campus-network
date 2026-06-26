@@ -12,7 +12,7 @@ const STORAGE_KEY = 'unipulse_theme';
  * dropdown) so the options are always reliably clickable.
  */
 export default function ThemeToggle() {
-  const [theme, setTheme] = useState(() => localStorage.getItem(STORAGE_KEY) || 'cupcake');
+  const [theme, setTheme] = useState(() => localStorage.getItem(STORAGE_KEY) || 'dracula');
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 

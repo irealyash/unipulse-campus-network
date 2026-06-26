@@ -5,7 +5,7 @@
    kicks in for users who prefer dark mode. The theme switcher in the navbar
    lets users pick any of these. */
 @plugin "daisyui" {
-  themes: cupcake --default, dracula --prefersdark, bumblebee, valentine, pastel, night, aqua;
+  themes: dracula --default, cupcake, bumblebee, valentine, pastel, night, aqua;
 }
 
 /* ---- Small global niceties ---------------------------------------------- */
@@ -41,6 +41,17 @@ body {
 }
 .msg-row:hover .msg-actions,
 .msg-row:focus-within .msg-actions {
+  opacity: 1;
+}
+
+/* Discord-style reply quote bar */
+.reply-quote {
+  border-left: 3px solid oklch(var(--p));
+  padding-left: 0.5rem;
+  cursor: pointer;
+  opacity: 0.85;
+}
+.reply-quote:hover {
   opacity: 1;
 }
 

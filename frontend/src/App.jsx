@@ -22,13 +22,11 @@ import NotFoundPage from './pages/NotFoundPage';
 import CommunityHub, { CommunityRedirect } from './pages/CommunityHub';
 import CommunityTabView from './pages/CommunityTabView';
 
-/** Redirect legacy /communities/:id URLs to the new shell. */
 function LegacyCommunityRedirect() {
   const { id } = useParams();
   return <Navigate to={`/c/${encodeURIComponent(id)}/chat`} replace />;
 }
 
-/** Layout for settings / moderator pages (top navbar). */
 function AppLayout() {
   return (
     <div className="min-h-screen bg-base-200/40">
@@ -70,7 +68,6 @@ export default function App() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-        {/* Discord-style community shell */}
         <Route
           path="/c"
           element={
@@ -80,12 +77,20 @@ export default function App() {
           }
         >
           <Route index element={<CommunityRedirect />} />
+          <Route
+            path="moderator"
+            element={
+              <ProtectedRoute moderatorOnly>
+                <ModeratorPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path=":communityId/:tab" element={<CommunityTabView />} />
         </Route>
 
-        {/* Legacy community URLs */}
         <Route path="/communities" element={<Navigate to="/c" replace />} />
         <Route path="/communities/:id" element={<LegacyCommunityRedirect />} />
+        <Route path="/moderator" element={<Navigate to="/c/moderator" replace />} />
 
         <Route element={<AppLayout />}>
           <Route
@@ -101,14 +106,6 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <SettingsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/moderator"
-            element={
-              <ProtectedRoute moderatorOnly>
-                <ModeratorPage />
               </ProtectedRoute>
             }
           />

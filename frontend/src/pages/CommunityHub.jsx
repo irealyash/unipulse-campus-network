@@ -36,7 +36,7 @@ export default function CommunityHub() {
   }
 
   // Unknown community id -> fall back to general
-  if (communityId && list.length && !list.some((c) => c._id === communityId)) {
+  if (communityId && communityId !== 'moderator' && list.length && !list.some((c) => c._id === communityId)) {
     return <Navigate to="/c/general/chat" replace />;
   }
 

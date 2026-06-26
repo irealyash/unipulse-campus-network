@@ -38,7 +38,7 @@ export default function CommunityShell() {
       <div className="flex flex-1 min-h-0">
         <CommunityRail />
         <ChannelSidebar open={sidebarOpen} onToggle={() => setSidebarOpen((o) => !o)} />
-        <main className="flex-1 flex flex-col min-w-0 min-h-0 bg-base-100">
+        <main className="flex-1 flex flex-col min-w-0 min-h-0 bg-base-100 overflow-hidden">
           <Outlet />
         </main>
       </div>

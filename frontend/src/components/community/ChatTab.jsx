@@ -3,8 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
 import { fetchCommunity } from '../../features/communities/communitiesSlice';
 import {
-  fetchMessages,
-  fetchReplies,
+  fetchTimeline,
   messageReceived,
   replyReceived,
   reactionReceived,
@@ -16,31 +15,30 @@ import MessageBubble from '../chat/MessageBubble';
 import ChatInput from '../chat/ChatInput';
 import ReportModal from '../chat/ReportModal';
 
-/** Group chat tab inside the Discord-style community shell. */
+/** Group chat — bottom-aligned timeline, Discord-style replies. */
 export default function ChatTab() {
   const { communityId } = useParams();
   const dispatch = useDispatch();
   const user = useSelector((s) => s.auth.user);
   const bucket = useSelector((s) => s.chat.byCommunity[communityId]);
-  const repliesByMessage = useSelector((s) => s.chat.repliesByMessage);
   const myReactions = useSelector((s) => s.chat.myReactions);
 
-  const messages = bucket?.messages || [];
+  const timeline = bucket?.timeline || [];
   const loading = !bucket || bucket.status === 'loading';
 
   const [connected, setConnected] = useState(() => getSocket().connected);
   const [chatError, setChatError] = useState('');
   const [typingUser, setTypingUser] = useState('');
-  const [openReplies, setOpenReplies] = useState({});
-  const [loadingReplies, setLoadingReplies] = useState({});
   const [reportTarget, setReportTarget] = useState(null);
+  const [replyTo, setReplyTo] = useState(null);
 
-  const bottomRef = useRef(null);
+  const scrollRef = useRef(null);
+  const msgRefs = useRef({});
   const typingTimeout = useRef(null);
 
   useEffect(() => {
     dispatch(fetchCommunity(communityId));
-    dispatch(fetchMessages(communityId));
+    dispatch(fetchTimeline(communityId));
   }, [dispatch, communityId]);
 
   useEffect(() => {
@@ -82,18 +80,28 @@ export default function ChatTab() {
   }, [dispatch, communityId]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages.length, openReplies]);
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [timeline.length]);
+
+  const scrollToParent = useCallback((parentId) => {
+    const el = document.getElementById(`msg-${parentId}`);
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el?.classList.add('ring-2', 'ring-primary', 'rounded-lg');
+    setTimeout(() => el?.classList.remove('ring-2', 'ring-primary', 'rounded-lg'), 1500);
+  }, []);
 
   const handleSend = useCallback(
-    (content) => getSocket().emit('chat:message', { communityId, content }),
+    ({ content, media, parentId }) => {
+      const socket = getSocket();
+      if (parentId) {
+        socket.emit('chat:reply', { parentId, content, media });
+      } else {
+        socket.emit('chat:message', { communityId, content, media });
+      }
+    },
     [communityId]
   );
-
-  const handleSendReply = useCallback((messageId, content) => {
-    getSocket().emit('chat:reply', { parentId: messageId, content });
-    setOpenReplies((prev) => ({ ...prev, [messageId]: true }));
-  }, []);
 
   const handleReact = useCallback(
     (targetType, targetId, action) => {
@@ -111,24 +119,8 @@ export default function ChatTab() {
     getSocket().emit('chat:typing', { communityId });
   }, [communityId]);
 
-  const handleToggleReplies = useCallback(
-    (messageId) => {
-      setOpenReplies((prev) => {
-        const next = { ...prev, [messageId]: !prev[messageId] };
-        if (next[messageId] && !repliesByMessage[messageId]) {
-          setLoadingReplies((l) => ({ ...l, [messageId]: true }));
-          dispatch(fetchReplies(messageId)).finally(() =>
-            setLoadingReplies((l) => ({ ...l, [messageId]: false }))
-          );
-        }
-        return next;
-      });
-    },
-    [dispatch, repliesByMessage]
-  );
-
   return (
-    <div className="flex flex-col h-full min-h-0">
+    <div className="flex flex-col h-full min-h-0 overflow-hidden">
       <div className="h-10 shrink-0 px-4 flex items-center border-b border-base-200 text-xs text-base-content/60">
         {typingUser ? (
           <span className="text-primary">{typingUser} is typing…</span>
@@ -140,44 +132,52 @@ export default function ChatTab() {
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 bg-base-200/20 min-h-0">
+      <div
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-3 min-h-0 flex flex-col justify-end"
+      >
         {chatError && (
-          <div className="alert alert-warning py-2 text-sm">
+          <div className="alert alert-warning py-2 text-sm mb-2 shrink-0">
             <span>{chatError}</span>
           </div>
         )}
         {loading ? (
           <Loader label="Loading messages…" />
-        ) : messages.length === 0 ? (
-          <div className="h-full grid place-items-center text-center text-base-content/50 py-20">
-            <div>
-              <div className="text-4xl mb-2">👋</div>
-              <p className="font-medium">No messages yet</p>
-            </div>
+        ) : timeline.length === 0 ? (
+          <div className="text-center text-base-content/50 py-12 shrink-0">
+            <div className="text-4xl mb-2">👋</div>
+            <p className="font-medium">No messages yet</p>
           </div>
         ) : (
-          messages.map((m) => (
-            <MessageBubble
-              key={m._id}
-              message={m}
-              myUsername={user?.username}
-              myId={user?.id}
-              myReactions={myReactions}
-              onReact={handleReact}
-              onEmoji={handleEmoji}
-              onReport={setReportTarget}
-              replies={repliesByMessage[m._id] || []}
-              repliesOpen={!!openReplies[m._id]}
-              repliesLoading={!!loadingReplies[m._id]}
-              onToggleReplies={handleToggleReplies}
-              onSendReply={handleSendReply}
-            />
-          ))
+          <div className="space-y-3 shrink-0">
+            {timeline.map((m) => (
+              <MessageBubble
+                key={m._id}
+                message={m}
+                myUsername={user?.username}
+                myId={user?.id}
+                myReactions={myReactions}
+                onReact={handleReact}
+                onEmoji={handleEmoji}
+                onReport={setReportTarget}
+                onReply={setReplyTo}
+                onScrollToParent={scrollToParent}
+                messageRef={(el) => {
+                  msgRefs.current[m._id] = el;
+                }}
+              />
+            ))}
+          </div>
         )}
-        <div ref={bottomRef} />
       </div>
 
-      <ChatInput onSend={handleSend} onTyping={handleTyping} disabled={!connected} />
+      <ChatInput
+        onSend={handleSend}
+        onTyping={handleTyping}
+        disabled={!connected}
+        replyTo={replyTo}
+        onCancelReply={() => setReplyTo(null)}
+      />
 
       <ReportModal open={!!reportTarget} onClose={() => setReportTarget(null)} target={reportTarget} />
     </div>

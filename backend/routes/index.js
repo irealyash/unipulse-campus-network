@@ -9,6 +9,7 @@ import messageRoutes from './messageRoutes.js';
 import messageReplyRoutes from './messageReplyRoutes.js';
 import reportRoutes from './reportRoutes.js';
 import requestRoutes from './requestRoutes.js';
+import uploadRoutes from './uploadRoutes.js';
 import moderatorRoutes from './moderatorRoutes.js';
 
 /**
@@ -33,5 +34,6 @@ router.use('/message-replies', messageReplyRoutes);
 router.use('/reports', reportRoutes);
 router.use('/requests', requestRoutes);
 router.use('/moderator', moderatorRoutes);
+router.use('/uploads', uploadRoutes);
 
 export default router;

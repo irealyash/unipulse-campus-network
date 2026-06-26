@@ -7,7 +7,7 @@ import {
 } from '../controllers/communityController.js';
 import { listPosts, createPost } from '../controllers/postController.js';
 import { listEvents, createEvent } from '../controllers/eventController.js';
-import { getMessages } from '../controllers/messageController.js';
+import { getMessages, getChatTimeline } from '../controllers/messageController.js';
 
 /**
  * Community routes, plus the community-scoped collections nested beneath them
@@ -48,6 +48,7 @@ router
   .post(requireModerator, createEvent);
 
 // Nested chat history (sending happens over Socket.io).
+router.get('/:communityId/timeline', getChatTimeline);
 router.get('/:communityId/messages', getMessages);
 
 // Single community lookup.

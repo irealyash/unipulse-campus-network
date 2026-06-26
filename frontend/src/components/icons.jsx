@@ -76,6 +76,21 @@ export const SendIcon = (p) => (
   </svg>
 );
 
+export const GifIcon = (p) => (
+  <svg {...base(p)}>
+    <rect x="2" y="4" width="20" height="16" rx="2" />
+    <path d="M6 8h4M6 12h8" strokeWidth="1.5" />
+  </svg>
+);
+
+export const ImageIcon = (p) => (
+  <svg {...base(p)}>
+    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+    <circle cx="8.5" cy="8.5" r="1.5" />
+    <polyline points="21 15 16 10 5 21" />
+  </svg>
+);
+
 export const CalendarIcon = (p) => (
   <svg {...base(p)}>
     <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />

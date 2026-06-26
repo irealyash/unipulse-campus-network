@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
 import { fetchEvents, createEvent, rsvpEvent } from '../../features/events/eventsSlice';
 import { eventAvatar } from '../../lib/avatars';
+import { uploadMedia } from '../../lib/media';
 import Loader from '../Loader';
 import { CalendarIcon } from '../icons';
 
@@ -14,12 +15,8 @@ export default function EventsTab() {
   const bucket = useSelector((s) => s.events.byCommunity[communityId]);
 
   const [createOpen, setCreateOpen] = useState(false);
-  const [form, setForm] = useState({
-    title: '',
-    description: '',
-    eventDate: '',
-    imageUrl: '',
-  });
+  const [form, setForm] = useState({ title: '', description: '', eventDate: '' });
+  const [imageFile, setImageFile] = useState(null);
 
   useEffect(() => {
     dispatch(fetchEvents({ communityId }));
@@ -30,6 +27,11 @@ export default function EventsTab() {
 
   const submitEvent = async (e) => {
     e.preventDefault();
+    let imageUrl;
+    if (imageFile) {
+      const uploaded = await uploadMedia(imageFile);
+      imageUrl = uploaded.url;
+    }
     await dispatch(
       createEvent({
         communityId,
@@ -37,12 +39,13 @@ export default function EventsTab() {
           title: form.title,
           description: form.description,
           eventDate: new Date(form.eventDate).toISOString(),
-          imageUrl: form.imageUrl || undefined,
+          imageUrl,
         },
       })
     );
     setCreateOpen(false);
-    setForm({ title: '', description: '', eventDate: '', imageUrl: '' });
+    setForm({ title: '', description: '', eventDate: '' });
+    setImageFile(null);
   };
 
   const handleRsvp = (eventId, status) => {
@@ -153,10 +156,10 @@ export default function EventsTab() {
                 onChange={(e) => setForm({ ...form, eventDate: e.target.value })}
               />
               <input
-                className="input input-bordered rounded-2xl"
-                placeholder="Cover image URL (optional)"
-                value={form.imageUrl}
-                onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
+                type="file"
+                accept="image/*"
+                className="file-input file-input-bordered rounded-2xl w-full"
+                onChange={(e) => setImageFile(e.target.files?.[0] || null)}
               />
               <div className="modal-action">
                 <button type="button" className="btn btn-ghost rounded-2xl" onClick={() => setCreateOpen(false)}>

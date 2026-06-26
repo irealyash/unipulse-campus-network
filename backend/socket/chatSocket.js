@@ -163,10 +163,11 @@ export const initChat = (io) => {
      * Validates access + content, persists the message with the sender's current
      * alias, then broadcasts it to everyone in the room (including the sender).
      */
-    socket.on('chat:message', async ({ communityId, content } = {}) => {
+    socket.on('chat:message', async ({ communityId, content, media } = {}) => {
       try {
-        if (!communityId || !content || !content.trim()) {
-          return socket.emit(EVT.ERROR, { message: 'communityId and content are required.' });
+        const hasMedia = media?.url;
+        if (!communityId || (!content?.trim() && !hasMedia)) {
+          return socket.emit(EVT.ERROR, { message: 'communityId and content or media are required.' });
         }
 
         // Always re-validate access on every message (don't trust the join state alone).
@@ -186,15 +187,18 @@ export const initChat = (io) => {
           communityId,
           senderId: freshUser._id,
           anonymousUsername: freshUser.username,
-          content: content.trim()
+          content: content?.trim() || '',
+          media: hasMedia
+            ? { url: media.url, mediaType: media.mediaType || 'image' }
+            : { url: null, mediaType: null },
         });
 
-        // Broadcast to the whole room. io.to(room) includes the sender.
         io.to(communityId).emit(EVT.MESSAGE, {
           id: message._id,
           communityId,
           anonymousUsername: message.anonymousUsername,
           content: message.content,
+          media: message.media,
           likes: 0,
           dislikes: 0,
           reactions: [],
@@ -210,10 +214,11 @@ export const initChat = (io) => {
      * Posts a live reply to a message OR another reply. parentId may point at a
      * Message or a MessageReply; we auto-detect and inherit its community.
      */
-    socket.on('chat:reply', async ({ parentId, content } = {}) => {
+    socket.on('chat:reply', async ({ parentId, content, media } = {}) => {
       try {
-        if (!parentId || !content || !content.trim()) {
-          return socket.emit(EVT.ERROR, { message: 'parentId and content are required.' });
+        const hasMedia = media?.url;
+        if (!parentId || (!content?.trim() && !hasMedia)) {
+          return socket.emit(EVT.ERROR, { message: 'parentId and content or media are required.' });
         }
 
         // Auto-detect the parent: a root message first, otherwise a reply.
@@ -240,7 +245,10 @@ export const initChat = (io) => {
           parentType,
           senderId: freshUser._id,
           anonymousUsername: freshUser.username,
-          content: content.trim()
+          content: content?.trim() || '',
+          media: hasMedia
+            ? { url: media.url, mediaType: media.mediaType || 'image' }
+            : { url: null, mediaType: null },
         });
 
         io.to(parent.communityId).emit(EVT.REPLY, {
@@ -248,8 +256,11 @@ export const initChat = (io) => {
           communityId: reply.communityId,
           parentMessageId: parentId,
           parentType,
+          parentAuthor: parent.anonymousUsername,
+          parentPreview: parent.content?.slice(0, 120) || (parent.media?.url ? '[media]' : ''),
           anonymousUsername: reply.anonymousUsername,
           content: reply.content,
+          media: reply.media,
           createdAt: reply.createdAt
         });
       } catch (err) {

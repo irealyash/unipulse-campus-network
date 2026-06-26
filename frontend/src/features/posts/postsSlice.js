@@ -36,14 +36,17 @@ export const fetchPost = createAsyncThunk('posts/one', async (postId, { rejectWi
   }
 });
 
-export const fetchComments = createAsyncThunk('posts/comments', async (postId, { rejectWithValue }) => {
-  try {
-    const { data } = await api.get(`/posts/${postId}/comments`);
-    return { postId, comments: data.comments };
-  } catch (err) {
-    return rejectWithValue(err.message);
+export const fetchComments = createAsyncThunk(
+  'posts/comments',
+  async ({ postId, sort = 'new' }, { rejectWithValue }) => {
+    try {
+      const { data } = await api.get(`/posts/${postId}/comments`, { params: { sort } });
+      return { postId, comments: data.comments };
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
   }
-});
+);
 
 export const createComment = createAsyncThunk(
   'posts/comment',

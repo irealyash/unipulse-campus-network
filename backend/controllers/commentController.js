@@ -1,10 +1,11 @@
+import mongoose from 'mongoose';
 import Comment from '../models/Comment.js';
 import Post from '../models/Post.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import ApiError from '../utils/ApiError.js';
 import { assertCommunityAccess } from '../utils/membership.js';
 import { applyLikeDislike } from '../utils/likeDislike.js';
-import { toggleEmojiReaction } from '../utils/emojiReaction.js';
+import { toggleSingleEmojiReaction } from '../utils/emojiReaction.js';
 import { deleteCommentCascade } from '../utils/contentDeletion.js';
 
 /**
@@ -26,8 +27,22 @@ export const listComments = asyncHandler(async (req, res) => {
   if (!post) throw new ApiError(404, 'Post not found.');
   await assertCommunityAccess(req.user, post.communityId);
 
-  // Fetch every comment for the post in one query, oldest first.
-  const flat = await Comment.find({ postId }).sort({ createdAt: 1 }).lean({ virtuals: true });
+  const sort = req.query.sort === 'top' ? 'top' : 'new';
+
+  let flat;
+  if (sort === 'top') {
+    flat = await Comment.aggregate([
+      { $match: { postId: new mongoose.Types.ObjectId(postId) } },
+      {
+        $addFields: {
+          score: { $subtract: [{ $size: '$likes' }, { $size: '$dislikes' }] },
+        },
+      },
+      { $sort: { score: -1, createdAt: -1 } },
+    ]);
+  } else {
+    flat = await Comment.find({ postId }).sort({ createdAt: 1 }).lean({ virtuals: true });
+  }
 
   // Build a tree: index by id, then attach each comment to its parent's replies.
   const byId = new Map();
@@ -117,7 +132,7 @@ export const reactToCommentWithEmoji = asyncHandler(async (req, res) => {
   const post = await Post.findById(comment.postId);
   if (post) await assertCommunityAccess(req.user, post.communityId);
 
-  const state = toggleEmojiReaction(comment, req.user._id, req.body.emoji);
+  const state = toggleSingleEmojiReaction(comment, req.user._id, req.body.emoji);
   await comment.save();
 
   res.json({ success: true, state, reactions: comment.reactions, comment });

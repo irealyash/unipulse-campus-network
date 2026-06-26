@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import { changeUsername } from '../features/auth/authSlice';
+import UserAvatar from '../components/UserAvatar';
 import { CalendarIcon, ShieldIcon } from '../components/icons';
 
 /**
@@ -39,11 +40,7 @@ export default function SettingsPage() {
       <div className="card bg-base-100 shadow-md border border-base-content/5 mb-6">
         <div className="card-body">
           <div className="flex items-center gap-4">
-            <div className="avatar avatar-placeholder">
-              <div className="bg-primary text-primary-content w-16 rounded-2xl">
-                <span className="text-2xl">{user?.username?.[0]?.toUpperCase()}</span>
-              </div>
-            </div>
+            <UserAvatar user={user} className="w-16 rounded-2xl" />
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-xl font-bold">{user?.username}</h2>

@@ -93,6 +93,21 @@ export const modBanUser = createAsyncThunk(
   }
 );
 
+export const modUpdateCommunity = createAsyncThunk(
+  'mod/updateCommunity',
+  async ({ communityId, payload }, { rejectWithValue }) => {
+    try {
+      const { data } = await api.patch(
+        `/moderator/communities/${encodeURIComponent(communityId)}`,
+        payload
+      );
+      return data.community;
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
 export const modDeleteContent = createAsyncThunk(
   'mod/deleteContent',
   async ({ kind, id }, { rejectWithValue }) => {
@@ -127,6 +142,10 @@ const moderatorSlice = createSlice({
     builder
       .addCase(modFetchCommunities.fulfilled, (state, action) => {
         state.communities = action.payload;
+      })
+      .addCase(modUpdateCommunity.fulfilled, (state, action) => {
+        const i = state.communities.findIndex((c) => c._id === action.payload._id);
+        if (i >= 0) state.communities[i] = action.payload;
       })
       .addCase(modLookupUser.fulfilled, (state, action) => {
         state.userLookup = action.payload;

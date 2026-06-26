@@ -9,7 +9,12 @@ import {
   modBanUser,
   modFetchCommunities,
   modDeleteContent,
+  modUpdateCommunity,
 } from '../features/moderator/moderatorSlice';
+import { Link } from 'react-router-dom';
+import UserAvatar from '../components/UserAvatar';
+import { communityAvatar } from '../lib/avatars';
+import { uploadMedia } from '../lib/media';
 import {
   ShieldIcon,
   FlagIcon,
@@ -176,10 +181,14 @@ function UsersTab() {
   const dispatch = useDispatch();
   const lookup = useSelector((s) => s.moderator.userLookup);
   const [identifier, setIdentifier] = useState('');
+  const [expanded, setExpanded] = useState(false);
 
   const search = (e) => {
     e.preventDefault();
-    if (identifier.trim()) dispatch(modLookupUser(identifier.trim()));
+    if (identifier.trim()) {
+      dispatch(modLookupUser(identifier.trim()));
+      setExpanded(false);
+    }
   };
 
   const u = lookup?.user;
@@ -201,15 +210,15 @@ function UsersTab() {
 
       {u && (
         <div className="card bg-base-100 border border-base-200 shadow-sm mb-4">
-          <div className="card-body p-4">
+          <button
+            type="button"
+            className="card-body p-4 text-left w-full"
+            onClick={() => setExpanded((e) => !e)}
+          >
             <div className="flex items-center gap-3">
-              <div className="avatar avatar-placeholder">
-                <div className="bg-primary text-primary-content w-12 rounded-2xl">
-                  <span className="text-xl">{u.username?.[0]?.toUpperCase()}</span>
-                </div>
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
+              <UserAvatar user={u} className="w-12 rounded-2xl" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
                   <h3 className="font-bold">{u.username}</h3>
                   {u.moderator && <span className="badge badge-secondary badge-sm">Mod</span>}
                   {u.isBanned && <span className="badge badge-error badge-sm">Banned</span>}
@@ -217,30 +226,25 @@ function UsersTab() {
                 <p className="text-sm text-base-content/60">{u.email}</p>
                 <p className="text-xs font-mono text-base-content/40 break-all">id: {u.id}</p>
               </div>
-              {!u.moderator && (
-                <button
-                  className={`btn btn-sm rounded-full ${u.isBanned ? 'btn-success' : 'btn-error'}`}
-                  onClick={() => dispatch(modBanUser({ id: u.id, banned: !u.isBanned }))}
-                >
-                  {u.isBanned ? 'Unban' : 'Ban'}
-                </button>
-              )}
+              <button
+                type="button"
+                className={`btn btn-sm rounded-full shrink-0 ${u.isBanned ? 'btn-success' : 'btn-error'}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  dispatch(modBanUser({ id: u.id, banned: !u.isBanned }));
+                }}
+              >
+                {u.isBanned ? 'Unban' : 'Ban'}
+              </button>
             </div>
-
-            {u.enrolledSections?.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-2">
-                {u.enrolledSections.map((s) => (
-                  <span key={s} className="badge badge-outline badge-sm">
-                    {s}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
+            <p className="text-xs text-base-content/40 mt-2">
+              {expanded ? '▲ Hide content' : '▼ Show posts, comments & chat messages'}
+            </p>
+          </button>
         </div>
       )}
 
-      {lookup && (
+      {u && expanded && (
         <div className="grid gap-4 lg:grid-cols-2">
           <ContentList
             title={`Posts (${lookup.posts?.total ?? 0})`}
@@ -254,16 +258,23 @@ function UsersTab() {
             render={(c) => c.content}
             kind="comments"
           />
+          <ContentList
+            title={`Chat (${lookup.messages?.total ?? 0})`}
+            items={lookup.messages?.items || []}
+            render={(m) => m.content || (m.media?.url ? '[media]' : '(empty)')}
+            kind="messages"
+            className="lg:col-span-2"
+          />
         </div>
       )}
     </div>
   );
 }
 
-function ContentList({ title, items, render, kind }) {
+function ContentList({ title, items, render, kind, className = '' }) {
   const dispatch = useDispatch();
   return (
-    <div className="card bg-base-100 border border-base-200 shadow-sm">
+    <div className={`card bg-base-100 border border-base-200 shadow-sm ${className}`}>
       <div className="card-body p-4">
         <h3 className="font-semibold mb-2">{title}</h3>
         {items.length === 0 ? (
@@ -300,6 +311,9 @@ function CommunitiesTab() {
   const dispatch = useDispatch();
   const communities = useSelector((s) => s.moderator.communities);
   const [search, setSearch] = useState('');
+  const [editId, setEditId] = useState(null);
+  const [editForm, setEditForm] = useState({ name: '', imageUrl: '' });
+  const [iconFile, setIconFile] = useState(null);
 
   useEffect(() => {
     dispatch(modFetchCommunities(''));
@@ -307,6 +321,24 @@ function CommunitiesTab() {
 
   const doSearch = (e) => {
     e.preventDefault();
+    dispatch(modFetchCommunities(search.trim()));
+  };
+
+  const openEdit = (c) => {
+    setEditId(c._id);
+    setEditForm({ name: c.name, imageUrl: c.imageUrl || '' });
+    setIconFile(null);
+  };
+
+  const saveEdit = async (e) => {
+    e.preventDefault();
+    let imageUrl = editForm.imageUrl;
+    if (iconFile) {
+      const up = await uploadMedia(iconFile);
+      imageUrl = up.url;
+    }
+    await dispatch(modUpdateCommunity({ communityId: editId, payload: { name: editForm.name, imageUrl } }));
+    setEditId(null);
     dispatch(modFetchCommunities(search.trim()));
   };
 
@@ -325,37 +357,72 @@ function CommunitiesTab() {
         </button>
       </form>
 
-      <div className="overflow-x-auto rounded-2xl border border-base-200">
-        <table className="table table-zebra">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Type</th>
-              <th>ID</th>
-            </tr>
-          </thead>
-          <tbody>
-            {communities.map((c) => (
-              <tr key={c._id}>
-                <td className="font-medium">{c.name}</td>
-                <td>
-                  <span className={`badge badge-sm ${c.type === 'course' ? 'badge-secondary' : 'badge-primary'}`}>
-                    {c.type}
-                  </span>
-                </td>
-                <td className="font-mono text-xs">{c._id}</td>
-              </tr>
-            ))}
-            {communities.length === 0 && (
-              <tr>
-                <td colSpan={3} className="text-center text-base-content/40 py-6">
-                  No communities found.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {communities.map((c) => (
+          <div key={c._id} className="card bg-base-100 border border-base-200 shadow-sm">
+            <div className="card-body p-4">
+              <div className="flex items-center gap-3">
+                <div className="avatar">
+                  <div className="w-12 rounded-xl">
+                    <img src={communityAvatar(c)} alt="" />
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <Link
+                    to={`/c/${encodeURIComponent(c._id)}/chat`}
+                    className="font-bold hover:text-primary link link-hover"
+                  >
+                    {c.name}
+                  </Link>
+                  <p className="text-xs font-mono text-base-content/40">{c._id}</p>
+                </div>
+                <span className={`badge badge-sm ${c.type === 'course' ? 'badge-secondary' : 'badge-primary'}`}>
+                  {c.type}
+                </span>
+              </div>
+              <div className="card-actions justify-end mt-2">
+                <button type="button" className="btn btn-ghost btn-xs rounded-full" onClick={() => openEdit(c)}>
+                  Edit
+                </button>
+                <Link to={`/c/${encodeURIComponent(c._id)}/posts`} className="btn btn-primary btn-xs rounded-full">
+                  Open
+                </Link>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
+
+      {editId && (
+        <div className="modal modal-open">
+          <div className="modal-box rounded-3xl">
+            <h3 className="font-bold">Edit community</h3>
+            <form onSubmit={saveEdit} className="flex flex-col gap-3 mt-3">
+              <input
+                className="input input-bordered rounded-2xl"
+                value={editForm.name}
+                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                required
+              />
+              <input
+                type="file"
+                accept="image/*"
+                className="file-input file-input-bordered rounded-2xl w-full"
+                onChange={(e) => setIconFile(e.target.files?.[0] || null)}
+              />
+              <div className="modal-action">
+                <button type="button" className="btn btn-ghost rounded-2xl" onClick={() => setEditId(null)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary rounded-2xl">
+                  Save
+                </button>
+              </div>
+            </form>
+          </div>
+          <div className="modal-backdrop bg-black/40" onClick={() => setEditId(null)} />
+        </div>
+      )}
     </div>
   );
 }
@@ -375,7 +442,7 @@ export default function ModeratorPage() {
   const [tab, setTab] = useState('reports');
 
   return (
-    <div>
+    <div className="h-full overflow-y-auto p-4">
       <div className="flex items-center gap-2 mb-5">
         <span className="text-2xl text-secondary">
           <ShieldIcon />

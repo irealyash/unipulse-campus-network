@@ -13,6 +13,15 @@ import {
 } from '../../features/posts/postsSlice';
 import Loader from '../Loader';
 import { ThumbUpIcon, ThumbDownIcon, CloseIcon } from '../icons';
+import { uploadMedia } from '../../lib/media';
+
+function PostMedia({ media }) {
+  if (!media?.url) return null;
+  if (media.mediaType === 'video') {
+    return <video src={media.url} controls className="rounded-xl max-h-64 mt-2 w-full" />;
+  }
+  return <img src={media.url} alt="" className="rounded-xl max-h-64 mt-2 object-contain" />;
+}
 
 function VoteColumn({ score, onLike, onDislike }) {
   return (
@@ -74,8 +83,10 @@ export default function PostsTab() {
   const comments = useSelector((s) => s.posts.commentsByPost[currentPost?._id]);
 
   const [sort, setSort] = useState('new');
+  const [commentSort, setCommentSort] = useState('new');
   const [createOpen, setCreateOpen] = useState(false);
   const [form, setForm] = useState({ title: '', content: '', tag: 'general' });
+  const [mediaFile, setMediaFile] = useState(null);
   const [replyParent, setReplyParent] = useState(null);
   const [commentText, setCommentText] = useState('');
 
@@ -83,18 +94,26 @@ export default function PostsTab() {
     dispatch(fetchPosts({ communityId, sort }));
   }, [dispatch, communityId, sort]);
 
+  useEffect(() => {
+    if (currentPost?._id) {
+      dispatch(fetchComments({ postId: currentPost._id, sort: commentSort }));
+    }
+  }, [dispatch, currentPost?._id, commentSort]);
+
   const openPost = (postId) => {
     dispatch(fetchPost(postId));
-    dispatch(fetchComments(postId));
   };
 
   const closePost = () => dispatch(clearCurrentPost());
 
   const submitPost = async (e) => {
     e.preventDefault();
-    await dispatch(createPost({ communityId, payload: form }));
+    let media;
+    if (mediaFile) media = await uploadMedia(mediaFile);
+    await dispatch(createPost({ communityId, payload: { ...form, media } }));
     setCreateOpen(false);
     setForm({ title: '', content: '', tag: 'general' });
+    setMediaFile(null);
     dispatch(fetchPosts({ communityId, sort }));
   };
 
@@ -106,7 +125,7 @@ export default function PostsTab() {
     );
     setCommentText('');
     setReplyParent(null);
-    dispatch(fetchComments(currentPost._id));
+    dispatch(fetchComments({ postId: currentPost._id, sort: commentSort }));
   };
 
   const posts = bucket?.posts || [];
@@ -117,7 +136,7 @@ export default function PostsTab() {
       {/* Subreddit-style header */}
       <div className="shrink-0 border-b border-base-200 bg-base-100 px-4 py-3 flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="font-bold text-lg">r/{communityId}</h1>
+          <h1 className="font-bold text-lg">Posts</h1>
           <p className="text-xs text-base-content/50">{community?.name}</p>
         </div>
         <div className="flex gap-2 items-center">
@@ -176,6 +195,7 @@ export default function PostsTab() {
                 </p>
                 <h2 className="font-bold text-base mt-1">{p.title}</h2>
                 <p className="text-sm text-base-content/80 line-clamp-3 mt-1">{p.content}</p>
+                <PostMedia media={p.media} />
                 <p className="text-xs text-base-content/40 mt-2">{p.commentCount || 0} comments</p>
               </div>
             </div>
@@ -216,6 +236,12 @@ export default function PostsTab() {
                   ))}
                 </select>
               )}
+              <input
+                type="file"
+                accept="image/*,video/*"
+                className="file-input file-input-bordered rounded-2xl w-full"
+                onChange={(e) => setMediaFile(e.target.files?.[0] || null)}
+              />
               <div className="modal-action">
                 <button type="button" className="btn btn-ghost rounded-2xl" onClick={() => setCreateOpen(false)}>
                   Cancel
@@ -247,6 +273,26 @@ export default function PostsTab() {
             </div>
             <div className="flex-1 overflow-y-auto p-4">
               <p className="text-sm whitespace-pre-wrap">{currentPost.content}</p>
+              <PostMedia media={currentPost.media} />
+              <div className="flex items-center justify-between mt-4">
+                <span className="text-sm font-semibold">Comments</span>
+                <div role="tablist" className="tabs tabs-box tabs-xs">
+                  <button
+                    type="button"
+                    className={`tab ${commentSort === 'new' ? 'tab-active' : ''}`}
+                    onClick={() => setCommentSort('new')}
+                  >
+                    New
+                  </button>
+                  <button
+                    type="button"
+                    className={`tab ${commentSort === 'top' ? 'tab-active' : ''}`}
+                    onClick={() => setCommentSort('top')}
+                  >
+                    Top
+                  </button>
+                </div>
+              </div>
               <div className="divider" />
               <CommentTree
                 comments={comments}

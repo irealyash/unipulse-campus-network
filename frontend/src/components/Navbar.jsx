@@ -2,6 +2,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { logout } from '../features/auth/authSlice';
 import ThemeToggle from './ThemeToggle';
+import UserAvatar from './UserAvatar';
 import { ShieldIcon, LogoutIcon, SparkleIcon } from './icons';
 
 /**
@@ -41,7 +42,7 @@ export default function Navbar() {
               Communities
             </NavLink>
             {user.moderator && (
-              <NavLink to="/moderator" className={linkClass}>
+              <NavLink to="/c/moderator" className={linkClass}>
                 <ShieldIcon className="text-base" /> Mod
               </NavLink>
             )}
@@ -53,13 +54,7 @@ export default function Navbar() {
         {user && (
           <div className="dropdown dropdown-end">
             <div tabIndex={0} role="button" className="btn btn-ghost btn-sm gap-2 rounded-full">
-              <div className="avatar avatar-placeholder">
-                <div className="bg-primary text-primary-content w-8 rounded-full">
-                  <span className="text-sm">
-                    {user.username?.[0]?.toUpperCase() || '?'}
-                  </span>
-                </div>
-              </div>
+              <UserAvatar user={user} className="w-8 rounded-full" />
               <span className="hidden sm:inline font-medium">{user.username}</span>
             </div>
             <ul
