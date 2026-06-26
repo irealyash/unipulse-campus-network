@@ -3,6 +3,7 @@ import Community from '../models/Community.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import ApiError from '../utils/ApiError.js';
 import { parseScheduleFile } from '../utils/scheduleParser.js';
+import { courseCommunityImage } from '../utils/avatars.js';
 import { serializeUser } from './authController.js';
 import { POST_TAGS } from './postController.js';
 import {
@@ -35,12 +36,22 @@ export const uploadScheduleFile = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'No schedule file uploaded. Use form field "schedule".');
   }
 
-  const sections = parseScheduleFile(req.file.buffer, req.file.originalname);
+  const buffer = req.file.buffer;
+  let sections;
+
+  try {
+    sections = parseScheduleFile(buffer, req.file.originalname);
+  } catch (err) {
+    throw new ApiError(422, err.message || 'Could not parse schedule file.');
+  } finally {
+    // File is only held in memory for parsing — discard immediately after extraction.
+    req.file.buffer = null;
+  }
 
   if (sections.length === 0) {
     throw new ApiError(
       422,
-      'Could not detect any course sections in that .xlsx file. Section extraction will be improved soon — ensure the file is your UBC schedule export.'
+      "Could not detect any course sections in that .xlsx file. Export your schedule from Workday (View My Courses) and ensure the Section column is present."
     );
   }
 
@@ -51,10 +62,11 @@ export const uploadScheduleFile = asyncHandler(async (req, res) => {
         {
           $setOnInsert: {
             _id: sectionId,
-            name: sectionId.replace(/-/g, ' '),
+            name: sectionId,
             description: `Private community for ${sectionId} students.`,
             type: 'course',
             private: true,
+            imageUrl: courseCommunityImage(sectionId),
             allowedTags: POST_TAGS,
           },
         },

@@ -530,6 +530,7 @@ function CommunitiesTab() {
   const dispatch = useDispatch();
   const communities = useSelector((s) => s.moderator.communities);
   const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState('all');
   const [editId, setEditId] = useState(null);
   const [editForm, setEditForm] = useState({ name: '', imageUrl: '', private: false });
   const [iconFile, setIconFile] = useState(null);
@@ -539,13 +540,22 @@ function CommunitiesTab() {
   const [addUsersId, setAddUsersId] = useState(null);
   const [memberUserId, setMemberUserId] = useState('');
 
+  const fetchList = (overrides = {}) => {
+    dispatch(
+      modFetchCommunities({
+        search: overrides.search ?? search.trim(),
+        type: overrides.type ?? typeFilter,
+      })
+    );
+  };
+
   useEffect(() => {
-    dispatch(modFetchCommunities(''));
-  }, [dispatch]);
+    fetchList({ search: '', type: typeFilter });
+  }, [dispatch, typeFilter]);
 
   const doSearch = (e) => {
     e.preventDefault();
-    dispatch(modFetchCommunities(search.trim()));
+    fetchList();
   };
 
   const openEdit = (c) => {
@@ -568,7 +578,7 @@ function CommunitiesTab() {
     }
     await dispatch(modUpdateCommunity({ communityId: editId, payload }));
     setEditId(null);
-    dispatch(modFetchCommunities(search.trim()));
+    fetchList();
     dispatch(fetchCommunities());
   };
 
@@ -591,7 +601,7 @@ function CommunitiesTab() {
     setCreateOpen(false);
     setCreateForm({ name: '', description: '', id: '', private: false });
     setCreateIconFile(null);
-    dispatch(modFetchCommunities(search.trim()));
+    fetchList();
     dispatch(fetchCommunities());
   };
 
@@ -619,18 +629,30 @@ function CommunitiesTab() {
           + New community
         </button>
       </div>
-      <form onSubmit={doSearch} className="flex gap-2 mb-4">
+      <form onSubmit={doSearch} className="flex flex-wrap gap-2 mb-4">
         <input
-          className="input input-bordered rounded-full flex-1"
+          className="input input-bordered rounded-full flex-1 min-w-[12rem]"
           placeholder="Search by id or name…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
+        <select
+          className="select select-bordered select-sm rounded-full"
+          value={typeFilter}
+          onChange={(e) => setTypeFilter(e.target.value)}
+        >
+          <option value="all">All communities</option>
+          <option value="course">Course sections</option>
+          <option value="general">Public & private</option>
+        </select>
         <button className="btn btn-primary rounded-full gap-1">
           <SearchIcon /> Search
         </button>
       </form>
 
+      {communities.length === 0 ? (
+        <EmptyState text="No communities match your filters." />
+      ) : (
       <div className="grid gap-3 sm:grid-cols-2">
         {communities.map((c) => (
           <div key={c._id} className="card bg-base-100 border border-base-200 shadow-sm">
@@ -690,6 +712,7 @@ function CommunitiesTab() {
           </div>
         ))}
       </div>
+      )}
 
       {createOpen && (
         <div className="modal modal-open">

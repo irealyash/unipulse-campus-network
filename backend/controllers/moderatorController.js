@@ -45,9 +45,12 @@ import { PROTECTED_COMMUNITY_IDS } from '../utils/ensureCommunities.js';
  * by a search term matching the id or display name.
  */
 export const listAllCommunities = asyncHandler(async (req, res) => {
-  const { search } = req.query;
+  const { search, type } = req.query;
 
   const filter = {};
+  if (type === 'course' || type === 'general') {
+    filter.type = type;
+  }
   if (search && search.trim()) {
     const rx = new RegExp(escapeRegex(search.trim()), 'i');
     filter.$or = [{ _id: rx }, { name: rx }];

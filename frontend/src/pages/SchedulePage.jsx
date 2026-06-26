@@ -2,12 +2,11 @@ import { useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { uploadSchedule } from '../features/auth/authSlice';
-import { CalendarIcon, SparkleIcon } from '../components/icons';
+import { CalendarIcon, ShieldIcon, SparkleIcon } from '../components/icons';
 
 /**
- * Schedule upload. Parsing the uploaded UBC schedule (.xlsx) unlocks private
- * course-section communities. This step is optional — users can skip and still
- * use public communities.
+ * Schedule upload. Parsing the uploaded UBC Workday schedule (.xlsx) unlocks
+ * private course-section communities. This step is optional.
  */
 export default function SchedulePage() {
   const dispatch = useDispatch();
@@ -20,6 +19,11 @@ export default function SchedulePage() {
   const [file, setFile] = useState(null);
   const [error, setError] = useState('');
   const [dragOver, setDragOver] = useState(false);
+
+  const clearFile = () => {
+    setFile(null);
+    if (inputRef.current) inputRef.current.value = '';
+  };
 
   const pick = (f) => {
     setError('');
@@ -40,6 +44,7 @@ export default function SchedulePage() {
   const onSubmit = async () => {
     if (!file) return setError('Please choose your schedule file first.');
     const res = await dispatch(uploadSchedule(file));
+    clearFile();
     if (uploadSchedule.fulfilled.match(res)) navigate('/c');
     else setError(res.payload || 'Upload failed.');
   };
@@ -52,13 +57,26 @@ export default function SchedulePage() {
         </div>
         <h1 className="text-3xl font-extrabold">Add your class schedule</h1>
         <p className="text-base-content/70 mt-2">
-          Upload your UBC schedule as an <code>.xlsx</code> file and we’ll add you to a private
-          community for each course section we detect.
+          Upload your UBC Workday schedule as an <code>.xlsx</code> file and we&apos;ll add you to a
+          private community for each course section we detect.
         </p>
       </div>
 
       <div className="card bg-base-100 shadow-xl border border-base-content/5">
         <div className="card-body gap-4">
+          <div className="rounded-2xl border border-primary/30 bg-primary/10 p-4 flex gap-3 text-sm text-base-content">
+            <ShieldIcon className="text-primary text-lg shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold">Your privacy matters</p>
+              <p className="mt-1 text-base-content/80">
+                We only read your course section codes from the file. The upload is processed in
+                memory and <strong className="font-semibold text-base-content">deleted immediately</strong>{' '}
+                after extraction — we never store your schedule file on our servers. Section data is
+                used solely to place you in the right private course communities.
+              </p>
+            </div>
+          </div>
+
           {error && (
             <div className="alert alert-error py-2 text-sm">
               <span>{error}</span>
@@ -85,7 +103,7 @@ export default function SchedulePage() {
               </p>
             ) : (
               <>
-                <p className="font-medium">Drag & drop your schedule here</p>
+                <p className="font-medium">Drag & drop your Workday export here</p>
                 <p className="text-sm text-base-content/60">or click to browse (.xlsx only)</p>
               </>
             )}
@@ -109,8 +127,8 @@ export default function SchedulePage() {
           </div>
 
           <p className="text-xs text-base-content/50 text-center">
-            Course section parsing from your xlsx layout will be refined soon. Public communities
-            are available without uploading a schedule.
+            Export from Workday via <strong>View My Courses</strong>. Public communities are
+            available without uploading a schedule.
           </p>
         </div>
       </div>
