@@ -21,6 +21,7 @@ import ModeratorPage from './pages/ModeratorPage';
 import NotFoundPage from './pages/NotFoundPage';
 import CommunityHub, { CommunityRedirect } from './pages/CommunityHub';
 import CommunityTabView from './pages/CommunityTabView';
+import PostPage from './pages/PostPage';
 
 function LegacyCommunityRedirect() {
   const { id } = useParams();
@@ -85,6 +86,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route path=":communityId/posts/:postId" element={<PostPage />} />
           <Route path=":communityId/:tab" element={<CommunityTabView />} />
         </Route>
 

@@ -27,6 +27,10 @@ export const listComments = asyncHandler(async (req, res) => {
   if (!post) throw new ApiError(404, 'Post not found.');
   await assertCommunityAccess(req.user, post.communityId);
 
+  if (post.status !== 'approved') {
+    throw new ApiError(403, 'Comments are only available on approved posts.');
+  }
+
   const sort = req.query.sort === 'top' ? 'top' : 'new';
 
   let flat;
@@ -73,13 +77,19 @@ export const listComments = asyncHandler(async (req, res) => {
  */
 export const createComment = asyncHandler(async (req, res) => {
   const { postId } = req.params;
-  const { content, parentId } = req.body;
+  const { content, parentId, media } = req.body;
 
-  if (!content || !content.trim()) throw new ApiError(400, 'Comment content is required.');
+  const hasText = content && content.trim();
+  const hasMedia = media?.url;
+  if (!hasText && !hasMedia) throw new ApiError(400, 'Comment must include text or a GIF/image.');
 
   const post = await Post.findById(postId);
   if (!post) throw new ApiError(404, 'Post not found.');
   await assertCommunityAccess(req.user, post.communityId);
+
+  if (post.status !== 'approved') {
+    throw new ApiError(403, 'Comments are only allowed on approved posts.');
+  }
 
   // If replying, make sure the parent comment exists and belongs to this post.
   if (parentId) {
@@ -94,7 +104,11 @@ export const createComment = asyncHandler(async (req, res) => {
     parentId: parentId || null,
     authorId: req.user._id,
     anonymousUsername: req.user.username, // frozen alias snapshot
-    content: content.trim()
+    content: hasText ? content.trim() : '',
+    media: {
+      url: media?.url || null,
+      mediaType: media?.mediaType || null
+    }
   });
 
   // Keep the post's cached comment count in sync for feed display.

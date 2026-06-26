@@ -377,11 +377,72 @@ export const setUserBan = asyncHandler(async (req, res) => {
   target.isBanned = banned;
   await target.save();
 
+  res.json({ success: true, message: banned ? 'User banned.' : 'User unbanned.', user: moderatorUserView(target) });
+});
+
+/* ------------------------------------------------------------------ */
+/* Post approval queue                                                 */
+/* ------------------------------------------------------------------ */
+
+/**
+ * GET /api/moderator/posts?status=pending&page&limit
+ * Lists posts awaiting (or previously) moderator review.
+ */
+export const listPostsForReview = asyncHandler(async (req, res) => {
+  const status = req.query.status || 'pending';
+  const allowed = ['pending', 'approved', 'rejected', 'all'];
+  if (!allowed.includes(status)) {
+    throw new ApiError(400, `status must be one of: ${allowed.join(', ')}`);
+  }
+
+  const { page, limit, skip } = paginate(req);
+  const filter = status === 'all' ? {} : { status };
+
+  const [posts, total] = await Promise.all([
+    Post.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean({ virtuals: true }),
+    Post.countDocuments(filter)
+  ]);
+
   res.json({
     success: true,
-    message: banned ? 'User banned.' : 'User unbanned.',
-    user: moderatorUserView(target)
+    page,
+    limit,
+    total,
+    hasMore: skip + posts.length < total,
+    posts
   });
+});
+
+/**
+ * POST /api/moderator/posts/:id/approve
+ * Approves a pending post so it appears in community feeds.
+ */
+export const approvePost = asyncHandler(async (req, res) => {
+  const post = await Post.findById(req.params.id);
+  if (!post) throw new ApiError(404, 'Post not found.');
+
+  post.status = 'approved';
+  post.reviewedBy = req.user._id;
+  post.reviewedAt = new Date();
+  await post.save();
+
+  res.json({ success: true, message: 'Post approved.', post });
+});
+
+/**
+ * POST /api/moderator/posts/:id/reject
+ * Rejects a post so it never appears in feeds.
+ */
+export const rejectPost = asyncHandler(async (req, res) => {
+  const post = await Post.findById(req.params.id);
+  if (!post) throw new ApiError(404, 'Post not found.');
+
+  post.status = 'rejected';
+  post.reviewedBy = req.user._id;
+  post.reviewedAt = new Date();
+  await post.save();
+
+  res.json({ success: true, message: 'Post rejected.', post });
 });
 
 /* ------------------------------------------------------------------ */

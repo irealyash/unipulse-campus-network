@@ -121,6 +121,42 @@ export const modDeleteContent = createAsyncThunk(
   }
 );
 
+export const modFetchPendingPosts = createAsyncThunk(
+  'mod/pendingPosts',
+  async (status = 'pending', { rejectWithValue }) => {
+    try {
+      const { data } = await api.get('/moderator/posts', { params: { status } });
+      return data.posts;
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
+export const modApprovePost = createAsyncThunk(
+  'mod/approvePost',
+  async (id, { rejectWithValue }) => {
+    try {
+      const { data } = await api.post(`/moderator/posts/${id}/approve`);
+      return { id, message: data.message };
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
+export const modRejectPost = createAsyncThunk(
+  'mod/rejectPost',
+  async (id, { rejectWithValue }) => {
+    try {
+      const { data } = await api.post(`/moderator/posts/${id}/reject`);
+      return { id, message: data.message };
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
 const moderatorSlice = createSlice({
   name: 'moderator',
   initialState: {
@@ -128,6 +164,7 @@ const moderatorSlice = createSlice({
     userLookup: null,
     reports: [],
     requests: [],
+    pendingPosts: [],
     status: 'idle',
     error: null,
     notice: null,
@@ -172,6 +209,17 @@ const moderatorSlice = createSlice({
       })
       .addCase(modDeleteContent.fulfilled, (state, action) => {
         state.notice = action.payload.message || 'Content deleted.';
+      })
+      .addCase(modFetchPendingPosts.fulfilled, (state, action) => {
+        state.pendingPosts = action.payload;
+      })
+      .addCase(modApprovePost.fulfilled, (state, action) => {
+        state.pendingPosts = state.pendingPosts.filter((p) => p._id !== action.payload.id);
+        state.notice = action.payload.message || 'Post approved.';
+      })
+      .addCase(modRejectPost.fulfilled, (state, action) => {
+        state.pendingPosts = state.pendingPosts.filter((p) => p._id !== action.payload.id);
+        state.notice = action.payload.message || 'Post rejected.';
       })
       // Generic error capture for all moderator thunks.
       .addMatcher(

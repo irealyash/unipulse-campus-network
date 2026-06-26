@@ -1,27 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useParams } from 'react-router-dom';
-import {
-  fetchPosts,
-  createPost,
-  fetchPost,
-  fetchComments,
-  createComment,
-  reactToPost,
-  reactToComment,
-  clearCurrentPost,
-} from '../../features/posts/postsSlice';
+import { Link, useParams } from 'react-router-dom';
+import { fetchPosts, createPost, reactToPost } from '../../features/posts/postsSlice';
 import Loader from '../Loader';
-import { ThumbUpIcon, ThumbDownIcon, CloseIcon } from '../icons';
+import { ThumbUpIcon, ThumbDownIcon } from '../icons';
 import { uploadMedia } from '../../lib/media';
-
-function PostMedia({ media }) {
-  if (!media?.url) return null;
-  if (media.mediaType === 'video') {
-    return <video src={media.url} controls className="rounded-xl max-h-64 mt-2 w-full" />;
-  }
-  return <img src={media.url} alt="" className="rounded-xl max-h-64 mt-2 object-contain" />;
-}
+import { POST_TAGS, PostMedia } from './PostCommentSection';
 
 function VoteColumn({ score, onLike, onDislike }) {
   return (
@@ -37,41 +21,7 @@ function VoteColumn({ score, onLike, onDislike }) {
   );
 }
 
-function CommentTree({ comments, onReply, onReact, depth = 0 }) {
-  if (!comments?.length) return null;
-  return (
-    <ul className={`space-y-3 ${depth ? 'ml-4 border-l-2 border-base-300 pl-3' : ''}`}>
-      {comments.map((c) => (
-        <li key={c._id}>
-          <div className="flex gap-2">
-            <VoteColumn
-              score={c.score}
-              onLike={() => onReact(c._id, 'like')}
-              onDislike={() => onReact(c._id, 'dislike')}
-            />
-            <div className="flex-1 min-w-0">
-              <p className="text-xs text-base-content/50">
-                <span className="font-semibold text-primary">{c.anonymousUsername}</span> ·{' '}
-                {new Date(c.createdAt).toLocaleString()}
-              </p>
-              <p className="text-sm mt-0.5">{c.content}</p>
-              <button
-                type="button"
-                className="btn btn-ghost btn-xs mt-1"
-                onClick={() => onReply(c._id)}
-              >
-                Reply
-              </button>
-            </div>
-          </div>
-          <CommentTree comments={c.replies} onReply={onReply} onReact={onReact} depth={depth + 1} />
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-/** Reddit-style posts feed + thread modal. */
+/** Reddit-style posts feed. Post titles link to a full-page thread view. */
 export default function PostsTab() {
   const { communityId } = useParams();
   const dispatch = useDispatch();
@@ -79,32 +29,15 @@ export default function PostsTab() {
     s.communities.list.find((c) => c._id === communityId) || s.communities.current
   );
   const bucket = useSelector((s) => s.posts.byCommunity[communityId]);
-  const currentPost = useSelector((s) => s.posts.currentPost);
-  const comments = useSelector((s) => s.posts.commentsByPost[currentPost?._id]);
 
   const [sort, setSort] = useState('new');
-  const [commentSort, setCommentSort] = useState('new');
   const [createOpen, setCreateOpen] = useState(false);
-  const [form, setForm] = useState({ title: '', content: '', tag: 'general' });
+  const [form, setForm] = useState({ title: '', content: '', tag: 'Humour' });
   const [mediaFile, setMediaFile] = useState(null);
-  const [replyParent, setReplyParent] = useState(null);
-  const [commentText, setCommentText] = useState('');
 
   useEffect(() => {
     dispatch(fetchPosts({ communityId, sort }));
   }, [dispatch, communityId, sort]);
-
-  useEffect(() => {
-    if (currentPost?._id) {
-      dispatch(fetchComments({ postId: currentPost._id, sort: commentSort }));
-    }
-  }, [dispatch, currentPost?._id, commentSort]);
-
-  const openPost = (postId) => {
-    dispatch(fetchPost(postId));
-  };
-
-  const closePost = () => dispatch(clearCurrentPost());
 
   const submitPost = async (e) => {
     e.preventDefault();
@@ -112,20 +45,9 @@ export default function PostsTab() {
     if (mediaFile) media = await uploadMedia(mediaFile);
     await dispatch(createPost({ communityId, payload: { ...form, media } }));
     setCreateOpen(false);
-    setForm({ title: '', content: '', tag: 'general' });
+    setForm({ title: '', content: '', tag: 'Humour' });
     setMediaFile(null);
     dispatch(fetchPosts({ communityId, sort }));
-  };
-
-  const submitComment = async (e) => {
-    e.preventDefault();
-    if (!commentText.trim()) return;
-    await dispatch(
-      createComment({ postId: currentPost._id, content: commentText, parentId: replyParent })
-    );
-    setCommentText('');
-    setReplyParent(null);
-    dispatch(fetchComments({ postId: currentPost._id, sort: commentSort }));
   };
 
   const posts = bucket?.posts || [];
@@ -133,7 +55,6 @@ export default function PostsTab() {
 
   return (
     <div className="flex flex-col h-full min-h-0">
-      {/* Subreddit-style header */}
       <div className="shrink-0 border-b border-base-200 bg-base-100 px-4 py-3 flex flex-wrap items-center justify-between gap-2">
         <div>
           <h1 className="font-bold text-lg">Posts</h1>
@@ -176,11 +97,10 @@ export default function PostsTab() {
         {posts.map((p) => (
           <article
             key={p._id}
-            className="card bg-base-100 border border-base-200 shadow-sm hover:shadow-md transition cursor-pointer"
-            onClick={() => openPost(p._id)}
+            className="card bg-base-100 border border-base-200 shadow-sm hover:shadow-md transition"
           >
             <div className="card-body p-0 flex-row gap-0">
-              <div className="p-3" onClick={(e) => e.stopPropagation()}>
+              <div className="p-3">
                 <VoteColumn
                   score={p.score}
                   onLike={() => dispatch(reactToPost({ postId: p._id, action: 'like' }))}
@@ -193,21 +113,33 @@ export default function PostsTab() {
                   {new Date(p.createdAt).toLocaleDateString()}
                   {p.tag && <span className="badge badge-outline badge-xs ml-2">{p.tag}</span>}
                 </p>
-                <h2 className="font-bold text-base mt-1">{p.title}</h2>
+                <Link
+                  to={`/c/${encodeURIComponent(communityId)}/posts/${p._id}`}
+                  className="font-bold text-base mt-1 link link-hover text-left block"
+                >
+                  {p.title}
+                </Link>
                 <p className="text-sm text-base-content/80 line-clamp-3 mt-1">{p.content}</p>
                 <PostMedia media={p.media} />
-                <p className="text-xs text-base-content/40 mt-2">{p.commentCount || 0} comments</p>
+                <Link
+                  to={`/c/${encodeURIComponent(communityId)}/posts/${p._id}`}
+                  className="text-xs text-base-content/40 mt-2 link link-hover inline-block"
+                >
+                  {p.commentCount || 0} comments
+                </Link>
               </div>
             </div>
           </article>
         ))}
       </div>
 
-      {/* Create post modal */}
       {createOpen && (
         <div className="modal modal-open">
           <div className="modal-box rounded-3xl max-w-lg">
             <h3 className="font-bold text-lg">Create a post</h3>
+            <p className="text-xs text-base-content/50 mt-1">
+              Posts are reviewed by a moderator before they appear in the feed.
+            </p>
             <form onSubmit={submitPost} className="flex flex-col gap-3 mt-3">
               <input
                 className="input input-bordered rounded-2xl"
@@ -223,19 +155,18 @@ export default function PostsTab() {
                 value={form.content}
                 onChange={(e) => setForm({ ...form, content: e.target.value })}
               />
-              {community?.allowedTags?.length > 1 && (
-                <select
-                  className="select select-bordered rounded-2xl"
-                  value={form.tag}
-                  onChange={(e) => setForm({ ...form, tag: e.target.value })}
-                >
-                  {community.allowedTags.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
-              )}
+              <select
+                className="select select-bordered rounded-2xl"
+                value={form.tag}
+                onChange={(e) => setForm({ ...form, tag: e.target.value })}
+                required
+              >
+                {POST_TAGS.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
               <input
                 type="file"
                 accept="image/*,video/*"
@@ -247,72 +178,12 @@ export default function PostsTab() {
                   Cancel
                 </button>
                 <button type="submit" className="btn btn-primary rounded-2xl">
-                  Post
+                  Submit for review
                 </button>
               </div>
             </form>
           </div>
           <div className="modal-backdrop bg-black/40" onClick={() => setCreateOpen(false)} />
-        </div>
-      )}
-
-      {/* Post detail modal (thread) */}
-      {currentPost && (
-        <div className="modal modal-open">
-          <div className="modal-box rounded-3xl max-w-2xl max-h-[90vh] flex flex-col p-0">
-            <div className="p-4 border-b border-base-200 flex justify-between items-start">
-              <div>
-                <p className="text-xs text-base-content/50">
-                  u/{currentPost.anonymousUsername} · {new Date(currentPost.createdAt).toLocaleString()}
-                </p>
-                <h3 className="font-bold text-xl mt-1">{currentPost.title}</h3>
-              </div>
-              <button type="button" className="btn btn-ghost btn-sm btn-circle" onClick={closePost}>
-                <CloseIcon />
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-4">
-              <p className="text-sm whitespace-pre-wrap">{currentPost.content}</p>
-              <PostMedia media={currentPost.media} />
-              <div className="flex items-center justify-between mt-4">
-                <span className="text-sm font-semibold">Comments</span>
-                <div role="tablist" className="tabs tabs-box tabs-xs">
-                  <button
-                    type="button"
-                    className={`tab ${commentSort === 'new' ? 'tab-active' : ''}`}
-                    onClick={() => setCommentSort('new')}
-                  >
-                    New
-                  </button>
-                  <button
-                    type="button"
-                    className={`tab ${commentSort === 'top' ? 'tab-active' : ''}`}
-                    onClick={() => setCommentSort('top')}
-                  >
-                    Top
-                  </button>
-                </div>
-              </div>
-              <div className="divider" />
-              <CommentTree
-                comments={comments}
-                onReply={(id) => setReplyParent(id)}
-                onReact={(id, action) => dispatch(reactToComment({ commentId: id, action }))}
-              />
-            </div>
-            <form onSubmit={submitComment} className="p-4 border-t border-base-200 flex gap-2">
-              <input
-                className="input input-bordered rounded-full flex-1 input-sm"
-                placeholder={replyParent ? 'Write a reply…' : 'Add a comment…'}
-                value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-              />
-              <button type="submit" className="btn btn-primary btn-sm rounded-full">
-                Comment
-              </button>
-            </form>
-          </div>
-          <div className="modal-backdrop bg-black/40" onClick={closePost} />
         </div>
       )}
     </div>

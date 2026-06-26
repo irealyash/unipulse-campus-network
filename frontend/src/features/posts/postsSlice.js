@@ -20,7 +20,7 @@ export const createPost = createAsyncThunk(
   async ({ communityId, payload }, { rejectWithValue }) => {
     try {
       const { data } = await api.post(`/communities/${encodeURIComponent(communityId)}/posts`, payload);
-      return { communityId, post: data.post };
+      return { communityId, post: data.post, message: data.message };
     } catch (err) {
       return rejectWithValue(err.message);
     }
@@ -50,9 +50,9 @@ export const fetchComments = createAsyncThunk(
 
 export const createComment = createAsyncThunk(
   'posts/comment',
-  async ({ postId, content, parentId }, { rejectWithValue }) => {
+  async ({ postId, content, parentId, media }, { rejectWithValue }) => {
     try {
-      const { data } = await api.post(`/posts/${postId}/comments`, { content, parentId });
+      const { data } = await api.post(`/posts/${postId}/comments`, { content, parentId, media });
       return { postId, comment: data.comment };
     } catch (err) {
       return rejectWithValue(err.message);
@@ -92,10 +92,14 @@ const postsSlice = createSlice({
     commentsByPost: {},
     status: 'idle',
     error: null,
+    notice: null,
   },
   reducers: {
     clearCurrentPost(state) {
       state.currentPost = null;
+    },
+    clearPostNotice(state) {
+      state.notice = null;
     },
   },
   extraReducers: (builder) => {
@@ -117,9 +121,12 @@ const postsSlice = createSlice({
         };
       })
       .addCase(createPost.fulfilled, (state, action) => {
-        const { communityId, post } = action.payload;
-        const bucket = state.byCommunity[communityId];
-        if (bucket) bucket.posts = [post, ...bucket.posts];
+        const { communityId, post, message } = action.payload;
+        state.notice = message || 'Post submitted for moderator approval.';
+        if (post?.status === 'approved') {
+          const bucket = state.byCommunity[communityId];
+          if (bucket) bucket.posts = [post, ...bucket.posts];
+        }
       })
       .addCase(fetchPost.fulfilled, (state, action) => {
         state.currentPost = action.payload;
@@ -138,5 +145,5 @@ const postsSlice = createSlice({
   },
 });
 
-export const { clearCurrentPost } = postsSlice.actions;
+export const { clearCurrentPost, clearPostNotice } = postsSlice.actions;
 export default postsSlice.reducer;

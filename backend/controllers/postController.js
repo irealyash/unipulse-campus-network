@@ -6,6 +6,9 @@ import { applyLikeDislike } from '../utils/likeDislike.js';
 import { toggleEmojiReaction } from '../utils/emojiReaction.js';
 import { deletePostCascade } from '../utils/contentDeletion.js';
 
+/** Tags users can pick when creating a post. */
+export const POST_TAGS = ['Humour', 'Angry', 'Confession'];
+
 /**
  * POST CONTROLLER
  * ----------------------------------------------------------------------------
@@ -26,13 +29,14 @@ export const listPosts = asyncHandler(async (req, res) => {
   const limit = Math.min(Math.max(parseInt(req.query.limit || '20', 10), 1), 50);
   const skip = (page - 1) * limit;
   const sort = req.query.sort === 'top' ? 'top' : 'new';
+  const baseMatch = { communityId, status: 'approved' };
 
   let posts;
   if (sort === 'top') {
     // "Top" needs to sort by net score (likes - dislikes), which is a virtual,
     // so we compute it server-side with an aggregation pipeline.
     posts = await Post.aggregate([
-      { $match: { communityId } },
+      { $match: baseMatch },
       {
         $addFields: {
           score: { $subtract: [{ $size: '$likes' }, { $size: '$dislikes' }] }
@@ -44,14 +48,14 @@ export const listPosts = asyncHandler(async (req, res) => {
     ]);
   } else {
     // "New" is a simple indexed sort on createdAt.
-    posts = await Post.find({ communityId })
+    posts = await Post.find(baseMatch)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .lean({ virtuals: true });
   }
 
-  const total = await Post.countDocuments({ communityId });
+  const total = await Post.countDocuments(baseMatch);
 
   res.json({
     success: true,
@@ -73,6 +77,11 @@ export const getPost = asyncHandler(async (req, res) => {
 
   await assertCommunityAccess(req.user, post.communityId);
 
+  const isAuthor = post.authorId.toString() === req.user._id.toString();
+  if (post.status !== 'approved' && !isAuthor && !req.user.moderator) {
+    throw new ApiError(404, 'Post not found.');
+  }
+
   res.json({ success: true, post });
 });
 
@@ -83,16 +92,14 @@ export const getPost = asyncHandler(async (req, res) => {
  */
 export const createPost = asyncHandler(async (req, res) => {
   const { communityId } = req.params;
-  const community = await assertCommunityAccess(req.user, communityId);
+  await assertCommunityAccess(req.user, communityId);
 
   const { title, content, tag, media } = req.body;
 
   if (!title || !title.trim()) throw new ApiError(400, 'Title is required.');
   if (!content || !content.trim()) throw new ApiError(400, 'Content is required.');
-
-  // If a tag is supplied it must be one this community allows.
-  if (tag && !community.allowedTags.includes(tag)) {
-    throw new ApiError(400, `Invalid tag. Allowed tags: ${community.allowedTags.join(', ')}`);
+  if (!tag || !POST_TAGS.includes(tag)) {
+    throw new ApiError(400, `Tag is required. Allowed tags: ${POST_TAGS.join(', ')}`);
   }
 
   const post = await Post.create({
@@ -101,14 +108,19 @@ export const createPost = asyncHandler(async (req, res) => {
     anonymousUsername: req.user.username, // frozen snapshot of the alias
     title: title.trim(),
     content: content.trim(),
-    tag: tag || null,
+    tag,
+    status: 'pending',
     media: {
       url: media?.url || null,
       mediaType: media?.mediaType || null
     }
   });
 
-  res.status(201).json({ success: true, post });
+  res.status(201).json({
+    success: true,
+    post,
+    message: 'Your post has been submitted for moderator approval.'
+  });
 });
 
 /**
@@ -121,6 +133,10 @@ export const reactToPost = asyncHandler(async (req, res) => {
   if (!post) throw new ApiError(404, 'Post not found.');
 
   await assertCommunityAccess(req.user, post.communityId);
+
+  if (post.status !== 'approved') {
+    throw new ApiError(403, 'You can only react to approved posts.');
+  }
 
   // applyLikeDislike mutates the likes/dislikes arrays according to the action.
   applyLikeDislike(post, req.user._id, req.body.action);

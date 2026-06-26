@@ -23,7 +23,11 @@ const commentSchema = new mongoose.Schema({
   }, // Frozen string value representing their alias at the exact time of posting
   content: { 
     type: String, 
-    required: true 
+    default: '' 
+  },
+  media: {
+    url: { type: String, default: null },
+    mediaType: { type: String, enum: ['image', 'video', 'gif', null], default: null },
   },
   // Same Reddit-style reactions used on posts (see Post.js for the rationale).
   likes: {

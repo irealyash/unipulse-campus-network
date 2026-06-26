@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { clearAuthMessages } from '../features/auth/authSlice';
 import { clearModMessages } from '../features/moderator/moderatorSlice';
+import { clearPostNotice } from '../features/posts/postsSlice';
 
 /**
  * Global toast layer. Watches the auth + moderator slices for transient
@@ -12,6 +13,7 @@ export default function Toasts() {
   const dispatch = useDispatch();
   const { notice: authNotice, error: authError } = useSelector((s) => s.auth);
   const { notice: modNotice, error: modError } = useSelector((s) => s.moderator);
+  const { notice: postNotice } = useSelector((s) => s.posts);
 
   useEffect(() => {
     if (authNotice || authError) {
@@ -27,11 +29,19 @@ export default function Toasts() {
     }
   }, [modNotice, modError, dispatch]);
 
+  useEffect(() => {
+    if (postNotice) {
+      const t = setTimeout(() => dispatch(clearPostNotice()), 4000);
+      return () => clearTimeout(t);
+    }
+  }, [postNotice, dispatch]);
+
   const items = [
     authError && { type: 'error', msg: authError },
     authNotice && { type: 'success', msg: authNotice },
     modError && { type: 'error', msg: modError },
     modNotice && { type: 'success', msg: modNotice },
+    postNotice && { type: 'info', msg: postNotice },
   ].filter(Boolean);
 
   if (items.length === 0) return null;
@@ -41,7 +51,13 @@ export default function Toasts() {
       {items.map((it, i) => (
         <div
           key={i}
-          className={`alert ${it.type === 'error' ? 'alert-error' : 'alert-success'} shadow-lg`}
+          className={`alert ${
+            it.type === 'error'
+              ? 'alert-error'
+              : it.type === 'info'
+                ? 'alert-info'
+                : 'alert-success'
+          } shadow-lg`}
         >
           <span>{it.msg}</span>
         </div>

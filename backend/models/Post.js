@@ -30,7 +30,7 @@ const postSchema = new mongoose.Schema({
         }, // The public cloud storage link (e.g., AWS S3 or Cloudinary URL)
         mediaType: {
             type: String,
-            enum: ['image', 'video', null],
+            enum: ['image', 'video', 'gif', null],
             default: null
         } // Helps the frontend immediately know whether to render an <img> or <video> tag
     },
@@ -67,6 +67,21 @@ const postSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    // All new posts start pending; moderators approve before they appear in feeds.
+    status: {
+        type: String,
+        enum: ['pending', 'approved', 'rejected'],
+        default: 'pending'
+    },
+    reviewedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        default: null
+    },
+    reviewedAt: {
+        type: Date,
+        default: null
+    },
     createdAt: {
         type: Date,
         default: Date.now
@@ -83,6 +98,7 @@ postSchema.set('toJSON', { virtuals: true });
 postSchema.set('toObject', { virtuals: true });
 
 // Compound index to serve a community's feed sorted by newest posts instantly
-postSchema.index({ communityId: 1, createdAt: -1 });
+postSchema.index({ communityId: 1, status: 1, createdAt: -1 });
+postSchema.index({ status: 1, createdAt: -1 });
 
 export default mongoose.model('Post', postSchema);

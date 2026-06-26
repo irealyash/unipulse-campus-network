@@ -14,7 +14,10 @@ import {
   resolveReport,
   listRequests,
   resolveRequest,
-  setUserBan
+  setUserBan,
+  listPostsForReview,
+  approvePost,
+  rejectPost
 } from '../controllers/moderatorController.js';
 
 /**
@@ -44,6 +47,11 @@ const router = Router();
 
 // Lock down the entire moderator namespace.
 router.use(protect, requireModerator);
+
+// --- Post approval queue ---
+router.get('/posts', listPostsForReview);
+router.post('/posts/:id/approve', approvePost);
+router.post('/posts/:id/reject', rejectPost);
 
 // --- Communities & browsing (no access gate for moderators) ---
 router.get('/communities', listAllCommunities);

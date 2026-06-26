@@ -1,0 +1,112 @@
+import { useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import {
+  fetchPost,
+  fetchComments,
+  reactToPost,
+  clearCurrentPost,
+} from '../features/posts/postsSlice';
+import Loader from '../components/Loader';
+import PostCommentSection, { PostMedia } from '../components/community/PostCommentSection';
+import { ThumbUpIcon, ThumbDownIcon } from '../components/icons';
+
+/** Full-page view for a single post and its comment thread. */
+export default function PostPage() {
+  const { communityId, postId } = useParams();
+  const dispatch = useDispatch();
+  const post = useSelector((s) => s.posts.currentPost);
+  const comments = useSelector((s) => s.posts.commentsByPost[postId]);
+  const [commentSort, setCommentSort] = useState('new');
+
+  useEffect(() => {
+    dispatch(fetchPost(postId));
+    return () => dispatch(clearCurrentPost());
+  }, [dispatch, postId]);
+
+  useEffect(() => {
+    if (post?._id) {
+      dispatch(fetchComments({ postId: post._id, sort: commentSort }));
+    }
+  }, [dispatch, post?._id, commentSort]);
+
+  const refreshComments = () => {
+    if (post?._id) dispatch(fetchComments({ postId: post._id, sort: commentSort }));
+  };
+
+  if (!post || post._id !== postId) {
+    return (
+      <div className="flex-1 flex items-center justify-center p-8">
+        <Loader label="Loading post…" />
+      </div>
+    );
+  }
+
+  const approved = post.status === 'approved' || !post.status;
+
+  return (
+    <div className="flex flex-col h-full min-h-0">
+      <div className="shrink-0 border-b border-base-200 bg-base-100 px-4 py-3">
+        <Link
+          to={`/c/${encodeURIComponent(communityId)}/posts`}
+          className="text-sm text-primary link link-hover"
+        >
+          ← Back to posts
+        </Link>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-4 bg-base-200/30 min-h-0">
+        <article className="card bg-base-100 border border-base-200 shadow-sm max-w-3xl mx-auto">
+          <div className="card-body">
+            {post.status === 'pending' && (
+              <div className="alert alert-warning text-sm py-2">
+                This post is awaiting moderator approval. Comments will open once it is approved.
+              </div>
+            )}
+            {post.status === 'rejected' && (
+              <div className="alert alert-error text-sm py-2">
+                This post was rejected by a moderator and is not visible in the community feed.
+              </div>
+            )}
+
+            <p className="text-xs text-base-content/50">
+              Posted by <span className="font-medium text-primary">{post.anonymousUsername}</span> ·{' '}
+              {new Date(post.createdAt).toLocaleString()}
+              {post.tag && <span className="badge badge-outline badge-xs ml-2">{post.tag}</span>}
+            </p>
+            <h1 className="font-bold text-2xl mt-2">{post.title}</h1>
+            <p className="text-sm whitespace-pre-wrap mt-3">{post.content}</p>
+            <PostMedia media={post.media} />
+
+            <div className="flex items-center gap-2 mt-4 text-base-content/60">
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm gap-1"
+                onClick={() => dispatch(reactToPost({ postId: post._id, action: 'like' }))}
+              >
+                <ThumbUpIcon /> Like
+              </button>
+              <span className="text-sm font-bold">{post.score ?? 0}</span>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm gap-1"
+                onClick={() => dispatch(reactToPost({ postId: post._id, action: 'dislike' }))}
+              >
+                <ThumbDownIcon />
+              </button>
+            </div>
+
+            <PostCommentSection
+              postId={post._id}
+              comments={comments}
+              commentSort={commentSort}
+              onSortChange={setCommentSort}
+              onRefresh={refreshComments}
+              disabled={!approved}
+            />
+          </div>
+        </article>
+      </div>
+    </div>
+  );
+}

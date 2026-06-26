@@ -10,11 +10,15 @@ import {
   modFetchCommunities,
   modDeleteContent,
   modUpdateCommunity,
+  modFetchPendingPosts,
+  modApprovePost,
+  modRejectPost,
 } from '../features/moderator/moderatorSlice';
 import { Link } from 'react-router-dom';
 import UserAvatar from '../components/UserAvatar';
 import { communityAvatar } from '../lib/avatars';
 import { uploadMedia } from '../lib/media';
+import { PostMedia } from '../components/community/PostCommentSection';
 import {
   ShieldIcon,
   FlagIcon,
@@ -23,10 +27,12 @@ import {
   SearchIcon,
   TrashIcon,
   CalendarIcon,
+  ChatIcon,
 } from '../components/icons';
 
 const TABS = [
   { id: 'reports', label: 'Reports', icon: <FlagIcon /> },
+  { id: 'posts', label: 'Posts', icon: <ChatIcon /> },
   { id: 'requests', label: 'Requests', icon: <InboxIcon /> },
   { id: 'users', label: 'Users', icon: <UsersIcon /> },
   { id: 'communities', label: 'Communities', icon: <CalendarIcon /> },
@@ -96,6 +102,79 @@ function ReportsTab() {
                       onClick={() => dispatch(modResolveReport({ id: r._id, action: 'delete' }))}
                     >
                       <TrashIcon /> Delete content
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ----------------------------- Posts tab ------------------------------- */
+function PostsTab() {
+  const dispatch = useDispatch();
+  const pendingPosts = useSelector((s) => s.moderator.pendingPosts);
+  const [status, setStatus] = useState('pending');
+
+  useEffect(() => {
+    dispatch(modFetchPendingPosts(status));
+  }, [dispatch, status]);
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-lg font-bold">Post approvals</h2>
+        <select
+          className="select select-bordered select-sm rounded-full"
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+        >
+          <option value="pending">Pending</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+          <option value="all">All</option>
+        </select>
+      </div>
+
+      {pendingPosts.length === 0 ? (
+        <EmptyState text="No posts in this queue." />
+      ) : (
+        <div className="grid gap-3">
+          {pendingPosts.map((p) => (
+            <div key={p._id} className="card bg-base-100 border border-base-200 shadow-sm">
+              <div className="card-body p-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  {p.tag && <span className="badge badge-outline badge-sm">{p.tag}</span>}
+                  <span className="badge badge-ghost badge-sm">{p.communityId}</span>
+                  <span className="badge badge-outline badge-sm">{p.status || 'pending'}</span>
+                  <span className="text-xs text-base-content/40 ml-auto">
+                    {new Date(p.createdAt).toLocaleString()}
+                  </span>
+                </div>
+                <h3 className="font-bold mt-1">{p.title}</h3>
+                <p className="text-sm text-base-content/80 whitespace-pre-wrap line-clamp-4">{p.content}</p>
+                <PostMedia media={p.media} />
+                <p className="text-xs text-base-content/50 mt-1">
+                  by <span className="font-medium">{p.anonymousUsername}</span>
+                </p>
+
+                {p.status === 'pending' && (
+                  <div className="card-actions justify-end mt-2">
+                    <button
+                      className="btn btn-ghost btn-sm rounded-full"
+                      onClick={() => dispatch(modRejectPost(p._id))}
+                    >
+                      Reject
+                    </button>
+                    <button
+                      className="btn btn-primary btn-sm rounded-full"
+                      onClick={() => dispatch(modApprovePost(p._id))}
+                    >
+                      Approve
                     </button>
                   </div>
                 )}
@@ -466,6 +545,7 @@ export default function ModeratorPage() {
       </div>
 
       {tab === 'reports' && <ReportsTab />}
+      {tab === 'posts' && <PostsTab />}
       {tab === 'requests' && <RequestsTab />}
       {tab === 'users' && <UsersTab />}
       {tab === 'communities' && <CommunitiesTab />}

@@ -1,4 +1,5 @@
 import Community from '../models/Community.js';
+import Post from '../models/Post.js';
 
 /** Default general communities every student can access. */
 export const GENERAL_COMMUNITIES = [
@@ -23,10 +24,13 @@ export const ensureDefaultCommunities = async () => {
           name: c.name,
           description: c.description,
           type: 'general',
-          allowedTags: ['general', 'discussion', 'question'],
+          allowedTags: ['Humour', 'Angry', 'Confession'],
         },
       },
       { upsert: true }
     );
   }
+
+  // Legacy posts created before moderation — treat as already approved.
+  await Post.updateMany({ status: { $exists: false } }, { $set: { status: 'approved' } });
 };
