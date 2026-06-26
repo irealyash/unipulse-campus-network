@@ -4,13 +4,24 @@ import ApiError from './ApiError.js';
 /**
  * Central access-control helper used by posts, comments, chat and events.
  *
- * Rules (straight from the product spec):
- *   - "general" communities  -> any verified student can view & participate.
- *   - "course"  communities  -> only students whose `enrolledSections` array
- *                               contains this community id may participate.
- *                               Students who skipped the schedule upload simply
- *                               never have the section id, so they're excluded.
- *
+ *   - private: false  -> any verified student can view & participate
+ *   - private: true + type course   -> enrolledSections must include community id
+ *   - private: true + type general    -> user must be in community.members
+ *   - moderators may access any community (e.g. when opening from the mod tab)
+ */
+
+export const canAccessCommunity = (user, community) => {
+  if (user?.moderator) return true;
+  if (!community.private) return true;
+  if (community.type === 'course') {
+    return Boolean(user.enrolledSections?.includes(community._id));
+  }
+  return Boolean(
+    community.members?.some((id) => id.toString() === user._id.toString())
+  );
+};
+
+/**
  * @param {Object} user        - the authenticated user document
  * @param {string} communityId - the community _id (e.g. "CPSC-110-101")
  * @returns {Promise<Object>}  - the community document if access is granted
@@ -22,25 +33,22 @@ export const assertCommunityAccess = async (user, communityId) => {
     throw new ApiError(404, `Community "${communityId}" not found`);
   }
 
-  // Course communities are gated behind enrollment.
-  if (community.type === 'course') {
-    const enrolled = user.enrolledSections?.includes(community._id);
-    if (!enrolled) {
-      throw new ApiError(
-        403,
-        'This is a course-specific community. Upload your class schedule with this course to join.'
-      );
-    }
+  if (!canAccessCommunity(user, community)) {
+    const hint =
+      community.type === 'course'
+        ? 'Upload your class schedule (.xlsx) with this course to join.'
+        : 'This is a private community. Ask a moderator to add you.';
+    throw new ApiError(403, hint);
   }
 
   return community;
 };
 
-/**
- * Non-throwing variant: returns true/false. Handy for filtering lists where we
- * just want to hide communities the user cannot access.
- */
-export const canAccessCommunity = (user, community) => {
-  if (community.type === 'general') return true;
-  return Boolean(user.enrolledSections?.includes(community._id));
-};
+/** Mongo filter: communities visible in a user's community list. */
+export const visibleCommunitiesFilter = (user) => ({
+  $or: [
+    { private: false },
+    { _id: { $in: user.enrolledSections || [] } },
+    { private: true, members: user._id },
+  ],
+});

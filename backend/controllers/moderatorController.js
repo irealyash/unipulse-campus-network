@@ -69,9 +69,15 @@ export const updateCommunity = asyncHandler(async (req, res) => {
   const community = await Community.findById(req.params.communityId);
   if (!community) throw new ApiError(404, 'Community not found.');
 
-  const { name, imageUrl } = req.body;
+  const { name, imageUrl, private: isPrivate } = req.body;
   if (name?.trim()) community.name = name.trim();
   if (imageUrl !== undefined) community.imageUrl = imageUrl?.trim() || null;
+  if (typeof isPrivate === 'boolean') {
+    if (community.type === 'course' && isPrivate === false) {
+      throw new ApiError(400, 'Course section communities must remain private.');
+    }
+    community.private = isPrivate;
+  }
 
   await community.save();
   res.json({ success: true, community: withCommunityImage(community) });
@@ -107,10 +113,52 @@ export const createCommunity = asyncHandler(async (req, res) => {
     description: description?.trim() || '',
     imageUrl: imageUrl?.trim() || null,
     type: 'general',
+    private: Boolean(req.body.private),
     allowedTags: POST_TAGS,
   });
 
   res.status(201).json({ success: true, community: withCommunityImage(community) });
+});
+
+/**
+ * POST /api/moderator/communities/:communityId/members
+ * Body: { userId }
+ * Adds a user to a private community by their MongoDB user id.
+ */
+export const addCommunityMember = asyncHandler(async (req, res) => {
+  const community = await Community.findById(req.params.communityId);
+  if (!community) throw new ApiError(404, 'Community not found.');
+
+  if (!community.private) {
+    throw new ApiError(400, 'Only private communities support manual member invites.');
+  }
+
+  const { userId } = req.body;
+  if (!mongoose.isValidObjectId(userId)) {
+    throw new ApiError(400, 'A valid userId is required.');
+  }
+
+  const user = await User.findById(userId);
+  if (!user) throw new ApiError(404, 'User not found.');
+
+  if (community.type === 'course') {
+    if (!user.enrolledSections.includes(community._id)) {
+      user.enrolledSections.push(community._id);
+      await user.save();
+    }
+  } else {
+    const already = community.members.some((m) => m.toString() === userId);
+    if (!already) {
+      community.members.push(user._id);
+      await community.save();
+    }
+  }
+
+  res.json({
+    success: true,
+    message: `Added ${user.username} to ${community.name}.`,
+    community: withCommunityImage(community),
+  });
 });
 
 /**

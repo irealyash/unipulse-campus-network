@@ -23,13 +23,24 @@ const communitySchema = new mongoose.Schema({
     type: String,
     default: null
   },
-  // "general"  -> open to every verified student (chess, housing, marketplace...)
-  // "course"   -> gated; only students whose enrolledSections include this _id can enter
-  // This single field drives all of our access-control logic across posts/chat/events.
+  // "general"  -> interest communities (public or moderator-managed private)
+  // "course"   -> section communities from calendar upload (always private)
   type: {
     type: String,
     enum: ["general", "course"],
     default: "general"
+  },
+  // false -> any verified student can see and join
+  // true  -> course sections via calendar, or general via moderator-added members
+  private: {
+    type: Boolean,
+    default: false
+  },
+  // Moderator-invited members for private general communities
+  members: {
+    type: [mongoose.Schema.Types.ObjectId],
+    ref: 'User',
+    default: []
   },
   // The list of custom tags allowed when posting in this specific community
   allowedTags: {
@@ -41,5 +52,8 @@ const communitySchema = new mongoose.Schema({
     default: Date.now
   }
 });
+
+communitySchema.index({ private: 1, type: 1 });
+communitySchema.index({ members: 1 });
 
 export default mongoose.model('Community', communitySchema);

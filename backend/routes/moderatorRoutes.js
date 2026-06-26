@@ -4,6 +4,7 @@ import {
   updateCommunity,
   createCommunity,
   deleteCommunity,
+  addCommunityMember,
   listAllCommunities,
   browseCommunityPosts,
   browseCommunityMessages,
@@ -68,6 +69,7 @@ router.post('/events/:id/reject', rejectEvent);
 router.get('/communities', listAllCommunities);
 router.post('/communities', createCommunity);
 router.patch('/communities/:communityId', updateCommunity);
+router.post('/communities/:communityId/members', addCommunityMember);
 router.delete('/communities/:communityId', deleteCommunity);
 router.get('/communities/:communityId/posts', browseCommunityPosts);
 router.get('/communities/:communityId/messages', browseCommunityMessages);

@@ -1,7 +1,7 @@
 import Community from '../models/Community.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import ApiError from '../utils/ApiError.js';
-import { assertCommunityAccess } from '../utils/membership.js';
+import { assertCommunityAccess, visibleCommunitiesFilter } from '../utils/membership.js';
 import { withCommunityImage } from '../utils/avatars.js';
 
 /**
@@ -19,12 +19,10 @@ import { withCommunityImage } from '../utils/avatars.js';
  * hidden entirely (they shouldn't even know the room exists in their feed).
  */
 export const listCommunities = asyncHandler(async (req, res) => {
-  const communities = await Community.find({
-    $or: [
-      { type: 'general' },
-      { _id: { $in: req.user.enrolledSections } } // their course rooms only
-    ]
-  }).sort({ type: 1, name: 1 });
+  const communities = await Community.find(visibleCommunitiesFilter(req.user)).sort({
+    type: 1,
+    name: 1,
+  });
 
   res.json({
     success: true,

@@ -4,6 +4,7 @@ import asyncHandler from '../utils/asyncHandler.js';
 import ApiError from '../utils/ApiError.js';
 import { parseScheduleFile } from '../utils/scheduleParser.js';
 import { serializeUser } from './authController.js';
+import { POST_TAGS } from './postController.js';
 import {
   isValidUsername,
   USERNAME_CHANGE_COOLDOWN_DAYS
@@ -26,28 +27,23 @@ export const getMe = asyncHandler(async (req, res) => {
 
 /**
  * POST /api/users/me/schedule   (multipart/form-data, field "schedule")
- * Parses the uploaded UBC calendar file, stores the detected sections on the
- * user, and auto-provisions a "course" community for each section so students
- * have somewhere to land. Uploading is optional for the user overall, but if
- * they DO upload we expect to find at least one course.
+ * Parses an uploaded UBC schedule .xlsx, provisions private course communities
+ * for each section, and enrolls the user in those sections.
  */
 export const uploadScheduleFile = asyncHandler(async (req, res) => {
   if (!req.file) {
     throw new ApiError(400, 'No schedule file uploaded. Use form field "schedule".');
   }
 
-  // 1) Extract normalized section ids (e.g. ["CPSC-110-101", "MATH-100-LEC"]).
   const sections = parseScheduleFile(req.file.buffer, req.file.originalname);
 
   if (sections.length === 0) {
     throw new ApiError(
       422,
-      'Could not detect any courses in that file. Make sure it is your UBC schedule export (.ics).'
+      'Could not detect any course sections in that .xlsx file. Section extraction will be improved soon — ensure the file is your UBC schedule export.'
     );
   }
 
-  // 2) Ensure a course community exists for each detected section. We use
-  //    bulk upserts so re-uploading is idempotent and never duplicates rooms.
   await Promise.all(
     sections.map((sectionId) =>
       Community.updateOne(
@@ -55,27 +51,29 @@ export const uploadScheduleFile = asyncHandler(async (req, res) => {
         {
           $setOnInsert: {
             _id: sectionId,
-            name: sectionId.replace(/-/g, ' '), // "CPSC-110-101" -> "CPSC 110 101"
-            description: `Community for ${sectionId} students.`,
+            name: sectionId.replace(/-/g, ' '),
+            description: `Private community for ${sectionId} students.`,
             type: 'course',
-            allowedTags: ['general', 'notes', 'questions', 'exams']
-          }
+            private: true,
+            allowedTags: POST_TAGS,
+          },
         },
         { upsert: true }
       )
     )
   );
 
-  // 3) Save the sections onto the user and flip the uploaded flag.
-  req.user.enrolledSections = sections;
+  const merged = [...new Set([...(req.user.enrolledSections || []), ...sections])];
+  req.user.enrolledSections = merged;
   req.user.scheduleUploaded = true;
   await req.user.save();
 
   res.json({
     success: true,
-    message: `Schedule processed. You now have access to ${sections.length} course communities.`,
-    enrolledSections: sections,
-    user: serializeUser(req.user)
+    message: `Schedule processed. You now have access to ${sections.length} course communit${sections.length === 1 ? 'y' : 'ies'}.`,
+    enrolledSections: merged,
+    addedSections: sections,
+    user: serializeUser(req.user),
   });
 });
 
@@ -91,12 +89,10 @@ export const changeUsername = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'Username must be 3-20 characters: letters, numbers or underscores.');
   }
 
-  // No-op if it's the same name.
   if (newUsername === req.user.username) {
     throw new ApiError(400, 'That is already your username.');
   }
 
-  // Enforce the weekly cooldown based on lastUsernameChange.
   const cooldownMs = USERNAME_CHANGE_COOLDOWN_DAYS * 24 * 60 * 60 * 1000;
   const nextAllowed = new Date(req.user.lastUsernameChange).getTime() + cooldownMs;
   if (Date.now() < nextAllowed) {
@@ -107,7 +103,6 @@ export const changeUsername = asyncHandler(async (req, res) => {
     );
   }
 
-  // Uniqueness check (the unique index is the final backstop).
   const taken = await User.findOne({ username: newUsername });
   if (taken) {
     throw new ApiError(409, 'That username is already taken.');
@@ -120,6 +115,6 @@ export const changeUsername = asyncHandler(async (req, res) => {
   res.json({
     success: true,
     message: 'Username updated.',
-    user: serializeUser(req.user)
+    user: serializeUser(req.user),
   });
 });

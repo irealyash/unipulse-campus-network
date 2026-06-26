@@ -132,6 +132,21 @@ export const modDeleteCommunity = createAsyncThunk(
   }
 );
 
+export const modAddCommunityMember = createAsyncThunk(
+  'mod/addCommunityMember',
+  async ({ communityId, userId }, { rejectWithValue }) => {
+    try {
+      const { data } = await api.post(
+        `/moderator/communities/${encodeURIComponent(communityId)}/members`,
+        { userId }
+      );
+      return { communityId, message: data.message, community: data.community };
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
 export const modDeleteContent = createAsyncThunk(
   'mod/deleteContent',
   async ({ kind, id }, { rejectWithValue }) => {
@@ -252,6 +267,11 @@ const moderatorSlice = createSlice({
       .addCase(modDeleteCommunity.fulfilled, (state, action) => {
         state.communities = state.communities.filter((c) => c._id !== action.payload.communityId);
         state.notice = action.payload.message || 'Community deleted.';
+      })
+      .addCase(modAddCommunityMember.fulfilled, (state, action) => {
+        const i = state.communities.findIndex((c) => c._id === action.payload.communityId);
+        if (i >= 0) state.communities[i] = action.payload.community;
+        state.notice = action.payload.message || 'User added.';
       })
       .addCase(modLookupUser.fulfilled, (state, action) => {
         state.userLookup = action.payload;

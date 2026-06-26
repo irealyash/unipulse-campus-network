@@ -5,9 +5,9 @@ import { uploadSchedule } from '../features/auth/authSlice';
 import { CalendarIcon, SparkleIcon } from '../components/icons';
 
 /**
- * Schedule upload. Parsing the uploaded UBC calendar (.ics) unlocks the user's
- * course communities. This step is OPTIONAL — they can skip and still use the
- * general communities.
+ * Schedule upload. Parsing the uploaded UBC schedule (.xlsx) unlocks private
+ * course-section communities. This step is optional — users can skip and still
+ * use public communities.
  */
 export default function SchedulePage() {
   const dispatch = useDispatch();
@@ -23,7 +23,12 @@ export default function SchedulePage() {
 
   const pick = (f) => {
     setError('');
-    if (f) setFile(f);
+    if (!f) return;
+    if (!/\.xlsx$/i.test(f.name)) {
+      setError('Only .xlsx schedule files are accepted.');
+      return;
+    }
+    setFile(f);
   };
 
   const onDrop = (e) => {
@@ -47,8 +52,8 @@ export default function SchedulePage() {
         </div>
         <h1 className="text-3xl font-extrabold">Add your class schedule</h1>
         <p className="text-base-content/70 mt-2">
-          Upload your UBC calendar export (<code>.ics</code>) and we’ll automatically add you to a
-          private community for each of your course sections.
+          Upload your UBC schedule as an <code>.xlsx</code> file and we’ll add you to a private
+          community for each course section we detect.
         </p>
       </div>
 
@@ -60,7 +65,6 @@ export default function SchedulePage() {
             </div>
           )}
 
-          {/* Drop zone */}
           <div
             onClick={() => inputRef.current?.click()}
             onDragOver={(e) => {
@@ -82,13 +86,13 @@ export default function SchedulePage() {
             ) : (
               <>
                 <p className="font-medium">Drag & drop your schedule here</p>
-                <p className="text-sm text-base-content/60">or click to browse (.ics, .csv, .txt)</p>
+                <p className="text-sm text-base-content/60">or click to browse (.xlsx only)</p>
               </>
             )}
             <input
               ref={inputRef}
               type="file"
-              accept=".ics,.csv,.txt,.json,text/calendar"
+              accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
               className="hidden"
               onChange={(e) => pick(e.target.files?.[0])}
             />
@@ -105,7 +109,8 @@ export default function SchedulePage() {
           </div>
 
           <p className="text-xs text-base-content/50 text-center">
-            Tip: in UBC’s SSC, choose “Save to calendar” to download your <code>.ics</code> file.
+            Course section parsing from your xlsx layout will be refined soon. Public communities
+            are available without uploading a schedule.
           </p>
         </div>
       </div>

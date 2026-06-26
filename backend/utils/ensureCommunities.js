@@ -29,6 +29,7 @@ export const ensureDefaultCommunities = async () => {
           name: c.name,
           description: c.description,
           type: 'general',
+          private: false,
           allowedTags: POST_TAGS,
         },
       },
@@ -39,4 +40,12 @@ export const ensureDefaultCommunities = async () => {
   // Legacy posts/events created before moderation — treat as already approved.
   await Post.updateMany({ status: { $exists: false } }, { $set: { status: 'approved' } });
   await Event.updateMany({ status: { $exists: false } }, { $set: { status: 'approved' } });
+  await Community.updateMany(
+    { private: { $exists: false }, type: 'course' },
+    { $set: { private: true } }
+  );
+  await Community.updateMany(
+    { private: { $exists: false }, type: 'general' },
+    { $set: { private: false } }
+  );
 };

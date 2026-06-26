@@ -12,6 +12,7 @@ import {
   modUpdateCommunity,
   modCreateCommunity,
   modDeleteCommunity,
+  modAddCommunityMember,
   modFetchPendingPosts,
   modApprovePost,
   modRejectPost,
@@ -530,11 +531,13 @@ function CommunitiesTab() {
   const communities = useSelector((s) => s.moderator.communities);
   const [search, setSearch] = useState('');
   const [editId, setEditId] = useState(null);
-  const [editForm, setEditForm] = useState({ name: '', imageUrl: '' });
+  const [editForm, setEditForm] = useState({ name: '', imageUrl: '', private: false });
   const [iconFile, setIconFile] = useState(null);
   const [createOpen, setCreateOpen] = useState(false);
-  const [createForm, setCreateForm] = useState({ name: '', description: '', id: '' });
+  const [createForm, setCreateForm] = useState({ name: '', description: '', id: '', private: false });
   const [createIconFile, setCreateIconFile] = useState(null);
+  const [addUsersId, setAddUsersId] = useState(null);
+  const [memberUserId, setMemberUserId] = useState('');
 
   useEffect(() => {
     dispatch(modFetchCommunities(''));
@@ -547,7 +550,7 @@ function CommunitiesTab() {
 
   const openEdit = (c) => {
     setEditId(c._id);
-    setEditForm({ name: c.name, imageUrl: c.imageUrl || '' });
+    setEditForm({ name: c.name, imageUrl: c.imageUrl || '', private: Boolean(c.private) });
     setIconFile(null);
   };
 
@@ -558,7 +561,12 @@ function CommunitiesTab() {
       const up = await uploadMedia(iconFile);
       imageUrl = up.url;
     }
-    await dispatch(modUpdateCommunity({ communityId: editId, payload: { name: editForm.name, imageUrl } }));
+    const community = communities.find((c) => c._id === editId);
+    const payload = { name: editForm.name, imageUrl };
+    if (community?.type !== 'course') {
+      payload.private = editForm.private;
+    }
+    await dispatch(modUpdateCommunity({ communityId: editId, payload }));
     setEditId(null);
     dispatch(modFetchCommunities(search.trim()));
     dispatch(fetchCommunities());
@@ -577,10 +585,11 @@ function CommunitiesTab() {
         description: createForm.description,
         id: createForm.id.trim() || undefined,
         imageUrl,
+        private: createForm.private,
       })
     );
     setCreateOpen(false);
-    setCreateForm({ name: '', description: '', id: '' });
+    setCreateForm({ name: '', description: '', id: '', private: false });
     setCreateIconFile(null);
     dispatch(modFetchCommunities(search.trim()));
     dispatch(fetchCommunities());
@@ -593,6 +602,14 @@ function CommunitiesTab() {
   };
 
   const canDelete = (c) => c.type === 'general' && !PROTECTED_COMMUNITY_IDS.has(c._id);
+
+  const submitAddMember = async (e) => {
+    e.preventDefault();
+    if (!memberUserId.trim()) return;
+    await dispatch(modAddCommunityMember({ communityId: addUsersId, userId: memberUserId.trim() }));
+    setAddUsersId(null);
+    setMemberUserId('');
+  };
 
   return (
     <div>
@@ -636,8 +653,23 @@ function CommunitiesTab() {
                 <span className={`badge badge-sm ${c.type === 'course' ? 'badge-secondary' : 'badge-primary'}`}>
                   {c.type}
                 </span>
+                <span className={`badge badge-sm ${c.private ? 'badge-warning' : 'badge-success'}`}>
+                  {c.private ? 'Private' : 'Public'}
+                </span>
               </div>
               <div className="card-actions justify-end mt-2 flex-wrap">
+                {c.private && (
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-xs rounded-full"
+                    onClick={() => {
+                      setAddUsersId(c._id);
+                      setMemberUserId('');
+                    }}
+                  >
+                    Add users
+                  </button>
+                )}
                 <button type="button" className="btn btn-ghost btn-xs rounded-full" onClick={() => openEdit(c)}>
                   Edit
                 </button>
@@ -683,6 +715,17 @@ function CommunitiesTab() {
                 value={createForm.description}
                 onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
               />
+              <label className="label cursor-pointer justify-start gap-3 py-0">
+                <input
+                  type="checkbox"
+                  className="toggle toggle-primary"
+                  checked={createForm.private}
+                  onChange={(e) => setCreateForm({ ...createForm, private: e.target.checked })}
+                />
+                <span className="label-text">
+                  Private community (only members you add, or course schedule upload, can join)
+                </span>
+              </label>
               <input
                 type="file"
                 accept="image/*"
@@ -703,6 +746,35 @@ function CommunitiesTab() {
         </div>
       )}
 
+      {addUsersId && (
+        <div className="modal modal-open">
+          <div className="modal-box rounded-3xl">
+            <h3 className="font-bold">Add user to community</h3>
+            <p className="text-sm text-base-content/60 mt-1">
+              Enter the user&apos;s MongoDB id to grant access to this private community.
+            </p>
+            <form onSubmit={submitAddMember} className="flex flex-col gap-3 mt-3">
+              <input
+                className="input input-bordered rounded-2xl font-mono text-sm"
+                placeholder="User id…"
+                value={memberUserId}
+                onChange={(e) => setMemberUserId(e.target.value)}
+                required
+              />
+              <div className="modal-action">
+                <button type="button" className="btn btn-ghost rounded-2xl" onClick={() => setAddUsersId(null)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary rounded-2xl">
+                  Add user
+                </button>
+              </div>
+            </form>
+          </div>
+          <div className="modal-backdrop bg-black/40" onClick={() => setAddUsersId(null)} />
+        </div>
+      )}
+
       {editId && (
         <div className="modal modal-open">
           <div className="modal-box rounded-3xl">
@@ -714,6 +786,17 @@ function CommunitiesTab() {
                 onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                 required
               />
+              {communities.find((c) => c._id === editId)?.type !== 'course' && (
+                <label className="label cursor-pointer justify-start gap-3 py-0">
+                  <input
+                    type="checkbox"
+                    className="toggle toggle-primary"
+                    checked={editForm.private}
+                    onChange={(e) => setEditForm({ ...editForm, private: e.target.checked })}
+                  />
+                  <span className="label-text">Private community</span>
+                </label>
+              )}
               <input
                 type="file"
                 accept="image/*"
