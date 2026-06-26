@@ -5,7 +5,7 @@
  *   1. allowed to sign up even if they don't match ALLOWED_EMAIL_DOMAIN, and
  *   2. automatically granted moderator powers on signup / login.
  *
- * Example .env:  MODERATOR_EMAILS=iyash636@ubc.ca
+ * Example .env:  MODERATOR_EMAILS=iyash636@student.ubc.ca
  */
 export const getModeratorEmails = () =>
   (process.env.MODERATOR_EMAILS || '')

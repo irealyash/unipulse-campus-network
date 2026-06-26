@@ -15,4 +15,12 @@ export default defineConfig({
       '/socket.io': { target: 'http://localhost:5000', ws: true, changeOrigin: true },
     },
   },
+  preview: {
+    port: 4173,
+    // Same proxy when using `npm run preview` so /api does not 404.
+    proxy: {
+      '/api': { target: 'http://localhost:5000', changeOrigin: true },
+      '/socket.io': { target: 'http://localhost:5000', ws: true, changeOrigin: true },
+    },
+  },
 })

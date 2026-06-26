@@ -2,6 +2,7 @@ import Community from '../models/Community.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import ApiError from '../utils/ApiError.js';
 import { assertCommunityAccess } from '../utils/membership.js';
+import { withCommunityImage } from '../utils/avatars.js';
 
 /**
  * COMMUNITY CONTROLLER
@@ -25,7 +26,11 @@ export const listCommunities = asyncHandler(async (req, res) => {
     ]
   }).sort({ type: 1, name: 1 });
 
-  res.json({ success: true, count: communities.length, communities });
+  res.json({
+    success: true,
+    count: communities.length,
+    communities: communities.map((c) => withCommunityImage(c)),
+  });
 });
 
 /**
@@ -35,7 +40,7 @@ export const listCommunities = asyncHandler(async (req, res) => {
 export const getCommunity = asyncHandler(async (req, res) => {
   // assertCommunityAccess both fetches the doc and enforces the access rules.
   const community = await assertCommunityAccess(req.user, req.params.id);
-  res.json({ success: true, community });
+  res.json({ success: true, community: withCommunityImage(community) });
 });
 
 /**
@@ -45,7 +50,7 @@ export const getCommunity = asyncHandler(async (req, res) => {
  * are never created here — those are auto-provisioned from schedule uploads.
  */
 export const createCommunity = asyncHandler(async (req, res) => {
-  const { name, description, allowedTags } = req.body;
+  const { name, description, allowedTags, imageUrl } = req.body;
 
   if (!name || !name.trim()) {
     throw new ApiError(400, 'Community name is required.');
@@ -68,10 +73,11 @@ export const createCommunity = asyncHandler(async (req, res) => {
     _id: id,
     name: name.trim(),
     description: description?.trim() || '',
-    type: 'general', // user-created communities are always open/general
+    imageUrl: imageUrl?.trim() || null,
+    type: 'general',
     allowedTags:
       Array.isArray(allowedTags) && allowedTags.length ? allowedTags : ['general']
   });
 
-  res.status(201).json({ success: true, community });
+  res.status(201).json({ success: true, community: withCommunityImage(community) });
 });

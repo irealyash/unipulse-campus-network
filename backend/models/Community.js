@@ -18,6 +18,11 @@ const communitySchema = new mongoose.Schema({
     type: String,
     default: ""
   },
+  // Community profile picture (URL). If omitted, the API returns a generated default.
+  imageUrl: {
+    type: String,
+    default: null
+  },
   // "general"  -> open to every verified student (chess, housing, marketplace...)
   // "course"   -> gated; only students whose enrolledSections include this _id can enter
   // This single field drives all of our access-control logic across posts/chat/events.

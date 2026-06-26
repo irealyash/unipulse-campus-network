@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { protect } from '../middleware/auth.js';
-import { getEvent, deleteEvent } from '../controllers/eventController.js';
+import { getEvent, deleteEvent, rsvpEvent } from '../controllers/eventController.js';
 
 /**
  * Single-event routes (listing/creating live under /communities/:id/events).
@@ -12,5 +12,6 @@ const router = Router();
 router.use(protect);
 
 router.route('/:id').get(getEvent).delete(deleteEvent);
+router.post('/:id/rsvp', rsvpEvent);
 
 export default router;

@@ -19,7 +19,7 @@ export default function LoginPage() {
   const onSubmit = async (e) => {
     e.preventDefault();
     const res = await dispatch(login(form));
-    if (login.fulfilled.match(res)) navigate('/communities');
+    if (login.fulfilled.match(res)) navigate('/c');
   };
 
   return (

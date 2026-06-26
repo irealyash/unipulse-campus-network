@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { Routes, Route, Navigate, Outlet, useParams } from 'react-router-dom';
 import { fetchMe } from './features/auth/authSlice';
 import { getToken } from './lib/api';
 
@@ -16,13 +16,19 @@ import LoginPage from './pages/LoginPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import SchedulePage from './pages/SchedulePage';
-import CommunitiesPage from './pages/CommunitiesPage';
-import CommunityPage from './pages/CommunityPage';
 import SettingsPage from './pages/SettingsPage';
 import ModeratorPage from './pages/ModeratorPage';
 import NotFoundPage from './pages/NotFoundPage';
+import CommunityHub, { CommunityRedirect } from './pages/CommunityHub';
+import CommunityTabView from './pages/CommunityTabView';
 
-/** Layout for authenticated app pages: persistent navbar + routed content. */
+/** Redirect legacy /communities/:id URLs to the new shell. */
+function LegacyCommunityRedirect() {
+  const { id } = useParams();
+  return <Navigate to={`/c/${encodeURIComponent(id)}/chat`} replace />;
+}
+
+/** Layout for settings / moderator pages (top navbar). */
 function AppLayout() {
   return (
     <div className="min-h-screen bg-base-200/40">
@@ -38,7 +44,6 @@ export default function App() {
   const dispatch = useDispatch();
   const { booting, token, user } = useSelector((s) => s.auth);
 
-  // On first load, if we have a stored token, resolve the current user.
   useEffect(() => {
     if (getToken()) dispatch(fetchMe());
   }, [dispatch]);
@@ -55,10 +60,9 @@ export default function App() {
     <>
       <Toasts />
       <Routes>
-        {/* Public routes */}
         <Route
           path="/"
-          element={token && user ? <Navigate to="/communities" replace /> : <LandingPage />}
+          element={token && user ? <Navigate to="/c" replace /> : <LandingPage />}
         />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/verify" element={<VerifyPage />} />
@@ -66,29 +70,29 @@ export default function App() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-        {/* Authenticated routes (with navbar layout) */}
+        {/* Discord-style community shell */}
+        <Route
+          path="/c"
+          element={
+            <ProtectedRoute>
+              <CommunityHub />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<CommunityRedirect />} />
+          <Route path=":communityId/:tab" element={<CommunityTabView />} />
+        </Route>
+
+        {/* Legacy community URLs */}
+        <Route path="/communities" element={<Navigate to="/c" replace />} />
+        <Route path="/communities/:id" element={<LegacyCommunityRedirect />} />
+
         <Route element={<AppLayout />}>
           <Route
             path="/schedule"
             element={
               <ProtectedRoute>
                 <SchedulePage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/communities"
-            element={
-              <ProtectedRoute>
-                <CommunitiesPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/communities/:id"
-            element={
-              <ProtectedRoute>
-                <CommunityPage />
               </ProtectedRoute>
             }
           />

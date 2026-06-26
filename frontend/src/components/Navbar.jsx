@@ -24,7 +24,7 @@ export default function Navbar() {
   return (
     <div className="navbar bg-base-100/80 backdrop-blur sticky top-0 z-50 border-b border-base-200 px-3 sm:px-6">
       <div className="flex-1">
-        <Link to="/communities" className="btn btn-ghost text-xl gap-2 normal-case">
+        <Link to="/c" className="btn btn-ghost text-xl gap-2 normal-case">
           <span className="text-primary">
             <SparkleIcon className="text-2xl" />
           </span>
@@ -37,7 +37,7 @@ export default function Navbar() {
       <div className="flex items-center gap-1">
         {user && (
           <>
-            <NavLink to="/communities" className={linkClass}>
+            <NavLink to="/c" className={linkClass}>
               Communities
             </NavLink>
             {user.moderator && (

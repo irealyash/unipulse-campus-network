@@ -35,7 +35,7 @@ export default function SchedulePage() {
   const onSubmit = async () => {
     if (!file) return setError('Please choose your schedule file first.');
     const res = await dispatch(uploadSchedule(file));
-    if (uploadSchedule.fulfilled.match(res)) navigate('/communities');
+    if (uploadSchedule.fulfilled.match(res)) navigate('/c');
     else setError(res.payload || 'Upload failed.');
   };
 
@@ -95,7 +95,7 @@ export default function SchedulePage() {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-2 justify-end">
-            <button className="btn btn-ghost rounded-2xl" onClick={() => navigate('/communities')}>
+            <button className="btn btn-ghost rounded-2xl" onClick={() => navigate('/c')}>
               Skip for now
             </button>
             <button className="btn btn-primary rounded-2xl" onClick={onSubmit} disabled={loading}>

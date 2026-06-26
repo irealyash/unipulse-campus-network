@@ -17,7 +17,7 @@ export default function ProtectedRoute({ children, moderatorOnly = false }) {
   }
 
   if (moderatorOnly && !user?.moderator) {
-    return <Navigate to="/communities" replace />;
+    return <Navigate to="/c" replace />;
   }
 
   return children;
