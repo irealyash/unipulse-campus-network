@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { NavLink, useParams } from 'react-router-dom';
 import { fetchCommunities } from '../../features/communities/communitiesSlice';
 import { communityAvatar } from '../../lib/avatars';
+import CourseCommunityAvatar from '../CourseCommunityAvatar';
 import UserAvatar from '../UserAvatar';
 import { ShieldIcon, ChevronIcon } from '../icons';
 
@@ -60,7 +61,11 @@ export default function CommunityRail({ sidebarOpen, onToggleSidebar }) {
         <span className="absolute -left-3 top-1/2 -translate-y-1/2 w-1 h-8 bg-base-content rounded-r-full" />
       )}
       <div className="w-12 h-12 rounded-2xl overflow-hidden group-hover:rounded-xl transition-all">
-        <img src={communityAvatar(c)} alt={c.name} className="w-full h-full object-cover" />
+        {c.type === 'course' ? (
+          <CourseCommunityAvatar sectionId={c._id} className="w-full h-full" boxPx={48} />
+        ) : (
+          <img src={communityAvatar(c)} alt={c.name} className="w-full h-full object-cover" />
+        )}
       </div>
     </NavLink>
   );

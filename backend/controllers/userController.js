@@ -3,7 +3,6 @@ import Community from '../models/Community.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import ApiError from '../utils/ApiError.js';
 import { parseScheduleFile } from '../utils/scheduleParser.js';
-import { courseCommunityImage } from '../utils/avatars.js';
 import { serializeUser } from './authController.js';
 import { POST_TAGS } from './postController.js';
 import {
@@ -66,7 +65,6 @@ export const uploadScheduleFile = asyncHandler(async (req, res) => {
             description: `Private community for ${sectionId} students.`,
             type: 'course',
             private: true,
-            imageUrl: courseCommunityImage(sectionId),
             allowedTags: POST_TAGS,
           },
         },

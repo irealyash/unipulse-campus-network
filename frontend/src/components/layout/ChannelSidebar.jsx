@@ -1,6 +1,7 @@
 import { NavLink, useParams, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { communityAvatar } from '../../lib/avatars';
+import CourseCommunityAvatar from '../CourseCommunityAvatar';
 import { ChatIcon, PostIcon, CalendarIcon, ShieldIcon } from '../icons';
 
 const TABS = [
@@ -41,7 +42,11 @@ export default function ChannelSidebar() {
         <div className="flex items-center gap-2 min-w-0">
           <div className="avatar">
             <div className="w-8 h-8 rounded-xl overflow-hidden">
-              <img src={communityAvatar(community)} alt="" className="w-full h-full object-cover" />
+              {community?.type === 'course' ? (
+                <CourseCommunityAvatar sectionId={community._id} className="w-full h-full" boxPx={32} />
+              ) : (
+                <img src={communityAvatar(community)} alt="" className="w-full h-full object-cover" />
+              )}
             </div>
           </div>
           <span className="font-bold truncate text-sm">{community?.name || communityId}</span>
