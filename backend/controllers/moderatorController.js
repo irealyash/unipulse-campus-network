@@ -19,7 +19,6 @@ import {
 import { withCommunityImage } from '../utils/avatars.js';
 import MessageReply from '../models/MessageReply.js';
 import { POST_TAGS } from './postController.js';
-import { PROTECTED_COMMUNITY_IDS } from '../utils/ensureCommunities.js';
 
 /**
  * MODERATOR CONTROLLER
@@ -166,17 +165,17 @@ export const addCommunityMember = asyncHandler(async (req, res) => {
 
 /**
  * DELETE /api/moderator/communities/:communityId
- * Removes a user-created general community and all of its content.
+ * Deletes any community and all of its content.
  */
 export const deleteCommunity = asyncHandler(async (req, res) => {
   const community = await Community.findById(req.params.communityId);
   if (!community) throw new ApiError(404, 'Community not found.');
 
   if (community.type === 'course') {
-    throw new ApiError(403, 'Course communities cannot be deleted.');
-  }
-  if (PROTECTED_COMMUNITY_IDS.has(community._id)) {
-    throw new ApiError(403, 'Default communities cannot be deleted.');
+    await User.updateMany(
+      { enrolledSections: community._id },
+      { $pull: { enrolledSections: community._id } }
+    );
   }
 
   const stats = await deleteCommunityCascade(community._id, req.user._id);

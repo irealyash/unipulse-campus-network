@@ -38,8 +38,6 @@ import {
   ChatIcon,
 } from '../components/icons';
 
-const PROTECTED_COMMUNITY_IDS = new Set(['general', 'housing', 'marketplace', 'events', 'chess']);
-
 const TABS = [
   { id: 'reports', label: 'Reports', icon: <FlagIcon /> },
   { id: 'posts', label: 'Posts', icon: <ChatIcon /> },
@@ -609,10 +607,9 @@ function CommunitiesTab() {
   const handleDelete = async (c) => {
     if (!window.confirm(`Delete community "${c.name}" and all of its content? This cannot be undone.`)) return;
     await dispatch(modDeleteCommunity(c._id));
+    fetchList();
     dispatch(fetchCommunities());
   };
-
-  const canDelete = (c) => c.type === 'general' && !PROTECTED_COMMUNITY_IDS.has(c._id);
 
   const submitAddMember = async (e) => {
     e.preventDefault();
@@ -700,15 +697,13 @@ function CommunitiesTab() {
                 <button type="button" className="btn btn-ghost btn-xs rounded-full" onClick={() => openEdit(c)}>
                   Edit
                 </button>
-                {canDelete(c) && (
-                  <button
-                    type="button"
-                    className="btn btn-error btn-xs rounded-full gap-1"
-                    onClick={() => handleDelete(c)}
-                  >
-                    <TrashIcon /> Delete
-                  </button>
-                )}
+                <button
+                  type="button"
+                  className="btn btn-error btn-xs rounded-full gap-1"
+                  onClick={() => handleDelete(c)}
+                >
+                  <TrashIcon /> Delete
+                </button>
                 <Link to={`/c/${encodeURIComponent(c._id)}/posts`} className="btn btn-primary btn-xs rounded-full">
                   Open
                 </Link>

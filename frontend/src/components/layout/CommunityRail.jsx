@@ -44,31 +44,42 @@ export default function CommunityRail({ sidebarOpen, onToggleSidebar }) {
 
   const general = list.filter((c) => c.type !== 'course');
   const courses = list.filter((c) => c.type === 'course');
+  const railCommunities = [...general, ...courses];
 
-  const Item = ({ c }) => (
-    <NavLink
-      to={`/c/${encodeURIComponent(c._id)}/${currentTab}`}
-      title={c.name}
-      className={({ isActive }) =>
-        `group relative flex items-center justify-center w-12 h-12 rounded-2xl transition-all hover:rounded-xl ${
-          isActive || c._id === communityId
-            ? 'rounded-xl ring-2 ring-primary'
-            : 'hover:bg-primary/20'
-        }`
-      }
-    >
-      {c._id === communityId && (
-        <span className="absolute -left-3 top-1/2 -translate-y-1/2 w-1 h-8 bg-base-content rounded-r-full" />
-      )}
-      <div className="w-12 h-12 rounded-2xl overflow-hidden group-hover:rounded-xl transition-all">
-        {c.type === 'course' ? (
-          <CourseCommunityAvatar sectionId={c._id} className="w-full h-full" boxPx={48} />
-        ) : (
-          <img src={communityAvatar(c)} alt={c.name} className="w-full h-full object-cover" />
+  const Item = ({ c }) => {
+    const selected = c._id === communityId;
+
+    return (
+      <NavLink
+        to={`/c/${encodeURIComponent(c._id)}/${currentTab}`}
+        title={c.name}
+        onMouseDown={(e) => e.preventDefault()}
+        className={({ isActive }) => {
+          const active = isActive || selected;
+          return `group relative flex items-center justify-center w-12 h-12 transition-all ${
+            active
+              ? 'rounded-xl ring-2 ring-primary bg-primary/20'
+              : 'rounded-2xl hover:rounded-xl hover:bg-primary/20'
+          }`;
+        }}
+      >
+        {selected && (
+          <span className="absolute -left-3 top-1/2 -translate-y-1/2 w-1 h-8 bg-base-content rounded-r-full" />
         )}
-      </div>
-    </NavLink>
-  );
+        <div
+          className={`w-12 h-12 overflow-hidden transition-all ${
+            selected ? 'rounded-xl' : 'rounded-2xl group-hover:rounded-xl'
+          }`}
+        >
+          {c.type === 'course' ? (
+            <CourseCommunityAvatar sectionId={c._id} className="w-full h-full" boxPx={48} />
+          ) : (
+            <img src={communityAvatar(c)} alt={c.name} className="w-full h-full object-cover" />
+          )}
+        </div>
+      </NavLink>
+    );
+  };
 
   const profileMenu =
     menuOpen &&
@@ -120,19 +131,13 @@ export default function CommunityRail({ sidebarOpen, onToggleSidebar }) {
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col items-center py-1 gap-2">
-        {general.map((c) => (
+      <div
+        className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col items-center py-1 gap-2 [overflow-anchor:none]"
+        style={{ overscrollBehavior: 'contain' }}
+      >
+        {railCommunities.map((c) => (
           <Item key={c._id} c={c} />
         ))}
-
-        {courses.length > 0 && (
-          <>
-            <div className="w-8 h-0.5 bg-base-content/10 rounded-full my-1" />
-            {courses.map((c) => (
-              <Item key={c._id} c={c} />
-            ))}
-          </>
-        )}
       </div>
 
       <div className="shrink-0 py-3 flex justify-center">
