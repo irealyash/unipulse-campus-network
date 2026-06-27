@@ -4,7 +4,7 @@
    pastel/bubbly themes plus the custom "true-dark" palette. The theme switcher
    in the navbar lets users pick any of these. */
 @plugin "daisyui" {
-  themes: cupcake, bumblebee, valentine, pastel, night, aqua, dracula, true-dark --default;
+  themes: cupcake, bumblebee, valentine, pastel, night, aqua, true-dark, dracula --default;
 }
 
 @plugin "daisyui/theme" {
