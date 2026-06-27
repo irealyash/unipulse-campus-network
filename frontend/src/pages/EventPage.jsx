@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { fetchEvent, rsvpEvent, clearCurrentEvent } from '../features/events/eventsSlice';
 import Loader from '../components/Loader';
 import { timeAgo } from '../lib/timeAgo';
+import { EventTagBadge } from '../lib/eventTags';
 import ReportModal from '../components/chat/ReportModal';
 import ReportFlagButton from '../components/ReportFlagButton';
 import {
@@ -74,8 +75,11 @@ export default function EventPage() {
             {hasEventUserMedia(event) && <EventMediaCarousel event={event} />}
 
             <div className="mt-4 space-y-3 min-w-0 overflow-hidden">
-              <p className="text-sm text-base-content/60 break-words">
-                {formatEventDate(event.eventDate)} · {timeAgo(event.createdAt)}
+              <p className="text-sm text-base-content/60 break-words flex flex-wrap items-center gap-2">
+                <span>
+                  {formatEventDate(event.eventDate)} · {timeAgo(event.createdAt)}
+                </span>
+                <EventTagBadge tag={event.tag} />
               </p>
               {event.description && (
                 <p className="text-sm whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-base-content/80">

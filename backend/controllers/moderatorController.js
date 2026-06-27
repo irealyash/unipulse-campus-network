@@ -20,6 +20,7 @@ import { withCommunityImage } from '../utils/avatars.js';
 import MessageReply from '../models/MessageReply.js';
 import { POST_TAGS } from './postController.js';
 import { withPostMedia } from '../utils/postMedia.js';
+import { EVENT_TAGS } from '../utils/eventTags.js';
 
 /**
  * MODERATOR CONTROLLER
@@ -692,7 +693,13 @@ export const approveEvent = asyncHandler(async (req, res) => {
   const event = await Event.findById(req.params.id);
   if (!event) throw new ApiError(404, 'Event not found.');
 
+  const { tag } = req.body;
+  if (!tag || !EVENT_TAGS.includes(tag)) {
+    throw new ApiError(400, `tag is required. Allowed tags: ${EVENT_TAGS.join(', ')}`);
+  }
+
   event.status = 'approved';
+  event.tag = tag;
   event.reviewedBy = req.user._id;
   event.reviewedAt = new Date();
   await event.save();

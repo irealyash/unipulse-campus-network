@@ -31,6 +31,7 @@ import { uploadMedia } from '../lib/media';
 import { PostMedia } from '../components/community/PostCommentSection';
 import { EventMediaCarousel, formatEventDate, hasEventUserMedia } from '../components/community/EventParts';
 import { timeAgo } from '../lib/timeAgo';
+import { EVENT_TAGS, EventTagBadge } from '../lib/eventTags';
 import {
   ShieldIcon,
   FlagIcon,
@@ -239,9 +240,12 @@ function PostsTab() {
 function ModEventsTab() {
   const dispatch = useDispatch();
   const pendingEvents = useSelector((s) => s.moderator.pendingEvents);
+  const modError = useSelector((s) => s.moderator.error);
   const [status, setStatus] = useState('pending');
   const [search, setSearch] = useState('');
   const [query, setQuery] = useState('');
+  const [tagsById, setTagsById] = useState({});
+  const [tagError, setTagError] = useState('');
 
   useEffect(() => {
     dispatch(modFetchPendingEvents({ status, search: query }));
@@ -250,6 +254,16 @@ function ModEventsTab() {
   const runSearch = (e) => {
     e.preventDefault();
     setQuery(search.trim());
+  };
+
+  const approveEvent = async (evId) => {
+    const tag = tagsById[evId];
+    if (!tag) {
+      setTagError('Select a tag before approving an event.');
+      return;
+    }
+    setTagError('');
+    await dispatch(modApproveEvent({ id: evId, tag }));
   };
 
   return (
@@ -280,6 +294,17 @@ function ModEventsTab() {
         </button>
       </form>
 
+      {tagError && (
+        <div className="alert alert-warning py-2 text-sm mb-3">
+          <span>{tagError}</span>
+        </div>
+      )}
+      {modError && status === 'pending' && (
+        <div className="alert alert-error py-2 text-sm mb-3">
+          <span>{modError}</span>
+        </div>
+      )}
+
       {pendingEvents.length === 0 ? (
         <EmptyState text="No events found." />
       ) : (
@@ -290,6 +315,7 @@ function ModEventsTab() {
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="badge badge-ghost badge-sm">{ev.communityId}</span>
                   <span className="badge badge-outline badge-sm">{ev.status || 'pending'}</span>
+                  {ev.tag && <EventTagBadge tag={ev.tag} />}
                   <span className="text-xs text-base-content/40 ml-auto">
                     {timeAgo(ev.createdAt)}
                   </span>
@@ -301,7 +327,38 @@ function ModEventsTab() {
                     {ev.description}
                   </p>
                 )}
+                {ev.moderatorNote?.trim() && (
+                  <div className="rounded-xl border border-warning/30 bg-warning/10 p-3 mt-2">
+                    <p className="text-[10px] uppercase font-bold text-warning tracking-wider mb-1">
+                      Information for moderator
+                    </p>
+                    <p className="text-sm whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-base-content/80">
+                      {ev.moderatorNote}
+                    </p>
+                  </div>
+                )}
                 {hasEventUserMedia(ev) && <EventMediaCarousel event={ev} compact />}
+
+                {ev.status === 'pending' && (
+                  <label className="form-control mt-2">
+                    <span className="label-text text-xs font-medium">Event tag (required to approve)</span>
+                    <select
+                      className="select select-bordered select-sm rounded-xl w-full"
+                      value={tagsById[ev._id] || ''}
+                      onChange={(e) => {
+                        setTagsById((prev) => ({ ...prev, [ev._id]: e.target.value }));
+                        setTagError('');
+                      }}
+                    >
+                      <option value="">Select a tag…</option>
+                      {EVENT_TAGS.map((t) => (
+                        <option key={t} value={t}>
+                          {t}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
 
                 <div className="card-actions justify-end mt-2 gap-2 flex-wrap">
                   <Link
@@ -320,7 +377,7 @@ function ModEventsTab() {
                       </button>
                       <button
                         className="btn btn-primary btn-sm rounded-full"
-                        onClick={() => dispatch(modApproveEvent(ev._id))}
+                        onClick={() => approveEvent(ev._id)}
                       >
                         Approve
                       </button>

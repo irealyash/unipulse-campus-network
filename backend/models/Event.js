@@ -61,6 +61,17 @@ const eventSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
+  tag: {
+    type: String,
+    enum: ['Official', 'Student-Led', 'Limited', 'Trending'],
+    default: null,
+  },
+  /** Creator notes for moderators only — never shown in public feeds. */
+  moderatorNote: {
+    type: String,
+    default: '',
+    trim: true,
+  },
   createdAt: { 
     type: Date, 
     default: Date.now 

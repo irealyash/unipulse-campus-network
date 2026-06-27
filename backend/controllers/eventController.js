@@ -4,6 +4,9 @@ import asyncHandler from '../utils/asyncHandler.js';
 import ApiError from '../utils/ApiError.js';
 import { assertCommunityAccess } from '../utils/membership.js';
 import { withEventImage } from '../utils/avatars.js';
+import { EVENT_TAGS } from '../utils/eventTags.js';
+
+export { EVENT_TAGS };
 
 /**
  * EVENT CONTROLLER
@@ -31,8 +34,10 @@ const serializeEvent = (event, userId) => {
   if (e.coming?.some((id) => id.toString() === uid)) myRsvp = 'coming';
   else if (e.busy?.some((id) => id.toString() === uid)) myRsvp = 'busy';
 
+  const { moderatorNote, ...publicFields } = e;
+
   return {
-    ...e,
+    ...publicFields,
     media: e.media || [],
     comingCount: e.coming?.length || 0,
     busyCount: e.busy?.length || 0,
@@ -132,7 +137,7 @@ export const createEvent = asyncHandler(async (req, res) => {
   const { communityId } = req.params;
   await assertCommunityAccess(req.user, communityId);
 
-  const { title, description, eventDate, imageUrl } = req.body;
+  const { title, description, eventDate, imageUrl, moderatorNote } = req.body;
   const mediaItems = normalizeMedia(req.body.media);
 
   if (!title || !title.trim()) throw new ApiError(400, 'Event title is required.');
@@ -156,6 +161,7 @@ export const createEvent = asyncHandler(async (req, res) => {
     media: mediaItems,
     eventDate: when,
     status: 'pending',
+    moderatorNote: typeof moderatorNote === 'string' ? moderatorNote.trim() : '',
   });
 
   res.status(201).json({

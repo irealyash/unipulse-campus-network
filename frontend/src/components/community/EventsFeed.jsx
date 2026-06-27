@@ -10,6 +10,7 @@ import {
   ALL_PUBLIC_EVENTS_KEY,
 } from '../../features/events/eventsSlice';
 import { timeAgo } from '../../lib/timeAgo';
+import { EventTagBadge } from '../../lib/eventTags';
 import { uploadMedia } from '../../lib/media';
 import Loader from '../Loader';
 import { CalendarIcon } from '../icons';
@@ -49,6 +50,7 @@ export default function EventsFeed({
   const [form, setForm] = useState({
     title: '',
     description: '',
+    moderatorNote: '',
     eventDate: todayDateInputValue(),
     eventHour: '6',
     eventMinute: '00',
@@ -78,6 +80,7 @@ export default function EventsFeed({
     setForm({
       title: '',
       description: '',
+      moderatorNote: '',
       eventDate: todayDateInputValue(),
       eventHour: '6',
       eventMinute: '00',
@@ -109,6 +112,7 @@ export default function EventsFeed({
     const payload = {
       title: form.title,
       description: form.description,
+      moderatorNote: form.moderatorNote,
       eventDate: when.toISOString(),
     };
     const files = [...mediaFiles];
@@ -206,6 +210,7 @@ export default function EventsFeed({
                     <span className="badge badge-ghost badge-xs">{ev.communityName || ev.communityId}</span>
                   )}
                   {formatEventDate(ev.eventDate)} · {timeAgo(ev.createdAt)}
+                  <EventTagBadge tag={ev.tag} />
                   <ReportFlagButton
                     onClick={() => setReportTarget({ contentType: 'event', contentId: ev._id })}
                   />
@@ -329,6 +334,20 @@ export default function EventsFeed({
                   <p className="text-xs text-base-content/50 mt-1">{mediaFiles.length} file(s) selected</p>
                 )}
               </div>
+              <label className="form-control">
+                <span className="label py-0">
+                  <span className="label-text text-xs">
+                    Information for moderator (Not visible to others)
+                  </span>
+                </span>
+                <textarea
+                  className="textarea textarea-bordered rounded-2xl text-sm"
+                  placeholder="Optional context for the review team"
+                  rows={3}
+                  value={form.moderatorNote}
+                  onChange={(e) => setForm({ ...form, moderatorNote: e.target.value })}
+                />
+              </label>
               {formError && <p className="text-error text-sm">{formError}</p>}
               <div className="modal-action">
                 <button

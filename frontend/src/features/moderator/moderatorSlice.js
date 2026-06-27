@@ -240,9 +240,9 @@ export const modFetchPendingEvents = createAsyncThunk(
 
 export const modApproveEvent = createAsyncThunk(
   'mod/approveEvent',
-  async (id, { rejectWithValue }) => {
+  async ({ id, tag }, { rejectWithValue }) => {
     try {
-      const { data } = await api.post(`/moderator/events/${id}/approve`);
+      const { data } = await api.post(`/moderator/events/${id}/approve`, { tag });
       return { id, message: data.message };
     } catch (err) {
       return rejectWithValue(err.message);
