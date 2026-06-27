@@ -24,7 +24,7 @@ const themeLabel = (id) => THEMES.find((t) => t.id === id)?.label || id;
  * (e.g. landing hero sections that share the same z-index as the navbar).
  */
 export default function ThemeToggle() {
-  const [theme, setTheme] = useState(() => localStorage.getItem(STORAGE_KEY) || 'dracula');
+  const [theme, setTheme] = useState(() => localStorage.getItem(STORAGE_KEY) || 'true-dark');
   const [open, setOpen] = useState(false);
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
   const btnRef = useRef(null);

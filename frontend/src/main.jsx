@@ -7,7 +7,7 @@ import './index.css';
 import App from './App.jsx';
 
 // Apply the saved theme as early as possible to avoid a flash of the default.
-const savedTheme = localStorage.getItem('unipulse_theme') || 'cupcake';
+const savedTheme = localStorage.getItem('unipulse_theme') || 'true-dark';
 document.documentElement.setAttribute('data-theme', savedTheme);
 
 createRoot(document.getElementById('root')).render(

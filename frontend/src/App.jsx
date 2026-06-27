@@ -23,6 +23,7 @@ import CommunityHub, { CommunityRedirect } from './pages/CommunityHub';
 import CommunityTabView from './pages/CommunityTabView';
 import PostPage from './pages/PostPage';
 import EventPage from './pages/EventPage';
+import AllEventsPage from './pages/AllEventsPage';
 
 function LegacyCommunityRedirect() {
   const { id } = useParams();
@@ -87,6 +88,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="events" element={<AllEventsPage />} />
           <Route path=":communityId/posts/:postId" element={<PostPage />} />
           <Route path=":communityId/events/:eventId" element={<EventPage />} />
           <Route path=":communityId/:tab" element={<CommunityTabView />} />

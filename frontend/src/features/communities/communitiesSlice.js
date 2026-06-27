@@ -51,6 +51,9 @@ const communitiesSlice = createSlice({
       state.list = [];
       state.current = null;
     },
+    clearCurrentCommunity(state) {
+      state.current = null;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -88,5 +91,5 @@ const communitiesSlice = createSlice({
   },
 });
 
-export const { removeCommunity, clearCommunities } = communitiesSlice.actions;
+export const { removeCommunity, clearCommunities, clearCurrentCommunity } = communitiesSlice.actions;
 export default communitiesSlice.reducer;

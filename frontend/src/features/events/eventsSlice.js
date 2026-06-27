@@ -1,6 +1,8 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import api from '../../lib/api';
 
+export const ALL_PUBLIC_EVENTS_KEY = '__all_public__';
+
 const applyOptimisticRsvp = (event, status) => {
   const prev = event.myRsvp;
   let comingCount = event.comingCount ?? 0;
@@ -29,6 +31,18 @@ const patchEventInState = (state, eventId, patch) => {
     if (i >= 0) b.events[i] = patch(b.events[i]);
   });
 };
+
+export const fetchAllPublicEvents = createAsyncThunk(
+  'events/fetchAllPublic',
+  async ({ sort = 'date' }, { rejectWithValue }) => {
+    try {
+      const { data } = await api.get('/events/public', { params: { sort } });
+      return { events: data.events, sort };
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
 
 export const fetchEvents = createAsyncThunk(
   'events/fetch',
@@ -108,6 +122,15 @@ const eventsSlice = createSlice({
       })
       .addCase(fetchEvents.fulfilled, (state, action) => {
         state.byCommunity[action.payload.communityId] = {
+          events: action.payload.events,
+          status: 'succeeded',
+        };
+      })
+      .addCase(fetchAllPublicEvents.pending, (state) => {
+        state.byCommunity[ALL_PUBLIC_EVENTS_KEY] = { events: [], status: 'loading' };
+      })
+      .addCase(fetchAllPublicEvents.fulfilled, (state, action) => {
+        state.byCommunity[ALL_PUBLIC_EVENTS_KEY] = {
           events: action.payload.events,
           status: 'succeeded',
         };

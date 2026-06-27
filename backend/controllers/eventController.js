@@ -1,4 +1,5 @@
 import Event from '../models/Event.js';
+import Community from '../models/Community.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import ApiError from '../utils/ApiError.js';
 import { assertCommunityAccess } from '../utils/membership.js';
@@ -36,7 +37,27 @@ const serializeEvent = (event, userId) => {
     comingCount: e.coming?.length || 0,
     busyCount: e.busy?.length || 0,
     myRsvp,
+    communityName: event.communityName ?? e.communityName,
   };
+};
+
+const fetchSortedEvents = async (filter, sortBy) => {
+  if (sortBy === 'rsvp') {
+    return Event.aggregate([
+      { $match: filter },
+      { $addFields: { comingCount: { $size: { $ifNull: ['$coming', []] } } } },
+      { $sort: { comingCount: -1, eventDate: 1 } },
+    ]);
+  }
+  return Event.find(filter).sort({ eventDate: 1 }).lean();
+};
+
+const attachCommunityNames = async (events) => {
+  const ids = [...new Set(events.map((ev) => ev.communityId))];
+  if (!ids.length) return events;
+  const communities = await Community.find({ _id: { $in: ids } }).select('_id name').lean();
+  const names = Object.fromEntries(communities.map((c) => [c._id, c.name]));
+  return events.map((ev) => ({ ...ev, communityName: names[ev.communityId] || ev.communityId }));
 };
 
 /**
@@ -51,17 +72,33 @@ export const listEvents = asyncHandler(async (req, res) => {
   const filter = { communityId, status: 'approved' };
   if (!includePast) filter.eventDate = { $gte: new Date() };
 
-  let events;
-  if (sortBy === 'rsvp') {
-    events = await Event.aggregate([
-      { $match: filter },
-      { $addFields: { comingCount: { $size: { $ifNull: ['$coming', []] } } } },
-      { $sort: { comingCount: -1, eventDate: 1 } },
-    ]);
-  } else {
-    const docs = await Event.find(filter).sort({ eventDate: 1 }).lean();
-    events = docs;
-  }
+  let events = await fetchSortedEvents(filter, sortBy);
+
+  res.json({
+    success: true,
+    count: events.length,
+    events: events.map((ev) => serializeEvent(ev, req.user._id)),
+  });
+});
+
+/**
+ * GET /api/events/public?sort=date|rsvp
+ * Upcoming approved events from public communities only.
+ */
+export const listAllPublicEvents = asyncHandler(async (req, res) => {
+  const sortBy = req.query.sort === 'rsvp' ? 'rsvp' : 'date';
+
+  const publicCommunities = await Community.find({ private: false }).select('_id').lean();
+  const publicIds = publicCommunities.map((c) => c._id);
+
+  const filter = {
+    communityId: { $in: publicIds },
+    status: 'approved',
+    eventDate: { $gte: new Date() },
+  };
+
+  let events = await fetchSortedEvents(filter, sortBy);
+  events = await attachCommunityNames(events);
 
   res.json({
     success: true,
