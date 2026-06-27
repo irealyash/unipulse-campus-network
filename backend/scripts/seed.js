@@ -1,21 +1,16 @@
 import 'dotenv/config';
 import mongoose from 'mongoose';
 import connectDB from '../config/db.js';
-import { ensureDefaultCommunities } from '../utils/ensureCommunities.js';
+import { seedCommunityCatalog } from '../utils/seedCommunityCatalog.js';
 
 /**
- * Seed script: creates the default "general" communities every student can see
- * regardless of whether they uploaded a schedule. Run with:  npm run seed
- *
- * It is idempotent — re-running only inserts communities that don't exist yet.
+ * Seed script: creates all catalog communities (countries, majors, residences, general).
+ * Run with: npm run seed
  */
 const seed = async () => {
   await connectDB();
-  await ensureDefaultCommunities();
-
-  for (const c of ['general', 'housing', 'marketplace', 'events', 'chess']) {
-    console.log(`[seed] ensured community: ${c}`);
-  }
+  const { total, created } = await seedCommunityCatalog();
+  console.log(`[seed] catalog: ${created} new communities (${total} total entries)`);
 
   await mongoose.connection.close();
   console.log('[seed] done.');

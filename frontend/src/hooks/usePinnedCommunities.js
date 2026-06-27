@@ -1,36 +1,26 @@
-import { useCallback, useEffect, useState } from 'react';
-import {
-  getPinnedCommunityIds,
-  PINS_CHANGED_EVENT,
-  togglePinCommunity,
-} from '../lib/communityPins';
+import { useCallback } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { joinCommunity, leaveCommunity } from '../features/communities/communitiesSlice';
 
+/** Server-backed navbar communities (joined catalog + course sections in list). */
 export default function usePinnedCommunities() {
-  const [pinnedIds, setPinnedIds] = useState(getPinnedCommunityIds);
-
-  const refresh = useCallback(() => {
-    setPinnedIds(getPinnedCommunityIds());
-  }, []);
-
-  useEffect(() => {
-    const onChange = () => refresh();
-    window.addEventListener(PINS_CHANGED_EVENT, onChange);
-    window.addEventListener('storage', onChange);
-    return () => {
-      window.removeEventListener(PINS_CHANGED_EVENT, onChange);
-      window.removeEventListener('storage', onChange);
-    };
-  }, [refresh]);
-
-  const togglePin = useCallback(
-    (id) => {
-      togglePinCommunity(id);
-      refresh();
-    },
-    [refresh]
-  );
+  const dispatch = useDispatch();
+  const user = useSelector((s) => s.auth.user);
+  const pinnedIds = user?.joinedCommunities || [];
 
   const isPinned = useCallback((id) => pinnedIds.includes(id), [pinnedIds]);
+
+  const togglePin = useCallback(
+    (id, community) => {
+      if (community?.type === 'course') return;
+      if (pinnedIds.includes(id)) {
+        dispatch(leaveCommunity(id));
+      } else {
+        dispatch(joinCommunity(id));
+      }
+    },
+    [dispatch, pinnedIds]
+  );
 
   return { pinnedIds, togglePin, isPinned };
 }

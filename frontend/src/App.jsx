@@ -15,6 +15,7 @@ import VerifyPage from './pages/VerifyPage';
 import LoginPage from './pages/LoginPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
+import CommunityOnboardingPage from './pages/CommunityOnboardingPage';
 import SchedulePage from './pages/SchedulePage';
 import SettingsPage from './pages/SettingsPage';
 import ModeratorPage from './pages/ModeratorPage';
@@ -71,6 +72,15 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+
+        <Route
+          path="/onboarding"
+          element={
+            <ProtectedRoute>
+              <CommunityOnboardingPage />
+            </ProtectedRoute>
+          }
+        />
 
         <Route
           path="/c"

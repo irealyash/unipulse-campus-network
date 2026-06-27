@@ -4,6 +4,7 @@ import asyncHandler from '../utils/asyncHandler.js';
 import ApiError from '../utils/ApiError.js';
 import { parseScheduleFile } from '../utils/scheduleParser.js';
 import { serializeUser } from './authController.js';
+import { withCommunityImage } from '../utils/avatars.js';
 import { POST_TAGS } from './postController.js';
 import {
   isValidUsername,
@@ -64,6 +65,7 @@ export const uploadScheduleFile = asyncHandler(async (req, res) => {
             name: sectionId,
             description: `Private community for ${sectionId} students.`,
             type: 'course',
+            category: 'course',
             private: true,
             allowedTags: POST_TAGS,
           },
@@ -85,6 +87,64 @@ export const uploadScheduleFile = asyncHandler(async (req, res) => {
     addedSections: sections,
     user: serializeUser(req.user),
   });
+});
+
+/**
+ * POST /api/users/me/joined-communities
+ * Body: { communityId }
+ */
+export const joinCommunity = asyncHandler(async (req, res) => {
+  const { communityId } = req.body;
+  if (!communityId) throw new ApiError(400, 'communityId is required.');
+
+  const community = await Community.findById(communityId);
+  if (!community) throw new ApiError(404, 'Community not found.');
+  if (community.type === 'course' || community.private) {
+    throw new ApiError(400, 'Only public catalog communities can be joined this way.');
+  }
+  if (!['international', 'academic', 'residence', 'general', 'faculty'].includes(community.category)) {
+    throw new ApiError(400, 'This community cannot be added to your navbar.');
+  }
+
+  const joined = req.user.joinedCommunities || [];
+  if (!joined.includes(communityId)) {
+    req.user.joinedCommunities = [...joined, communityId];
+    await req.user.save();
+  }
+
+  res.json({
+    success: true,
+    message: `Added ${community.name} to your communities.`,
+    user: serializeUser(req.user),
+    community: withCommunityImage(community),
+  });
+});
+
+/**
+ * DELETE /api/users/me/joined-communities/:communityId
+ */
+export const leaveCommunity = asyncHandler(async (req, res) => {
+  const { communityId } = req.params;
+  req.user.joinedCommunities = (req.user.joinedCommunities || []).filter(
+    (id) => id !== communityId
+  );
+  await req.user.save();
+
+  res.json({
+    success: true,
+    message: 'Community removed from your navbar.',
+    user: serializeUser(req.user),
+  });
+});
+
+/**
+ * POST /api/users/me/community-onboarding
+ */
+export const completeCommunityOnboarding = asyncHandler(async (req, res) => {
+  req.user.communityOnboardingComplete = true;
+  await req.user.save();
+
+  res.json({ success: true, user: serializeUser(req.user) });
 });
 
 /**

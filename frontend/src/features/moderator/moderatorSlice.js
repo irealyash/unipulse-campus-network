@@ -11,11 +11,12 @@ import api from '../../lib/api';
 
 export const modFetchCommunities = createAsyncThunk(
   'mod/communities',
-  async ({ search = '', type = 'all' } = {}, { rejectWithValue }) => {
+  async ({ search = '', type = 'all', category = '' } = {}, { rejectWithValue }) => {
     try {
       const params = {};
       if (search) params.search = search;
       if (type && type !== 'all') params.type = type;
+      if (category && category !== 'all') params.category = category;
       const { data } = await api.get('/moderator/communities', { params });
       return data.communities;
     } catch (err) {

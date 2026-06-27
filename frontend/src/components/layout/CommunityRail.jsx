@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { NavLink, useParams } from 'react-router-dom';
 import { fetchCommunities } from '../../features/communities/communitiesSlice';
 import { communityAvatar } from '../../lib/avatars';
+import { filterNavbarCommunities } from '../../lib/navbarCommunities';
 import { sortCommunities } from '../../lib/communityPins';
 import usePinnedCommunities from '../../hooks/usePinnedCommunities';
 import CourseCommunityAvatar from '../CourseCommunityAvatar';
@@ -61,9 +62,10 @@ export default function CommunityRail({ sidebarOpen, onToggleSidebar, onOpenSide
     setMenuOpen((o) => !o);
   };
 
-  const railCommunities = sortCommunities(list, pinnedIds);
+  const railCommunities = sortCommunities(filterNavbarCommunities(list, user), pinnedIds);
 
   const openPinMenu = (c, e) => {
+    if (c.type === 'course') return;
     e.preventDefault();
     e.stopPropagation();
     const rect = e.currentTarget.getBoundingClientRect();
@@ -269,7 +271,8 @@ export default function CommunityRail({ sidebarOpen, onToggleSidebar, onOpenSide
                   : `Pin ${pinMenu.name}`
               }
               onClick={() => {
-                togglePin(pinMenu.communityId);
+                const c = list.find((x) => x._id === pinMenu.communityId);
+                togglePin(pinMenu.communityId, c);
                 setPinMenu(null);
               }}
             >

@@ -319,6 +319,8 @@ export const serializeUser = (user) => ({
   email: user.email,
   username: user.username,
   enrolledSections: user.enrolledSections,
+  joinedCommunities: user.joinedCommunities || [],
+  communityOnboardingComplete: Boolean(user.communityOnboardingComplete),
   scheduleUploaded: user.scheduleUploaded,
   isBanned: user.isBanned,
   // The frontend uses this flag to decide whether to render the moderator tab.

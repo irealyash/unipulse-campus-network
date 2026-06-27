@@ -1,4 +1,4 @@
-import { NavLink, useParams, useLocation } from 'react-router-dom';
+import { NavLink, useParams, useLocation, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { communityAvatar } from '../../lib/avatars';
 import usePinnedCommunities from '../../hooks/usePinnedCommunities';
@@ -14,13 +14,26 @@ const TABS = [
 export default function ChannelSidebar() {
   const { communityId } = useParams();
   const location = useLocation();
+  const navigate = useNavigate();
   const isModeratorRoute = location.pathname === '/c/moderator';
   const user = useSelector((s) => s.auth.user);
-  const { togglePin, isPinned } = usePinnedCommunities();
   const community = useSelector((s) =>
     s.communities.list.find((c) => c._id === communityId) || s.communities.current
   );
+  const { togglePin, isPinned } = usePinnedCommunities();
   const pinned = communityId ? isPinned(communityId) : false;
+  const isCourse = community?.type === 'course';
+  const canUnpin = communityId && !isCourse && pinned;
+
+  const handleUnpin = () => {
+    if (!canUnpin) return;
+    togglePin(communityId, community);
+    const fallback = user?.joinedCommunities?.find((id) => id !== communityId);
+    if (communityId && !isCourse) {
+      if (fallback) navigate(`/c/${encodeURIComponent(fallback)}/chat`);
+      else navigate('/c');
+    }
+  };
 
   if (isModeratorRoute) {
     return (
@@ -54,17 +67,15 @@ export default function ChannelSidebar() {
           </div>
           <span className="font-bold truncate text-sm">{community?.name || communityId}</span>
         </div>
-        {communityId && (
+        {canUnpin && (
           <button
             type="button"
-            className={`btn btn-ghost btn-xs btn-square shrink-0 ${
-              pinned ? 'text-primary' : 'text-base-content/45 hover:text-base-content'
-            }`}
-            title={pinned ? 'Unpin community' : 'Pin community'}
-            aria-label={pinned ? `Unpin ${community?.name || communityId}` : `Pin ${community?.name || communityId}`}
-            onClick={() => togglePin(communityId)}
+            className="btn btn-ghost btn-xs btn-square shrink-0 text-primary"
+            title="Remove from navbar"
+            aria-label={`Remove ${community?.name || communityId} from navbar`}
+            onClick={handleUnpin}
           >
-            <PinIcon pinned={pinned} className="text-base" />
+            <PinIcon pinned className="text-base" />
           </button>
         )}
       </div>

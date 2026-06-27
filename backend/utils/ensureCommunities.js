@@ -1,7 +1,9 @@
+import User from '../models/User.js';
 import Community from '../models/Community.js';
 import Post from '../models/Post.js';
 import Event from '../models/Event.js';
 import { POST_TAGS } from '../controllers/postController.js';
+import { seedCommunityCatalog } from './seedCommunityCatalog.js';
 
 /** Default general communities every student can access. */
 export const GENERAL_COMMUNITIES = [
@@ -22,22 +24,8 @@ export const PROTECTED_COMMUNITY_IDS = new Set(GENERAL_COMMUNITIES.map((c) => c.
  */
 export const ensureDefaultCommunities = async () => {
   if (process.env.SEED_DEFAULT_COMMUNITIES === 'true') {
-    for (const c of GENERAL_COMMUNITIES) {
-      await Community.updateOne(
-        { _id: c._id },
-        {
-          $setOnInsert: {
-            _id: c._id,
-            name: c.name,
-            description: c.description,
-            type: 'general',
-            private: false,
-            allowedTags: POST_TAGS,
-          },
-        },
-        { upsert: true }
-      );
-    }
+    const { total, created } = await seedCommunityCatalog();
+    console.log(`[communities] catalog seed: ${created} new of ${total} entries`);
   }
 
   // Legacy posts/events created before moderation — treat as already approved.
@@ -50,5 +38,17 @@ export const ensureDefaultCommunities = async () => {
   await Community.updateMany(
     { private: { $exists: false }, type: 'general' },
     { $set: { private: false } }
+  );
+  await Community.updateMany(
+    { type: 'course', category: { $exists: false } },
+    { $set: { category: 'course' } }
+  );
+  await Community.updateMany(
+    { type: 'general', category: { $exists: false } },
+    { $set: { category: 'general' } }
+  );
+  await User.updateMany(
+    { communityOnboardingComplete: { $exists: false } },
+    { $set: { joinedCommunities: [], communityOnboardingComplete: true } }
   );
 };

@@ -40,6 +40,16 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    // Public catalog communities the user added to their navbar.
+    joinedCommunities: {
+        type: [String],
+        default: []
+    },
+    // False until the user finishes or skips the post-signup community picker.
+    communityOnboardingComplete: {
+        type: Boolean,
+        default: false
+    },
     // Moderation flag. A banned user is blocked from posting, commenting and chatting.
     isBanned: {
         type: Boolean,

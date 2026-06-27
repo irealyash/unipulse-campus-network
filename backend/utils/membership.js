@@ -52,3 +52,11 @@ export const visibleCommunitiesFilter = (user) => ({
     { private: true, members: user._id },
   ],
 });
+
+/** Navbar rail: joined catalog communities + enrolled course sections. */
+export const navbarCommunitiesFilter = (user) => ({
+  $or: [
+    { _id: { $in: user.joinedCommunities || [] } },
+    { type: 'course', _id: { $in: user.enrolledSections || [] } },
+  ],
+});

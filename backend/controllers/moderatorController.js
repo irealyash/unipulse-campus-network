@@ -46,11 +46,14 @@ import { EVENT_TAGS } from '../utils/eventTags.js';
  * by a search term matching the id or display name.
  */
 export const listAllCommunities = asyncHandler(async (req, res) => {
-  const { search, type } = req.query;
+  const { search, type, category } = req.query;
 
   const filter = {};
   if (type === 'course' || type === 'general') {
     filter.type = type;
+  }
+  if (category && ['international', 'academic', 'residence', 'general', 'faculty', 'course'].includes(category)) {
+    filter.category = category;
   }
   if (search && search.trim()) {
     const rx = new RegExp(escapeRegex(search.trim()), 'i');
@@ -753,6 +756,7 @@ const moderatorUserView = (user) => ({
   email: user.email,
   username: user.username,
   enrolledSections: user.enrolledSections,
+  joinedCommunities: user.joinedCommunities,
   scheduleUploaded: user.scheduleUploaded,
   isBanned: user.isBanned,
   moderator: user.moderator,

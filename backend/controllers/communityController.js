@@ -1,26 +1,21 @@
 import Community from '../models/Community.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import ApiError from '../utils/ApiError.js';
-import { assertCommunityAccess, visibleCommunitiesFilter } from '../utils/membership.js';
+import {
+  assertCommunityAccess,
+  navbarCommunitiesFilter,
+} from '../utils/membership.js';
 import { withCommunityImage } from '../utils/avatars.js';
-
-/**
- * COMMUNITY CONTROLLER
- * ----------------------------------------------------------------------------
- * Communities come in two flavours (see Community model):
- *   - general : visible to everyone (chess, housing, marketplace...)
- *   - course  : visible only to enrolled students (CPSC-110-101...)
- */
+import { CATALOG_CATEGORIES } from '../utils/communityCategories.js';
 
 /**
  * GET /api/communities
- * Returns communities visible to the user. Moderators receive every community
- * (including course sections they are not enrolled in).
+ * Communities in the user's left navbar (joined catalog + course sections).
  */
 export const listCommunities = asyncHandler(async (req, res) => {
-  const filter = req.user.moderator ? {} : visibleCommunitiesFilter(req.user);
-  const communities = await Community.find(filter).sort({
+  const communities = await Community.find(navbarCommunitiesFilter(req.user)).sort({
     type: 1,
+    category: 1,
     name: 1,
   });
 
@@ -32,50 +27,43 @@ export const listCommunities = asyncHandler(async (req, res) => {
 });
 
 /**
- * GET /api/communities/:id
- * Returns a single community after verifying the user is allowed to view it.
+ * GET /api/communities/catalog?category=international|academic|residence|general
+ * Browse public catalog communities for onboarding / add-community flows.
  */
-export const getCommunity = asyncHandler(async (req, res) => {
-  // assertCommunityAccess both fetches the doc and enforces the access rules.
-  const community = await assertCommunityAccess(req.user, req.params.id);
-  res.json({ success: true, community: withCommunityImage(community) });
+export const listCatalog = asyncHandler(async (req, res) => {
+  const { category, search } = req.query;
+
+  if (!category || !CATALOG_CATEGORIES.includes(category)) {
+    throw new ApiError(
+      400,
+      `category is required (${CATALOG_CATEGORIES.join(', ')}).`
+    );
+  }
+
+  const filter = {
+    type: 'general',
+    private: false,
+    category,
+  };
+
+  if (search?.trim()) {
+    const rx = new RegExp(search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+    filter.$or = [{ name: rx }, { _id: rx }];
+  }
+
+  const communities = await Community.find(filter).sort({ name: 1 }).limit(500);
+
+  res.json({
+    success: true,
+    count: communities.length,
+    communities: communities.map((c) => withCommunityImage(c)),
+  });
 });
 
 /**
- * POST /api/communities
- * Body: { id?, name, description?, allowedTags? }
- * Lets a student spin up a new GENERAL interest community. Course communities
- * are never created here — those are auto-provisioned from schedule uploads.
+ * GET /api/communities/:id
  */
-export const createCommunity = asyncHandler(async (req, res) => {
-  const { name, description, allowedTags, imageUrl } = req.body;
-
-  if (!name || !name.trim()) {
-    throw new ApiError(400, 'Community name is required.');
-  }
-
-  // Derive a URL-safe id from the provided id or the name (e.g. "Chess Club" -> "chess-club").
-  const rawId = (req.body.id || name).toString().trim().toLowerCase();
-  const id = rawId.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-
-  if (!id) {
-    throw new ApiError(400, 'Could not derive a valid community id from the name.');
-  }
-
-  const exists = await Community.findById(id);
-  if (exists) {
-    throw new ApiError(409, `A community with id "${id}" already exists.`);
-  }
-
-  const community = await Community.create({
-    _id: id,
-    name: name.trim(),
-    description: description?.trim() || '',
-    imageUrl: imageUrl?.trim() || null,
-    type: 'general',
-    allowedTags:
-      Array.isArray(allowedTags) && allowedTags.length ? allowedTags : ['general']
-  });
-
-  res.status(201).json({ success: true, community: withCommunityImage(community) });
+export const getCommunity = asyncHandler(async (req, res) => {
+  const community = await assertCommunityAccess(req.user, req.params.id);
+  res.json({ success: true, community: withCommunityImage(community) });
 });

@@ -33,11 +33,55 @@ export const fetchCommunity = createAsyncThunk(
   }
 );
 
+export const fetchCatalog = createAsyncThunk(
+  'communities/fetchCatalog',
+  async ({ category, search = '' }, { rejectWithValue }) => {
+    try {
+      const { data } = await api.get('/communities/catalog', {
+        params: { category, search: search || undefined },
+      });
+      return { category, communities: data.communities };
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
+export const joinCommunity = createAsyncThunk(
+  'communities/join',
+  async (community, { rejectWithValue }) => {
+    const communityId = typeof community === 'string' ? community : community._id;
+    try {
+      const { data } = await api.post('/users/me/joined-communities', { communityId });
+      return { ...data, communityId };
+    } catch (err) {
+      return rejectWithValue({ message: err.message, communityId });
+    }
+  }
+);
+
+export const leaveCommunity = createAsyncThunk(
+  'communities/leave',
+  async (communityId, { rejectWithValue }) => {
+    try {
+      const { data } = await api.delete(
+        `/users/me/joined-communities/${encodeURIComponent(communityId)}`
+      );
+      return { ...data, communityId };
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
 const communitiesSlice = createSlice({
   name: 'communities',
   initialState: {
     list: [],
     current: null,
+    catalog: [],
+    catalogCategory: null,
+    catalogStatus: 'idle',
     status: 'idle',
     error: null,
   },
@@ -72,12 +116,43 @@ const communitiesSlice = createSlice({
       .addCase(fetchCommunity.fulfilled, (state, action) => {
         state.current = action.payload;
         state.error = null;
-        if (!state.list.some((c) => c._id === action.payload._id)) {
-          state.list.push(action.payload);
-        }
       })
       .addCase(fetchCommunity.rejected, (state, action) => {
         state.error = action.payload;
+      })
+      .addCase(fetchCatalog.pending, (state) => {
+        state.catalogStatus = 'loading';
+      })
+      .addCase(fetchCatalog.fulfilled, (state, action) => {
+        state.catalogStatus = 'succeeded';
+        state.catalog = action.payload.communities;
+        state.catalogCategory = action.payload.category;
+      })
+      .addCase(fetchCatalog.rejected, (state, action) => {
+        state.catalogStatus = 'failed';
+        state.error = action.payload;
+      })
+      .addCase(joinCommunity.pending, (state, action) => {
+        const arg = action.meta.arg;
+        const c = typeof arg === 'object' ? arg : null;
+        if (c?._id && !state.list.some((x) => x._id === c._id)) {
+          state.list.push(c);
+        }
+      })
+      .addCase(joinCommunity.fulfilled, (state, action) => {
+        const c = action.payload.community;
+        if (c && !state.list.some((x) => x._id === c._id)) {
+          state.list.push(c);
+        }
+      })
+      .addCase(joinCommunity.rejected, (state, action) => {
+        const id = action.payload?.communityId;
+        if (id) state.list = state.list.filter((c) => c._id !== id);
+      })
+      .addCase(leaveCommunity.fulfilled, (state, action) => {
+        const id = action.payload.communityId;
+        state.list = state.list.filter((c) => c._id !== id || c.type === 'course');
+        if (state.current?._id === id) state.current = null;
       })
       .addCase(modDeleteCommunity.fulfilled, (state, action) => {
         const id = action.payload.communityId;

@@ -85,6 +85,19 @@ export const uploadSchedule = createAsyncThunk('auth/schedule', async (file, { r
   }
 });
 
+// Complete post-signup community onboarding.
+export const completeCommunityOnboarding = createAsyncThunk(
+  'auth/completeOnboarding',
+  async (_, { rejectWithValue }) => {
+    try {
+      const { data } = await api.post('/users/me/community-onboarding');
+      return data.user;
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
 // Change the anonymous username (once a week).
 export const changeUsername = createAsyncThunk('auth/username', async (username, { rejectWithValue }) => {
   try {
@@ -156,7 +169,7 @@ const authSlice = createSlice({
       // Profile/user-updating flows just refresh the user object.
       .addMatcher(
         (action) =>
-          ['auth/me/fulfilled', 'auth/schedule/fulfilled', 'auth/username/fulfilled'].includes(
+          ['auth/me/fulfilled', 'auth/schedule/fulfilled', 'auth/username/fulfilled', 'auth/completeOnboarding/fulfilled'].includes(
             action.type
           ),
         (state, action) => {
@@ -166,6 +179,36 @@ const authSlice = createSlice({
         }
       )
       // Signup/forgot/reset just surface a success notice (no token yet).
+      .addMatcher(
+        (action) => action.type === 'communities/join/pending',
+        (state, action) => {
+          const arg = action.meta.arg;
+          const id = typeof arg === 'string' ? arg : arg?._id;
+          if (!id || !state.user) return;
+          const joined = state.user.joinedCommunities || [];
+          if (!joined.includes(id)) {
+            state.user = { ...state.user, joinedCommunities: [...joined, id] };
+          }
+        }
+      )
+      .addMatcher(
+        (action) =>
+          ['communities/join/fulfilled', 'communities/leave/fulfilled'].includes(action.type),
+        (state, action) => {
+          if (action.payload?.user) state.user = action.payload.user;
+        }
+      )
+      .addMatcher(
+        (action) => action.type === 'communities/join/rejected',
+        (state, action) => {
+          const id = action.payload?.communityId;
+          if (!id || !state.user) return;
+          state.user = {
+            ...state.user,
+            joinedCommunities: (state.user.joinedCommunities || []).filter((x) => x !== id),
+          };
+        }
+      )
       .addMatcher(
         (action) =>
           ['auth/signup/fulfilled', 'auth/forgot/fulfilled', 'auth/reset/fulfilled'].includes(

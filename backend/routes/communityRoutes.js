@@ -3,6 +3,7 @@ import { protect, requireNotBanned } from '../middleware/auth.js';
 import {
   listCommunities,
   getCommunity,
+  listCatalog,
 } from '../controllers/communityController.js';
 import { listPosts, createPost } from '../controllers/postController.js';
 import { listEvents, createEvent } from '../controllers/eventController.js';
@@ -32,6 +33,7 @@ router.use(protect);
 
 // Community collection + creation (creation is moderator-only).
 router.route('/').get(listCommunities);
+router.get('/catalog', listCatalog);
 
 // Nested post feed (declared before "/:id" is fine since paths are distinct).
 router

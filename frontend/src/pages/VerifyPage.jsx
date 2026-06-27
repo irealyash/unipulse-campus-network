@@ -25,7 +25,7 @@ export default function VerifyPage() {
     const res = await dispatch(verify({ email: email.toLowerCase(), code }));
     if (verify.fulfilled.match(res)) {
       // Brand-new account -> nudge them to upload their schedule next.
-      navigate('/schedule');
+      navigate('/onboarding');
     }
   };
 

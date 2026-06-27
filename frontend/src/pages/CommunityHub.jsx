@@ -5,16 +5,19 @@ import { fetchCommunities, fetchCommunity } from '../features/communities/commun
 import CommunityShell from '../components/layout/CommunityShell';
 import Loader from '../components/Loader';
 import { communityChatPath, pickDefaultCommunityId } from '../lib/communityNav';
+import { filterNavbarCommunities } from '../lib/navbarCommunities';
+import CommunityHomeEmpty from './CommunityHomeEmpty';
 
-/** Redirect /c to the first available community's chat. */
+/** Redirect /c to the first available community's chat, or show an empty home. */
 export function CommunityRedirect() {
-  const list = useSelector((s) => s.communities.list);
-  const status = useSelector((s) => s.communities.status);
+  const rawList = useSelector((s) => s.communities.list);
   const user = useSelector((s) => s.auth.user);
+  const list = filterNavbarCommunities(rawList, user);
+  const status = useSelector((s) => s.communities.status);
 
-  if (status === 'loading' || (status === 'idle' && !list.length)) {
+  if (status === 'loading') {
     return (
-      <div className="h-screen grid place-items-center bg-base-300">
+      <div className="flex-1 grid place-items-center">
         <Loader label="Loading communities…" />
       </div>
     );
@@ -25,16 +28,17 @@ export function CommunityRedirect() {
     return <Navigate to={communityChatPath(target)} replace />;
   }
 
-  return <Navigate to="/schedule" replace />;
+  return <CommunityHomeEmpty />;
 }
 
 /** Loads communities then renders the Discord-style shell. */
 export default function CommunityHub() {
   const dispatch = useDispatch();
   const { communityId } = useParams();
-  const list = useSelector((s) => s.communities.list);
-  const status = useSelector((s) => s.communities.status);
+  const rawList = useSelector((s) => s.communities.list);
   const user = useSelector((s) => s.auth.user);
+  const list = filterNavbarCommunities(rawList, user);
+  const status = useSelector((s) => s.communities.status);
 
   useEffect(() => {
     dispatch(fetchCommunities());
@@ -45,6 +49,10 @@ export default function CommunityHub() {
       dispatch(fetchCommunity(communityId));
     }
   }, [dispatch, communityId]);
+
+  if (user && user.communityOnboardingComplete === false) {
+    return <Navigate to="/onboarding" replace />;
+  }
 
   if (status === 'loading' && !list.length) {
     return (
@@ -59,7 +67,7 @@ export default function CommunityHub() {
   if (
     communityId &&
     communityId !== 'moderator' &&
-    list.length > 0 &&
+    communityId !== 'events' &&
     !inList &&
     !enrolled &&
     !user?.moderator
@@ -68,6 +76,7 @@ export default function CommunityHub() {
     if (fallback) {
       return <Navigate to={communityChatPath(fallback)} replace />;
     }
+    return <Navigate to="/c" replace />;
   }
 
   return <CommunityShell />;

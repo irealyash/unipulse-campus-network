@@ -30,6 +30,12 @@ const communitySchema = new mongoose.Schema({
     enum: ["general", "course"],
     default: "general"
   },
+  // Catalog grouping for public communities (course sections use "course").
+  category: {
+    type: String,
+    enum: ["international", "academic", "residence", "general", "faculty", "course"],
+    default: "general",
+  },
   // false -> any verified student can see and join
   // true  -> course sections via calendar, or general via moderator-added members
   private: {
@@ -54,6 +60,7 @@ const communitySchema = new mongoose.Schema({
 });
 
 communitySchema.index({ private: 1, type: 1 });
+communitySchema.index({ category: 1, name: 1 });
 communitySchema.index({ members: 1 });
 
 export default mongoose.model('Community', communitySchema);

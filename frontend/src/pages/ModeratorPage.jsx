@@ -30,8 +30,9 @@ import CourseCommunityAvatar from '../components/CourseCommunityAvatar';
 import { uploadMedia } from '../lib/media';
 import { PostMedia } from '../components/community/PostCommentSection';
 import { EventMediaCarousel, formatEventDate, hasEventUserMedia } from '../components/community/EventParts';
-import { timeAgo } from '../lib/timeAgo';
+import { CATEGORY_LABELS } from '../lib/communityCategories';
 import { EVENT_TAGS, EventTagBadge } from '../lib/eventTags';
+import { timeAgo } from '../lib/timeAgo';
 import {
   ShieldIcon,
   FlagIcon,
@@ -603,6 +604,7 @@ function CommunitiesTab() {
   const communities = useSelector((s) => s.moderator.communities);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
   const [editId, setEditId] = useState(null);
   const [editForm, setEditForm] = useState({ name: '', imageUrl: '', private: false });
   const [iconFile, setIconFile] = useState(null);
@@ -617,13 +619,14 @@ function CommunitiesTab() {
       modFetchCommunities({
         search: overrides.search ?? search.trim(),
         type: overrides.type ?? typeFilter,
+        category: overrides.category ?? categoryFilter,
       })
     );
   };
 
   useEffect(() => {
-    fetchList({ search: '', type: typeFilter });
-  }, [dispatch, typeFilter]);
+    fetchList({ search: '', type: typeFilter, category: categoryFilter });
+  }, [dispatch, typeFilter, categoryFilter]);
 
   const doSearch = (e) => {
     e.preventDefault();
@@ -735,9 +738,22 @@ function CommunitiesTab() {
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
         >
-          <option value="all">All communities</option>
+          <option value="all">All types</option>
           <option value="course">Course sections</option>
-          <option value="general">Public & private</option>
+          <option value="general">Public general</option>
+        </select>
+        <select
+          className="select select-bordered select-sm rounded-full"
+          value={categoryFilter}
+          onChange={(e) => setCategoryFilter(e.target.value)}
+        >
+          <option value="all">All categories</option>
+          <option value="international">{CATEGORY_LABELS.international}</option>
+          <option value="academic">{CATEGORY_LABELS.academic}</option>
+          <option value="faculty">{CATEGORY_LABELS.faculty}</option>
+          <option value="residence">{CATEGORY_LABELS.residence}</option>
+          <option value="general">{CATEGORY_LABELS.general}</option>
+          <option value="course">{CATEGORY_LABELS.course}</option>
         </select>
         <button className="btn btn-primary rounded-full gap-1">
           <SearchIcon /> Search
@@ -773,6 +789,11 @@ function CommunitiesTab() {
                 <span className={`badge badge-sm ${c.type === 'course' ? 'badge-secondary' : 'badge-primary'}`}>
                   {c.type}
                 </span>
+                {c.category && (
+                  <span className="badge badge-sm badge-outline">
+                    {CATEGORY_LABELS[c.category] || c.category}
+                  </span>
+                )}
                 <span className={`badge badge-sm ${c.private ? 'badge-warning' : 'badge-success'}`}>
                   {c.private ? 'Private' : 'Public'}
                 </span>
