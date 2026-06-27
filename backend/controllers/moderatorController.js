@@ -189,6 +189,34 @@ export const deleteCommunity = asyncHandler(async (req, res) => {
 });
 
 /**
+ * DELETE /api/moderator/communities/course
+ * Deletes every course-section community and resets all users' schedules so they
+ * can upload a fresh schedule.
+ */
+export const deleteAllCourseCommunities = asyncHandler(async (req, res) => {
+  const communities = await Community.find({ type: 'course' }).select('_id name').lean();
+
+  let deletedPosts = 0;
+  let deletedMessages = 0;
+
+  for (const community of communities) {
+    const stats = await deleteCommunityCascade(community._id, req.user._id);
+    deletedPosts += stats.deletedPosts || 0;
+    deletedMessages += stats.deletedMessages || 0;
+  }
+
+  await User.updateMany({}, { $set: { enrolledSections: [], scheduleUploaded: false } });
+
+  res.json({
+    success: true,
+    message: `Deleted ${communities.length} course communit${communities.length === 1 ? 'y' : 'ies'}. All users can upload their schedule again.`,
+    deletedCommunities: communities.length,
+    deletedPosts,
+    deletedMessages,
+  });
+});
+
+/**
  * DELETE /api/moderator/communities/all
  * Hard-deletes every community (public, private, course) and all related content.
  */

@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import api from '../../lib/api';
-import { modDeleteCommunity, modDeleteAllCommunities } from '../moderator/moderatorSlice';
+import { modDeleteCommunity, modDeleteAllCommunities, modDeleteAllCourseCommunities } from '../moderator/moderatorSlice';
 
 /**
  * COMMUNITIES SLICE
@@ -87,6 +87,10 @@ const communitiesSlice = createSlice({
       .addCase(modDeleteAllCommunities.fulfilled, (state) => {
         state.list = [];
         state.current = null;
+      })
+      .addCase(modDeleteAllCourseCommunities.fulfilled, (state) => {
+        state.list = state.list.filter((c) => c.type !== 'course');
+        if (state.current?.type === 'course') state.current = null;
       });
   },
 });

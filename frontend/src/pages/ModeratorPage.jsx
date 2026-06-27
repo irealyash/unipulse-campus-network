@@ -12,6 +12,7 @@ import {
   modUpdateCommunity,
   modCreateCommunity,
   modDeleteCommunity,
+  modDeleteAllCourseCommunities,
   modAddCommunityMember,
   modFetchPendingPosts,
   modApprovePost,
@@ -21,6 +22,7 @@ import {
   modRejectEvent,
 } from '../features/moderator/moderatorSlice';
 import { fetchCommunities } from '../features/communities/communitiesSlice';
+import { fetchMe } from '../features/auth/authSlice';
 import { Link } from 'react-router-dom';
 import UserAvatar from '../components/UserAvatar';
 import { communityAvatar } from '../lib/avatars';
@@ -618,6 +620,20 @@ function CommunitiesTab() {
     dispatch(fetchCommunities());
   };
 
+  const handleDeleteAllCourse = async () => {
+    if (
+      !window.confirm(
+        'Delete ALL course communities and their content? Every user\'s enrolled sections will be cleared and they will be able to upload their schedule again. This cannot be undone.'
+      )
+    ) {
+      return;
+    }
+    await dispatch(modDeleteAllCourseCommunities());
+    fetchList();
+    dispatch(fetchCommunities());
+    dispatch(fetchMe());
+  };
+
   const handleDelete = async (c) => {
     if (!window.confirm(`Delete community "${c.name}" and all of its content? This cannot be undone.`)) return;
     await dispatch(modDeleteCommunity(c._id));
@@ -637,9 +653,18 @@ function CommunitiesTab() {
     <div>
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <h2 className="text-lg font-bold">Communities</h2>
-        <button type="button" className="btn btn-primary btn-sm rounded-full" onClick={() => setCreateOpen(true)}>
-          + New community
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            className="btn btn-error btn-sm btn-outline rounded-full"
+            onClick={handleDeleteAllCourse}
+          >
+            Delete all course communities
+          </button>
+          <button type="button" className="btn btn-primary btn-sm rounded-full" onClick={() => setCreateOpen(true)}>
+            + New community
+          </button>
+        </div>
       </div>
       <form onSubmit={doSearch} className="flex flex-wrap gap-2 mb-4">
         <input

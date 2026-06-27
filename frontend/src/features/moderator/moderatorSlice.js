@@ -135,6 +135,21 @@ export const modDeleteCommunity = createAsyncThunk(
   }
 );
 
+export const modDeleteAllCourseCommunities = createAsyncThunk(
+  'mod/deleteAllCourseCommunities',
+  async (_, { rejectWithValue }) => {
+    try {
+      const { data } = await api.delete('/moderator/communities/course');
+      return {
+        message: data.message,
+        deletedCommunities: data.deletedCommunities,
+      };
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
 export const modDeleteAllCommunities = createAsyncThunk(
   'mod/deleteAllCommunities',
   async (_, { rejectWithValue }) => {
@@ -286,6 +301,10 @@ const moderatorSlice = createSlice({
       .addCase(modDeleteAllCommunities.fulfilled, (state, action) => {
         state.communities = [];
         state.notice = action.payload.message || 'All communities deleted.';
+      })
+      .addCase(modDeleteAllCourseCommunities.fulfilled, (state, action) => {
+        state.communities = state.communities.filter((c) => c.type !== 'course');
+        state.notice = action.payload.message || 'All course communities deleted.';
       })
       .addCase(modAddCommunityMember.fulfilled, (state, action) => {
         const i = state.communities.findIndex((c) => c._id === action.payload.communityId);
