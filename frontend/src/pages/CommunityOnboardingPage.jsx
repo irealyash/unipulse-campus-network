@@ -1,17 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { fetchCatalog, joinCommunity } from '../features/communities/communitiesSlice';
+import { fetchCatalog, joinCommunity, fetchCommunities } from '../features/communities/communitiesSlice';
 import { completeCommunityOnboarding } from '../features/auth/authSlice';
-import { fetchCommunities } from '../features/communities/communitiesSlice';
 import { ONBOARDING_STEPS } from '../lib/communityCategories';
-import { communityAvatar } from '../lib/avatars';
 import AuthShell from '../components/AuthShell';
+import CommunityAvatar from '../components/CommunityAvatar';
 import Loader from '../components/Loader';
+import ScheduleUploadForm from '../components/ScheduleUploadForm';
 import { SearchIcon } from '../components/icons';
+import useDebouncedValue from '../hooks/useDebouncedValue';
 
 /**
- * Post-signup wizard: pick communities from each catalog category (skippable).
+ * Post-signup wizard: pick communities from each catalog category, then optional schedule upload.
  */
 export default function CommunityOnboardingPage() {
   const dispatch = useDispatch();
@@ -21,18 +22,20 @@ export default function CommunityOnboardingPage() {
   const catalogStatus = useSelector((s) => s.communities.catalogStatus);
   const joined = user?.joinedCommunities || [];
 
+  const [phase, setPhase] = useState('communities');
   const [stepIndex, setStepIndex] = useState(0);
   const [search, setSearch] = useState('');
-  const [query, setQuery] = useState('');
+  const debouncedSearch = useDebouncedValue(search, 250);
 
   const step = ONBOARDING_STEPS[stepIndex];
   const category = step?.id;
+  const totalSteps = ONBOARDING_STEPS.length + 1;
 
   useEffect(() => {
-    if (category) {
-      dispatch(fetchCatalog({ category, search: query }));
+    if (phase === 'communities' && category) {
+      dispatch(fetchCatalog({ category, search: debouncedSearch.trim() }));
     }
-  }, [dispatch, category, query]);
+  }, [dispatch, phase, category, debouncedSearch]);
 
   if (user?.communityOnboardingComplete) {
     return <Navigate to="/c" replace />;
@@ -44,21 +47,20 @@ export default function CommunityOnboardingPage() {
     navigate('/c', { replace: true });
   };
 
+  const goToSchedule = () => {
+    setPhase('schedule');
+    setSearch('');
+  };
+
   const nextStep = () => {
-    if (stepIndex >= ONBOARDING_STEPS.length - 1) finish();
+    if (stepIndex >= ONBOARDING_STEPS.length - 1) goToSchedule();
     else {
       setStepIndex((i) => i + 1);
       setSearch('');
-      setQuery('');
     }
   };
 
   const skipStep = () => nextStep();
-
-  const runSearch = (e) => {
-    e?.preventDefault?.();
-    setQuery(search.trim());
-  };
 
   const addCommunity = (c) => {
     if (!joined.includes(c._id)) {
@@ -66,35 +68,51 @@ export default function CommunityOnboardingPage() {
     }
   };
 
+  const onScheduleSuccess = async () => {
+    await dispatch(fetchCommunities());
+    await finish();
+  };
+
+  if (phase === 'schedule') {
+    return (
+      <AuthShell
+        title="Add your class schedule"
+        subtitle={`Step ${totalSteps} of ${totalSteps} · Optional`}
+      >
+        <p className="text-sm text-base-content/70 mb-4">
+          Upload your UBC Workday schedule as an <code>.xlsx</code> file and we&apos;ll add you to a
+          private community for each course section we detect. You can skip and add it later from
+          settings.
+        </p>
+        <ScheduleUploadForm compact onSkip={finish} onSuccess={onScheduleSuccess} />
+      </AuthShell>
+    );
+  }
+
   if (!step) return null;
 
   return (
     <AuthShell
       title="Pick your communities"
-      subtitle={`Step ${stepIndex + 1} of ${ONBOARDING_STEPS.length} · ${step.label}`}
+      subtitle={`Step ${stepIndex + 1} of ${totalSteps} · ${step.label}`}
     >
       <p className="text-sm text-base-content/70 mb-3">
         Add a community to pin it to your sidebar. You can skip any step and add more later from
         the home page.
       </p>
 
-      <form onSubmit={runSearch} className="flex gap-2 mb-3">
+      <div className="flex gap-2 mb-3">
         <input
           className="input input-bordered rounded-full flex-1 input-sm"
           placeholder="Search…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              runSearch(e);
-            }
-          }}
+          aria-label="Search communities"
         />
-        <button type="submit" className="btn btn-primary btn-sm btn-circle">
+        <span className="btn btn-primary btn-sm btn-circle pointer-events-none" aria-hidden>
           <SearchIcon />
-        </button>
-      </form>
+        </span>
+      </div>
 
       <div className="max-h-64 overflow-y-auto space-y-1 border border-base-content/10 rounded-2xl p-2">
         {catalogStatus === 'loading' && <Loader label="Loading communities…" />}
@@ -107,7 +125,7 @@ export default function CommunityOnboardingPage() {
                 className="flex items-center gap-2 p-2 rounded-xl hover:bg-base-200/60"
               >
                 <div className="w-9 h-9 rounded-lg overflow-hidden shrink-0">
-                  <img src={communityAvatar(c)} alt="" className="w-full h-full object-cover" />
+                  <CommunityAvatar community={c} className="w-full h-full" boxPx={36} />
                 </div>
                 <span className="text-sm font-medium truncate flex-1 min-w-0">{c.name}</span>
                 <button
@@ -127,16 +145,16 @@ export default function CommunityOnboardingPage() {
           Skip
         </button>
         <button type="button" className="btn btn-primary rounded-2xl flex-1" onClick={nextStep}>
-          {stepIndex >= ONBOARDING_STEPS.length - 1 ? 'Finish' : 'Continue'}
+          {stepIndex >= ONBOARDING_STEPS.length - 1 ? 'Continue to schedule' : 'Continue'}
         </button>
       </div>
 
       <button
         type="button"
         className="btn btn-link btn-xs w-full mt-2 text-base-content/50"
-        onClick={finish}
+        onClick={goToSchedule}
       >
-        Skip all and go to home
+        Skip remaining categories
       </button>
     </AuthShell>
   );

@@ -25,8 +25,7 @@ import { fetchCommunities } from '../features/communities/communitiesSlice';
 import { fetchMe } from '../features/auth/authSlice';
 import { Link } from 'react-router-dom';
 import UserAvatar from '../components/UserAvatar';
-import { communityAvatar } from '../lib/avatars';
-import CourseCommunityAvatar from '../components/CourseCommunityAvatar';
+import CommunityAvatar from '../components/CommunityAvatar';
 import { uploadMedia } from '../lib/media';
 import { PostMedia } from '../components/community/PostCommentSection';
 import { EventMediaCarousel, formatEventDate, hasEventUserMedia } from '../components/community/EventParts';
@@ -770,11 +769,7 @@ function CommunitiesTab() {
               <div className="flex items-center gap-3">
                 <div className="avatar">
                   <div className="w-12 rounded-xl overflow-hidden">
-                    {c.type === 'course' ? (
-                      <CourseCommunityAvatar sectionId={c._id} className="w-full h-full" boxPx={48} />
-                    ) : (
-                      <img src={communityAvatar(c)} alt="" className="w-full h-full object-cover" />
-                    )}
+                    <CommunityAvatar community={c} className="w-full h-full" boxPx={48} />
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">

@@ -3,11 +3,10 @@ import { createPortal } from 'react-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { NavLink, useParams } from 'react-router-dom';
 import { fetchCommunities } from '../../features/communities/communitiesSlice';
-import { communityAvatar } from '../../lib/avatars';
 import { filterNavbarCommunities } from '../../lib/navbarCommunities';
 import { sortCommunities } from '../../lib/communityPins';
 import usePinnedCommunities from '../../hooks/usePinnedCommunities';
-import CourseCommunityAvatar from '../CourseCommunityAvatar';
+import CommunityAvatar from '../CommunityAvatar';
 import UserAvatar from '../UserAvatar';
 import { ShieldIcon, ChevronIcon, PinIcon } from '../icons';
 
@@ -162,11 +161,7 @@ export default function CommunityRail({ sidebarOpen, onToggleSidebar, onOpenSide
                 selected ? 'rounded-xl' : 'rounded-2xl group-hover:rounded-xl'
               }`}
             >
-              {c.type === 'course' ? (
-                <CourseCommunityAvatar sectionId={c._id} className="w-full h-full" boxPx={48} />
-              ) : (
-                <img src={communityAvatar(c)} alt="" className="w-full h-full object-cover" />
-              )}
+              <CommunityAvatar community={c} className="w-full h-full" boxPx={48} />
             </div>
           </NavLink>
         </div>

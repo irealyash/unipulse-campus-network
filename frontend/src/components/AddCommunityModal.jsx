@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchCatalog, joinCommunity } from '../features/communities/communitiesSlice';
 import { CATALOG_CATEGORIES, CATEGORY_LABELS, CATEGORY_SHORT } from '../lib/communityCategories';
-import { communityAvatar } from '../lib/avatars';
-import CourseCommunityAvatar from './CourseCommunityAvatar';
+import CommunityAvatar from './CommunityAvatar';
 import Loader from './Loader';
 import { SearchIcon } from './icons';
+import useDebouncedValue from '../hooks/useDebouncedValue';
 
 /**
  * Pick a category then add a public catalog community to the navbar.
@@ -24,22 +24,21 @@ export default function AddCommunityModal({ open, onClose, initialCategory = nul
   const [step, setStep] = useState(initialCategory ? 'pick' : 'category');
   const [category, setCategory] = useState(initialCategory);
   const [search, setSearch] = useState('');
-  const [query, setQuery] = useState('');
+  const debouncedSearch = useDebouncedValue(search, 250);
 
   useEffect(() => {
     if (!open) {
       setStep(initialCategory ? 'pick' : 'category');
       setCategory(initialCategory);
       setSearch('');
-      setQuery('');
     }
   }, [open, initialCategory]);
 
   useEffect(() => {
     if (open && step === 'pick' && category) {
-      dispatch(fetchCatalog({ category, search: query }));
+      dispatch(fetchCatalog({ category, search: debouncedSearch.trim() }));
     }
-  }, [dispatch, open, step, category, query]);
+  }, [dispatch, open, step, category, debouncedSearch]);
 
   if (!open) return null;
 
@@ -47,12 +46,6 @@ export default function AddCommunityModal({ open, onClose, initialCategory = nul
     setCategory(cat);
     setStep('pick');
     setSearch('');
-    setQuery('');
-  };
-
-  const runSearch = (e) => {
-    e?.preventDefault?.();
-    setQuery(search.trim());
   };
 
   const addCommunity = (c) => {
@@ -97,23 +90,18 @@ export default function AddCommunityModal({ open, onClose, initialCategory = nul
               ← {initialCategory ? 'Cancel' : 'Categories'}
             </button>
             <h3 className="font-bold text-lg">{CATEGORY_LABELS[category]}</h3>
-            <form onSubmit={runSearch} className="flex gap-2 mt-3">
+            <div className="flex gap-2 mt-3">
               <input
                 className="input input-bordered input-sm rounded-full flex-1"
                 placeholder={`Search ${CATEGORY_SHORT[category]?.toLowerCase() || 'communities'}…`}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    runSearch(e);
-                  }
-                }}
+                aria-label="Search communities"
               />
-              <button type="submit" className="btn btn-primary btn-sm btn-circle">
+              <span className="btn btn-primary btn-sm btn-circle pointer-events-none" aria-hidden>
                 <SearchIcon />
-              </button>
-            </form>
+              </span>
+            </div>
             <div className="mt-3 max-h-72 overflow-y-auto space-y-1">
               {catalogStatus === 'loading' && <Loader label="Loading…" />}
               {catalogStatus !== 'loading' &&
@@ -125,11 +113,7 @@ export default function AddCommunityModal({ open, onClose, initialCategory = nul
                       className="flex items-center gap-2 p-2 rounded-xl hover:bg-base-200/80"
                     >
                       <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0">
-                        <img
-                          src={communityAvatar(c)}
-                          alt=""
-                          className="w-full h-full object-cover"
-                        />
+                        <CommunityAvatar community={c} className="w-full h-full" boxPx={32} />
                       </div>
                       <span className="text-sm font-medium truncate flex-1 min-w-0">{c.name}</span>
                       <button
