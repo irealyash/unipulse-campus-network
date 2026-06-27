@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import api, { setToken, clearToken, getToken } from '../../lib/api';
 import { disconnectSocket } from '../../lib/socket';
+import { fetchCommunities } from '../communities/communitiesSlice';
 
 /**
  * AUTH SLICE
@@ -72,14 +73,13 @@ export const fetchMe = createAsyncThunk('auth/me', async (_, { rejectWithValue }
 });
 
 // Upload the schedule file (multipart). Updates enrolledSections + user.
-export const uploadSchedule = createAsyncThunk('auth/schedule', async (file, { rejectWithValue }) => {
+export const uploadSchedule = createAsyncThunk('auth/schedule', async (file, { rejectWithValue, dispatch }) => {
   try {
     const form = new FormData();
     form.append('schedule', file);
-    const { data } = await api.post('/users/me/schedule', form, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-    return data.user;
+    const { data } = await api.post('/users/me/schedule', form);
+    await dispatch(fetchCommunities());
+    return data;
   } catch (err) {
     return rejectWithValue(err.message);
   }
@@ -162,7 +162,7 @@ const authSlice = createSlice({
         (state, action) => {
           state.status = 'succeeded';
           state.booting = false;
-          state.user = action.payload;
+          state.user = action.payload?.user ?? action.payload;
         }
       )
       // Signup/forgot/reset just surface a success notice (no token yet).

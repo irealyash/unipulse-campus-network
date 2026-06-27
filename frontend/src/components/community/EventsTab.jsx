@@ -110,8 +110,8 @@ export default function EventsTab() {
           },
         })
       ).unwrap();
-    } catch {
-      dispatch(showEventNotice('Could not submit your event. Please try again.'));
+    } catch (err) {
+      dispatch(showEventNotice(err?.message || 'Could not submit your event. Please try again.'));
     }
   };
 

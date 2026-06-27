@@ -28,7 +28,7 @@ export default function ChannelSidebar() {
           </span>
         </div>
         <nav className="p-2">
-          <NavLink to="/c/general/chat" className="btn btn-ghost btn-sm w-full justify-start rounded-lg">
+          <NavLink to="/c" className="btn btn-ghost btn-sm w-full justify-start rounded-lg">
             ← Back to communities
           </NavLink>
         </nav>

@@ -1,4 +1,5 @@
 import { v2 as cloudinary } from 'cloudinary';
+import ApiError from './ApiError.js';
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -12,7 +13,7 @@ cloudinary.config({
 export const uploadBuffer = (buffer, resourceType = 'auto') =>
   new Promise((resolve, reject) => {
     if (!process.env.CLOUDINARY_CLOUD_NAME) {
-      return reject(new Error('Cloudinary is not configured on the server.'));
+      return reject(new ApiError(503, 'Media uploads are not configured on the server (Cloudinary).'));
     }
     const stream = cloudinary.uploader.upload_stream(
       { resource_type: resourceType },

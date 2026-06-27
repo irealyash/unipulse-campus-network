@@ -46,8 +46,8 @@ export default function PostsTab() {
         media.push(await uploadMedia(file));
       }
       await dispatch(createPost({ communityId, payload: { ...payload, media } })).unwrap();
-    } catch {
-      dispatch(showPostNotice('Could not submit your post. Please try again.'));
+    } catch (err) {
+      dispatch(showPostNotice(err?.message || 'Could not submit your post. Please try again.'));
     }
   };
 

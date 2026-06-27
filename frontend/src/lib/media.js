@@ -4,9 +4,8 @@ import api from './api';
 export async function uploadMedia(file) {
   const form = new FormData();
   form.append('file', file);
-  const { data } = await api.post('/uploads/media', form, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
+  // Do not set Content-Type — axios must add the multipart boundary automatically.
+  const { data } = await api.post('/uploads/media', form);
   return { url: data.url, mediaType: data.mediaType };
 }
 

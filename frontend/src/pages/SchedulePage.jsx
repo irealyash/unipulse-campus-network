@@ -2,7 +2,15 @@ import { useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { uploadSchedule } from '../features/auth/authSlice';
+import { communityChatPath } from '../lib/communityNav';
 import { CalendarIcon, ShieldIcon, SparkleIcon } from '../components/icons';
+
+function firstSectionFromPayload(payload) {
+  const added = payload?.addedSections;
+  if (added?.length) return added[0];
+  const enrolled = payload?.enrolledSections || payload?.user?.enrolledSections;
+  return enrolled?.[0] || null;
+}
 
 /**
  * Schedule upload. Parsing the uploaded UBC Workday schedule (.xlsx) unlocks
@@ -45,8 +53,12 @@ export default function SchedulePage() {
     if (!file) return setError('Please choose your schedule file first.');
     const res = await dispatch(uploadSchedule(file));
     clearFile();
-    if (uploadSchedule.fulfilled.match(res)) navigate('/c');
-    else setError(res.payload || 'Upload failed.');
+    if (uploadSchedule.fulfilled.match(res)) {
+      const target = firstSectionFromPayload(res.payload);
+      navigate(target ? communityChatPath(target) : '/c');
+    } else {
+      setError(res.payload || 'Upload failed.');
+    }
   };
 
   return (

@@ -68,9 +68,13 @@ const communitiesSlice = createSlice({
       })
       .addCase(fetchCommunity.fulfilled, (state, action) => {
         state.current = action.payload;
+        state.error = null;
         if (!state.list.some((c) => c._id === action.payload._id)) {
           state.list.push(action.payload);
         }
+      })
+      .addCase(fetchCommunity.rejected, (state, action) => {
+        state.error = action.payload;
       })
       .addCase(modDeleteCommunity.fulfilled, (state, action) => {
         const id = action.payload.communityId;
