@@ -162,23 +162,26 @@ export default function PostCommentSection({
     e.preventDefault();
     if (!commentText.trim()) return;
     const parentId = replyParent?._id || replyParent || null;
+    const text = commentText;
     const optimisticId = `temp-${Date.now()}`;
+    setCommentText('');
+    setReplyParent(null);
     await dispatch(
       createComment({
         postId,
-        content: commentText,
+        content: text,
         parentId,
         optimisticId,
         username: user?.username,
       })
     );
-    setCommentText('');
-    setReplyParent(null);
   };
 
   const sendGif = async (url) => {
     const parentId = replyParent?._id || replyParent || null;
     const optimisticId = `temp-${Date.now()}`;
+    setGifOpen(false);
+    setReplyParent(null);
     await dispatch(
       createComment({
         postId,
@@ -189,8 +192,6 @@ export default function PostCommentSection({
         username: user?.username,
       })
     );
-    setGifOpen(false);
-    setReplyParent(null);
   };
 
   return (
