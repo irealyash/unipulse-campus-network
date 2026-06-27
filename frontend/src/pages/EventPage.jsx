@@ -47,8 +47,8 @@ export default function EventPage() {
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 bg-base-200/30 min-h-0">
-        <article className="card bg-base-100 border border-base-200 shadow-sm max-w-3xl mx-auto">
-          <div className="card-body">
+        <article className="card bg-base-100 border border-base-200 shadow-sm max-w-3xl mx-auto w-full min-w-0 overflow-hidden">
+          <div className="card-body min-w-0 overflow-hidden">
             {event.status === 'pending' && (
               <div className="alert alert-warning text-sm py-2 mb-2">
                 This event is awaiting moderator approval.
@@ -60,8 +60,8 @@ export default function EventPage() {
               </div>
             )}
 
-            <div className="flex items-start justify-between gap-2">
-              <h1 className="font-bold text-2xl">{event.title}</h1>
+            <div className="flex items-start justify-between gap-2 min-w-0">
+              <h1 className="font-bold text-2xl min-w-0 flex-1 break-words">{event.title}</h1>
               <ReportFlagButton
                 onClick={() => setReportTarget({ contentType: 'event', contentId: event._id })}
               />
@@ -69,10 +69,12 @@ export default function EventPage() {
 
             <EventMediaCarousel event={event} />
 
-            <div className="mt-4 space-y-3">
-              <p className="text-sm text-base-content/60">{formatEventDate(event.eventDate)}</p>
+            <div className="mt-4 space-y-3 min-w-0 overflow-hidden">
+              <p className="text-sm text-base-content/60 break-words">{formatEventDate(event.eventDate)}</p>
               {event.description && (
-                <p className="text-sm whitespace-pre-wrap text-base-content/80">{event.description}</p>
+                <p className="text-sm whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-base-content/80">
+                  {event.description}
+                </p>
               )}
             </div>
 

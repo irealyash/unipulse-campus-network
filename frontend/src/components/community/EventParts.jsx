@@ -90,8 +90,8 @@ export function EventMediaCarousel({ event, compact = false }) {
   }
 
   return (
-    <div className={`relative ${compact ? 'mt-2' : 'mt-4'}`}>
-      <div className="relative flex items-center gap-2">
+    <div className={`relative min-w-0 overflow-hidden ${compact ? 'mt-2' : 'mt-4'}`}>
+      <div className="relative flex items-center gap-2 min-w-0">
         {hasMultiple && (
           <button
             type="button"
