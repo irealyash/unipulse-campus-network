@@ -49,12 +49,9 @@ export default function AddCommunityModal({ open, onClose, initialCategory = nul
   };
 
   const addCommunity = (c) => {
-    if (joined.includes(c._id)) {
-      onClose();
-      return;
+    if (!joined.includes(c._id)) {
+      dispatch(joinCommunity(c));
     }
-    dispatch(joinCommunity(c));
-    onClose();
   };
 
   return (
@@ -118,7 +115,7 @@ export default function AddCommunityModal({ open, onClose, initialCategory = nul
                       <span className="text-sm font-medium truncate flex-1 min-w-0">{c.name}</span>
                       <button
                         type="button"
-                        className={`btn btn-xs rounded-full ${already ? 'btn-ghost' : 'btn-primary'}`}
+                        className={`btn btn-xs rounded-full ${already ? 'btn-success btn-outline' : 'btn-primary'}`}
                         disabled={already}
                         onClick={() => addCommunity(c)}
                       >

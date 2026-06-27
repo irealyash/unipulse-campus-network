@@ -8,9 +8,8 @@ import { CalendarIcon, ShieldIcon } from './icons';
  * @param {object} props
  * @param {() => void} props.onSkip
  * @param {(payload: object) => void} [props.onSuccess]
- * @param {boolean} [props.compact]
  */
-export default function ScheduleUploadForm({ onSkip, onSuccess, compact = false }) {
+export default function ScheduleUploadForm({ onSkip, onSuccess }) {
   const dispatch = useDispatch();
   const { status } = useSelector((s) => s.auth);
   const loading = status === 'loading';
@@ -52,7 +51,7 @@ export default function ScheduleUploadForm({ onSkip, onSuccess, compact = false 
     }
   };
 
-  const dropPad = compact ? 'p-6' : 'p-10';
+  const dropPad = 'p-10';
 
   return (
     <div className="flex flex-col gap-4">
@@ -61,9 +60,10 @@ export default function ScheduleUploadForm({ onSkip, onSuccess, compact = false 
         <div>
           <p className="font-semibold">Your privacy matters</p>
           <p className="mt-1 text-base-content/80">
-            We only read your course section codes from the file. The upload is processed in memory
-            and <strong className="font-semibold text-base-content">deleted immediately</strong>{' '}
-            after extraction — we never store your schedule file on our servers.
+            We only read your course section codes from the file. The upload is processed in
+            memory and <strong className="font-semibold text-base-content">deleted immediately</strong>{' '}
+            after extraction, we never store your schedule file on our servers. Section data is
+            used solely to place you in the right private course communities.
           </p>
         </div>
       </div>
@@ -85,7 +85,7 @@ export default function ScheduleUploadForm({ onSkip, onSuccess, compact = false 
         className={`cursor-pointer rounded-3xl border-2 border-dashed ${dropPad} text-center transition
           ${dragOver ? 'border-primary bg-primary/5' : 'border-base-300 hover:border-primary/50'}`}
       >
-        <div className={`text-primary mx-auto w-fit mb-3 ${compact ? 'text-4xl' : 'text-5xl'}`}>
+        <div className="text-5xl text-primary mx-auto w-fit mb-3">
           <CalendarIcon />
         </div>
         {file ? (
@@ -96,14 +96,12 @@ export default function ScheduleUploadForm({ onSkip, onSuccess, compact = false 
           <>
             <p className="font-medium">Drag & drop your Workday registered schedule here</p>
             <p className="text-sm text-base-content/60">or click to browse (.xlsx only)</p>
-            {!compact && (
-              <p className="text-sm text-base-content/60 mt-2">
-                Only add the current term&apos;s schedule, or the upcoming term&apos;s schedule if no
-                other term is in progress. Manipulating or editing course sections will result in an
-                instant permanent ban. You may delete the &apos;My Enrolled Courses&apos; column
-                completely for privacy, but modifying any other data is strictly prohibited.
-              </p>
-            )}
+            <p className="text-sm text-base-content/60 mt-2">
+              (Only add the current term&apos;s schedule, or the upcoming term&apos;s schedule if no
+              other term is in progress. Manipulating or editing course sections will result in an
+              instant permanent ban. You may delete the &apos;My Enrolled Courses&apos; column
+              completely for privacy, but modifying any other data is strictly prohibited.)
+            </p>
           </>
         )}
         <input

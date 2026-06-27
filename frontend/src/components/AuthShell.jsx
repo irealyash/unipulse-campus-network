@@ -29,7 +29,7 @@ export default function AuthShell({ title, subtitle, children, footer }) {
             </span>
           </Link>
 
-          <h1 className="text-center text-xl font-bold">{title}</h1>
+          {title ? <h1 className="text-center text-xl font-bold">{title}</h1> : null}
           {subtitle && (
             <p className="text-center text-sm text-base-content/60 mb-2">{subtitle}</p>
           )}

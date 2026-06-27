@@ -7,7 +7,7 @@ import { ONBOARDING_STEPS } from '../lib/communityCategories';
 import AuthShell from '../components/AuthShell';
 import CommunityAvatar from '../components/CommunityAvatar';
 import Loader from '../components/Loader';
-import ScheduleUploadForm from '../components/ScheduleUploadForm';
+import ScheduleUploadCard from '../components/ScheduleUploadCard';
 import { SearchIcon } from '../components/icons';
 import useDebouncedValue from '../hooks/useDebouncedValue';
 
@@ -76,15 +76,10 @@ export default function CommunityOnboardingPage() {
   if (phase === 'schedule') {
     return (
       <AuthShell
-        title="Add your class schedule"
+        title=""
         subtitle={`Step ${totalSteps} of ${totalSteps} · Optional`}
       >
-        <p className="text-sm text-base-content/70 mb-4">
-          Upload your UBC Workday schedule as an <code>.xlsx</code> file and we&apos;ll add you to a
-          private community for each course section we detect. You can skip and add it later from
-          settings.
-        </p>
-        <ScheduleUploadForm compact onSkip={finish} onSuccess={onScheduleSuccess} />
+        <ScheduleUploadCard onSkip={finish} onSuccess={onScheduleSuccess} />
       </AuthShell>
     );
   }
