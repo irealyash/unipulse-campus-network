@@ -1,15 +1,16 @@
 import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Link } from 'react-router-dom';
-import { changeUsername } from '../features/auth/authSlice';
+import { Link, useNavigate } from 'react-router-dom';
+import { changeUsername, logout } from '../features/auth/authSlice';
 import UserAvatar from '../components/UserAvatar';
-import { CalendarIcon, ShieldIcon } from '../components/icons';
+import { CalendarIcon, ShieldIcon, LogoutIcon } from '../components/icons';
 
 /**
  * User settings: profile overview + the weekly-limited username change.
  */
 export default function SettingsPage() {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const user = useSelector((s) => s.auth.user);
   const { status } = useSelector((s) => s.auth);
   const loading = status === 'loading';
@@ -30,6 +31,11 @@ export default function SettingsPage() {
     const res = await dispatch(changeUsername(username.trim()));
     if (changeUsername.fulfilled.match(res)) setMsg({ ok: true, text: 'Username updated!' });
     else setMsg({ ok: false, text: res.payload || 'Could not update username.' });
+  };
+
+  const onLogout = () => {
+    dispatch(logout());
+    navigate('/login');
   };
 
   return (
@@ -115,6 +121,18 @@ export default function SettingsPage() {
               Save
             </button>
           </form>
+        </div>
+      </div>
+
+      <div className="card bg-base-100 shadow-md border border-base-content/5 mt-6">
+        <div className="card-body p-2">
+          <ul className="menu rounded-box w-full">
+            <li>
+              <button type="button" onClick={onLogout} className="text-error">
+                <LogoutIcon /> Log out
+              </button>
+            </li>
+          </ul>
         </div>
       </div>
     </div>
