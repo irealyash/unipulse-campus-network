@@ -125,7 +125,7 @@ export default function MessageBubble({
         }`}
       >
         <UserAvatar
-          user={{ username: message.anonymousUsername, id: message._id }}
+          user={{ username: message.anonymousUsername }}
           className="w-9 h-9"
         />
 

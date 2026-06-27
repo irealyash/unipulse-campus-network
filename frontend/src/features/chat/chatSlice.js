@@ -27,6 +27,7 @@ const normalizeItem = (raw, userId) => {
     myVote: raw.myVote ?? voteFromArrays(likes, dislikes, userId),
     reactions: raw.reactions || [],
     pending: Boolean(raw.pending),
+    clientKey: raw.clientKey || null,
   };
 };
 
@@ -65,14 +66,34 @@ const chatSlice = createSlice({
   },
   reducers: {
     optimisticMessage(state, action) {
-      const item = normalizeItem({ ...action.payload, itemType: 'message', pending: true }, null);
+      const tempId = action.payload._id || `temp-${Date.now()}`;
+      const item = normalizeItem(
+        {
+          ...action.payload,
+          _id: tempId,
+          clientKey: action.payload.clientKey || tempId,
+          itemType: 'message',
+          pending: true,
+        },
+        null
+      );
       const bucket = state.byCommunity[item.communityId];
       if (bucket && !bucket.timeline.some((t) => String(t._id) === String(item._id))) {
         bucket.timeline.push(item);
       }
     },
     optimisticReply(state, action) {
-      const item = normalizeItem({ ...action.payload, itemType: 'reply', pending: true }, null);
+      const tempId = action.payload._id || `temp-${Date.now()}`;
+      const item = normalizeItem(
+        {
+          ...action.payload,
+          _id: tempId,
+          clientKey: action.payload.clientKey || tempId,
+          itemType: 'reply',
+          pending: true,
+        },
+        null
+      );
       const bucket = state.byCommunity[item.communityId];
       if (bucket && !bucket.timeline.some((t) => String(t._id) === String(item._id))) {
         bucket.timeline.push(item);
@@ -84,16 +105,22 @@ const chatSlice = createSlice({
       const bucket = state.byCommunity[item.communityId];
       if (!bucket) return;
 
-      bucket.timeline = bucket.timeline.filter(
+      const pendingIdx = bucket.timeline.findIndex(
         (t) =>
-          !(
-            t.pending &&
-            t.itemType === 'message' &&
-            t.anonymousUsername === item.anonymousUsername &&
-            t.content === item.content &&
-            String(t.media?.url || '') === String(item.media?.url || '')
-          )
+          t.pending &&
+          t.itemType === 'message' &&
+          t.anonymousUsername === item.anonymousUsername &&
+          t.content === item.content &&
+          String(t.media?.url || '') === String(item.media?.url || '')
       );
+
+      if (pendingIdx !== -1) {
+        const existing = bucket.timeline[pendingIdx];
+        const clientKey = existing.clientKey || existing._id;
+        Object.assign(existing, item, { pending: false, clientKey });
+        if (item.myVote) state.myReactions[item._id] = item.myVote;
+        return;
+      }
 
       if (!bucket.timeline.some((t) => String(t._id) === String(item._id))) {
         bucket.timeline.push(item);
@@ -107,16 +134,22 @@ const chatSlice = createSlice({
       const bucket = state.byCommunity[item.communityId];
       if (!bucket) return;
 
-      bucket.timeline = bucket.timeline.filter(
+      const pendingIdx = bucket.timeline.findIndex(
         (t) =>
-          !(
-            t.pending &&
-            t.itemType === 'reply' &&
-            t.parentMessageId === item.parentMessageId &&
-            t.anonymousUsername === item.anonymousUsername &&
-            t.content === item.content
-          )
+          t.pending &&
+          t.itemType === 'reply' &&
+          t.parentMessageId === item.parentMessageId &&
+          t.anonymousUsername === item.anonymousUsername &&
+          t.content === item.content
       );
+
+      if (pendingIdx !== -1) {
+        const existing = bucket.timeline[pendingIdx];
+        const clientKey = existing.clientKey || existing._id;
+        Object.assign(existing, item, { pending: false, clientKey });
+        if (item.myVote) state.myReactions[item._id] = item.myVote;
+        return;
+      }
 
       if (!bucket.timeline.some((t) => String(t._id) === String(item._id))) {
         bucket.timeline.push(item);

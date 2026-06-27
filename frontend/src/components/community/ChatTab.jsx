@@ -109,6 +109,7 @@ export default function ChatTab() {
       const tempId = `temp-${Date.now()}`;
       const base = {
         _id: tempId,
+        clientKey: tempId,
         communityId,
         anonymousUsername: user?.username,
         content: content || '',
@@ -192,7 +193,7 @@ export default function ChatTab() {
           <div className="space-y-4 pb-2">
             {timeline.map((m) => (
               <MessageBubble
-                key={m._id}
+                key={m.clientKey || m._id}
                 message={m}
                 myUsername={user?.username}
                 myId={user?.id}
