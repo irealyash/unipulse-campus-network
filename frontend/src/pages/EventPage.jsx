@@ -10,6 +10,7 @@ import {
   EventMediaCarousel,
   EventRsvpButtons,
   formatEventDate,
+  hasEventUserMedia,
 } from '../components/community/EventParts';
 
 /** Full-page view for a single event (no likes or comments). */
@@ -47,7 +48,7 @@ export default function EventPage() {
         </Link>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 bg-base-200/30 min-h-0">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 bg-base-200/30 min-h-0">
         <article className="card bg-base-100 border border-base-200 shadow-sm max-w-3xl mx-auto w-full min-w-0 overflow-hidden">
           <div className="card-body min-w-0 overflow-hidden">
             {event.status === 'pending' && (
@@ -68,7 +69,7 @@ export default function EventPage() {
               />
             </div>
 
-            <EventMediaCarousel event={event} />
+            {hasEventUserMedia(event) && <EventMediaCarousel event={event} />}
 
             <div className="mt-4 space-y-3 min-w-0 overflow-hidden">
               <p className="text-sm text-base-content/60 break-words">

@@ -13,12 +13,9 @@ import {
   EventMediaCarousel,
   EventRsvpButtons,
   formatEventDate,
+  hasEventUserMedia,
   todayDateInputValue,
 } from './EventParts';
-
-function hasUserMedia(items) {
-  return Array.isArray(items) && items.length > 0;
-}
 
 /** Events tab — full-width cards, route-based detail view, RSVP, sort, multi-media. */
 export default function EventsTab() {
@@ -151,7 +148,7 @@ export default function EventsTab() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-base-200/30 min-h-0">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-3 bg-base-200/30 min-h-0">
         {loading && <Loader label="Loading events…" />}
         {!loading && events.length === 0 && (
           <div className="card bg-base-100 border border-dashed border-base-300">
@@ -163,14 +160,14 @@ export default function EventsTab() {
         )}
 
         {events.map((ev) => {
-          const hasMedia = hasUserMedia(ev.media);
+          const hasMedia = hasEventUserMedia(ev);
 
           return (
             <article
               key={ev._id}
               className="card bg-base-100 border border-base-200 shadow-sm hover:shadow-md transition overflow-hidden"
             >
-              <div className="card-body py-3 px-4 min-w-0">
+              <div className="card-body py-3 px-4 min-w-0 overflow-hidden">
                 <p className="text-xs text-base-content/50 flex flex-wrap items-center gap-1">
                   {formatEventDate(ev.eventDate)} · {timeAgo(ev.createdAt)}
                   <ReportFlagButton
@@ -179,7 +176,7 @@ export default function EventsTab() {
                 </p>
                 <Link
                   to={eventPath(ev._id)}
-                  className="font-bold text-base mt-1 link link-hover text-left block line-clamp-2"
+                  className="font-bold text-base mt-1 link link-hover text-left block line-clamp-2 break-words [overflow-wrap:anywhere]"
                 >
                   {ev.title}
                 </Link>

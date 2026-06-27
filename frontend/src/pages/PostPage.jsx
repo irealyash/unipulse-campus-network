@@ -59,9 +59,9 @@ export default function PostPage() {
         </Link>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 bg-base-200/30 min-h-0">
-        <article className="card bg-base-100 border border-base-200 shadow-sm max-w-3xl mx-auto">
-          <div className="card-body">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 bg-base-200/30 min-h-0">
+        <article className="card bg-base-100 border border-base-200 shadow-sm max-w-3xl mx-auto w-full min-w-0 overflow-hidden">
+          <div className="card-body min-w-0 overflow-hidden">
             {post.status === 'pending' && (
               <div className="alert alert-warning text-sm py-2">
                 This post is awaiting moderator approval. Comments will open once it is approved.
@@ -81,8 +81,8 @@ export default function PostPage() {
                 onClick={() => setReportTarget({ contentType: 'post', contentId: post._id })}
               />
             </p>
-            <h1 className="font-bold text-2xl mt-2">{post.title}</h1>
-            <p className="text-sm whitespace-pre-wrap mt-3">{post.content}</p>
+            <h1 className="font-bold text-2xl mt-2 break-words [overflow-wrap:anywhere]">{post.title}</h1>
+            <p className="text-sm whitespace-pre-wrap mt-3 break-words [overflow-wrap:anywhere]">{post.content}</p>
             <PostMedia media={post.media} />
 
             <div className="flex items-center gap-2 mt-4">

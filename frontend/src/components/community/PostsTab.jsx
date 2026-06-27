@@ -86,7 +86,7 @@ export default function PostsTab() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-base-200/30 min-h-0">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-3 bg-base-200/30 min-h-0">
         {loading && <Loader label="Loading posts…" />}
         {!loading && posts.length === 0 && (
           <div className="card bg-base-100 border border-dashed border-base-300">
@@ -101,9 +101,9 @@ export default function PostsTab() {
           return (
           <article
             key={p._id}
-            className="card bg-base-100 border border-base-200 shadow-sm hover:shadow-md transition"
+            className="card bg-base-100 border border-base-200 shadow-sm hover:shadow-md transition overflow-hidden"
           >
-            <div className="card-body p-0 flex-row gap-0">
+            <div className="card-body p-0 flex-row gap-0 min-w-0">
               <div className="p-3">
                 <VoteColumn
                   score={p.score}
@@ -139,12 +139,14 @@ export default function PostsTab() {
                 </p>
                 <Link
                   to={`/c/${encodeURIComponent(communityId)}/posts/${p._id}`}
-                  className="font-bold text-base mt-1 link link-hover text-left block"
+                  className="font-bold text-base mt-1 link link-hover text-left block break-words [overflow-wrap:anywhere]"
                 >
                   {p.title}
                 </Link>
                 {!hasMedia && (
-                  <p className="text-sm text-base-content/80 line-clamp-3 mt-1">{p.content}</p>
+                  <p className="text-sm text-base-content/80 line-clamp-3 mt-1 break-words [overflow-wrap:anywhere]">
+                    {p.content}
+                  </p>
                 )}
                 {hasMedia && <PostMedia media={p.media} feed />}
                 <Link

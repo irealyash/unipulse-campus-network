@@ -1,6 +1,35 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import api from '../../lib/api';
 
+const applyOptimisticRsvp = (event, status) => {
+  const prev = event.myRsvp;
+  let comingCount = event.comingCount ?? 0;
+  let busyCount = event.busyCount ?? 0;
+
+  if (prev === 'coming') comingCount = Math.max(0, comingCount - 1);
+  if (prev === 'busy') busyCount = Math.max(0, busyCount - 1);
+
+  if (status === 'coming') comingCount += 1;
+  if (status === 'busy') busyCount += 1;
+
+  return {
+    ...event,
+    myRsvp: status === 'none' ? null : status,
+    comingCount,
+    busyCount,
+  };
+};
+
+const patchEventInState = (state, eventId, patch) => {
+  if (state.currentEvent?._id === eventId) {
+    state.currentEvent = patch(state.currentEvent);
+  }
+  Object.values(state.byCommunity).forEach((b) => {
+    const i = b.events?.findIndex((e) => e._id === eventId);
+    if (i >= 0) b.events[i] = patch(b.events[i]);
+  });
+};
+
 export const fetchEvents = createAsyncThunk(
   'events/fetch',
   async ({ communityId, past = false, sort = 'date' }, { rejectWithValue }) => {
@@ -93,6 +122,10 @@ const eventsSlice = createSlice({
           const bucket = state.byCommunity[communityId];
           if (bucket) bucket.events = [event, ...bucket.events];
         }
+      })
+      .addCase(rsvpEvent.pending, (state, action) => {
+        const { eventId, status } = action.meta.arg;
+        patchEventInState(state, eventId, (ev) => applyOptimisticRsvp(ev, status));
       })
       .addCase(rsvpEvent.fulfilled, (state, action) => {
         const updated = action.payload;

@@ -23,11 +23,11 @@ import {
 import { fetchCommunities } from '../features/communities/communitiesSlice';
 import { Link } from 'react-router-dom';
 import UserAvatar from '../components/UserAvatar';
-import { communityAvatar, eventAvatar } from '../lib/avatars';
+import { communityAvatar } from '../lib/avatars';
 import CourseCommunityAvatar from '../components/CourseCommunityAvatar';
 import { uploadMedia } from '../lib/media';
 import { PostMedia } from '../components/community/PostCommentSection';
-import { EventMediaCarousel, formatEventDate } from '../components/community/EventParts';
+import { EventMediaCarousel, formatEventDate, hasEventUserMedia } from '../components/community/EventParts';
 import { timeAgo } from '../lib/timeAgo';
 import {
   ShieldIcon,
@@ -175,8 +175,8 @@ function PostsTab() {
       ) : (
         <div className="grid gap-3">
           {pendingPosts.map((p) => (
-            <div key={p._id} className="card bg-base-100 border border-base-200 shadow-sm">
-              <div className="card-body p-4">
+            <div key={p._id} className="card bg-base-100 border border-base-200 shadow-sm overflow-hidden">
+              <div className="card-body p-4 min-w-0 overflow-hidden">
                 <div className="flex flex-wrap items-center gap-2">
                   {p.tag && <span className="badge badge-outline badge-sm">{p.tag}</span>}
                   <span className="badge badge-ghost badge-sm">{p.communityId}</span>
@@ -185,8 +185,10 @@ function PostsTab() {
                     {timeAgo(p.createdAt)}
                   </span>
                 </div>
-                <h3 className="font-bold mt-1">{p.title}</h3>
-                <p className="text-sm text-base-content/80 whitespace-pre-wrap line-clamp-4">{p.content}</p>
+                <h3 className="font-bold mt-1 break-words [overflow-wrap:anywhere]">{p.title}</h3>
+                <p className="text-sm text-base-content/80 whitespace-pre-wrap line-clamp-4 break-words [overflow-wrap:anywhere]">
+                  {p.content}
+                </p>
                 <PostMedia media={p.media} />
                 <p className="text-xs text-base-content/50 mt-1">
                   by <span className="font-medium">{p.anonymousUsername}</span>
@@ -282,10 +284,7 @@ function ModEventsTab() {
         <div className="grid gap-3 sm:grid-cols-2">
           {pendingEvents.map((ev) => (
             <div key={ev._id} className="card bg-base-100 border border-base-200 shadow-sm overflow-hidden">
-              <figure className="h-28 bg-base-200">
-                <img src={eventAvatar(ev)} alt="" className="w-full h-full object-cover" />
-              </figure>
-              <div className="card-body p-4">
+              <div className="card-body p-4 min-w-0 overflow-hidden">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="badge badge-ghost badge-sm">{ev.communityId}</span>
                   <span className="badge badge-outline badge-sm">{ev.status || 'pending'}</span>
@@ -293,14 +292,14 @@ function ModEventsTab() {
                     {timeAgo(ev.createdAt)}
                   </span>
                 </div>
-                <h3 className="font-bold mt-1">{ev.title}</h3>
-                <p className="text-xs text-base-content/50">
-                  {formatEventDate(ev.eventDate)}
-                </p>
+                <h3 className="font-bold mt-1 break-words [overflow-wrap:anywhere]">{ev.title}</h3>
+                <p className="text-xs text-base-content/50">{formatEventDate(ev.eventDate)}</p>
                 {ev.description && (
-                  <p className="text-sm text-base-content/80 line-clamp-3">{ev.description}</p>
+                  <p className="text-sm text-base-content/80 line-clamp-3 break-words [overflow-wrap:anywhere]">
+                    {ev.description}
+                  </p>
                 )}
-                <EventMediaCarousel event={ev} compact />
+                {hasEventUserMedia(ev) && <EventMediaCarousel event={ev} compact />}
 
                 <div className="card-actions justify-end mt-2 gap-2 flex-wrap">
                   <Link

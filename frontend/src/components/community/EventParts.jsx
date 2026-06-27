@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { eventAvatar } from '../../lib/avatars';
 
 function ChevronLeftIcon() {
   return (
@@ -17,9 +16,12 @@ function ChevronRightIcon() {
   );
 }
 
+export function hasEventUserMedia(event) {
+  return Array.isArray(event?.media) && event.media.length > 0;
+}
+
 export function getEventMediaItems(event) {
-  if (event?.media?.length > 0) return event.media;
-  if (event?.imageUrl) return [{ url: event.imageUrl, mediaType: 'image' }];
+  if (hasEventUserMedia(event)) return event.media;
   return [];
 }
 
@@ -67,7 +69,6 @@ export function EventMediaCarousel({
   feed = false,
 }) {
   const items = itemsProp ?? getEventMediaItems(event);
-  const fallback = fallbackImage ?? (event ? eventAvatar(event) : null);
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
@@ -110,17 +111,10 @@ export function EventMediaCarousel({
     : `flex-1 min-w-0 ${!hasMultiple ? 'w-full' : ''}`;
 
   if (!items.length) {
-    if (!fallback) return null;
-    if (feed) {
-      return (
-        <div className="mt-2 flex items-center justify-center min-h-[8rem] max-h-52 bg-base-200 rounded-xl px-2">
-          <img src={fallback} alt="" className="max-h-52 max-w-full object-contain rounded-xl" />
-        </div>
-      );
-    }
+    if (!fallbackImage) return null;
     return (
       <figure className={`${compact || feed ? 'mt-2' : 'mt-4'} ${heightClass} bg-base-200 rounded-xl overflow-hidden`}>
-        <img src={fallback} alt="" className="w-full h-full object-cover" />
+        <img src={fallbackImage} alt="" className="w-full h-full object-cover" />
       </figure>
     );
   }
