@@ -14,6 +14,8 @@ export const serializeVotable = (doc, userId) => {
   const likes = d.likes || [];
   const dislikes = d.dislikes || [];
   const uid = userId?.toString();
+  const senderId = d.senderId ? String(d.senderId) : null;
+  const isMine = Boolean(uid && senderId && senderId === uid);
 
   let myVote = null;
   if (uid && likes.some((id) => String(id) === uid)) myVote = 'like';
@@ -24,6 +26,8 @@ export const serializeVotable = (doc, userId) => {
 
   return {
     ...d,
+    senderId: isMine ? senderId : undefined,
+    isMine,
     likeCount,
     dislikeCount,
     score: likeCount - dislikeCount,

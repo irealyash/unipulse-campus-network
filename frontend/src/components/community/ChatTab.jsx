@@ -112,6 +112,7 @@ export default function ChatTab() {
         clientKey: tempId,
         communityId,
         anonymousUsername: user?.username,
+        senderId: user?.id,
         content: content || '',
         media: media || null,
         createdAt: new Date().toISOString(),
@@ -133,7 +134,7 @@ export default function ChatTab() {
         socket.emit('chat:message', { communityId, content, media });
       }
     },
-    [communityId, dispatch, replyTo, user?.username]
+    [communityId, dispatch, replyTo, user?.username, user?.id]
   );
 
   const handleReact = useCallback(
@@ -152,9 +153,42 @@ export default function ChatTab() {
     [dispatch, user?.id]
   );
 
-  const handleDelete = useCallback((targetType, targetId) => {
-    getSocket().emit('chat:delete', { targetType, targetId });
-  }, []);
+  const handleDelete = useCallback(
+    (targetType, targetId) => {
+      if (String(targetId).startsWith('temp-')) {
+        setChatError('Wait for the message to send before deleting.');
+        return;
+      }
+
+      const removedIds = new Set([String(targetId)]);
+
+      if (targetType === 'message') {
+        let growing = true;
+        while (growing) {
+          growing = false;
+          for (const t of timeline) {
+            if (
+              t.parentMessageId &&
+              removedIds.has(String(t.parentMessageId)) &&
+              !removedIds.has(String(t._id))
+            ) {
+              removedIds.add(String(t._id));
+              growing = true;
+            }
+          }
+        }
+      }
+
+      dispatch(messagesDeleted({ communityId, removedIds: [...removedIds] }));
+
+      getSocket().emit('chat:delete', { targetType, targetId }, (res) => {
+        if (res?.ok) return;
+        dispatch(fetchTimeline(communityId));
+        setChatError(res?.message || 'Failed to delete message.');
+      });
+    },
+    [communityId, dispatch, timeline]
+  );
 
   const handleTyping = useCallback(() => {
     getSocket().emit('chat:typing', { communityId });

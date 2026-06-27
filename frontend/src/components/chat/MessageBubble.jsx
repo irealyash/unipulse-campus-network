@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { EmojiIcon, ReplyIcon, FlagIcon, ThumbUpIcon, ThumbDownIcon, TrashIcon } from '../icons';
 import UserAvatar from '../UserAvatar';
 
@@ -29,6 +30,61 @@ function MediaContent({ media, content }) {
   return <p className="text-sm whitespace-pre-wrap break-words px-3 py-2">{content}</p>;
 }
 
+function EmojiReactionPicker({ targetType, messageId, onEmoji, align = 'left' }) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onOutside = (e) => {
+      if (rootRef.current && !rootRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', onOutside);
+    return () => document.removeEventListener('mousedown', onOutside);
+  }, [open]);
+
+  const pick = (emoji) => {
+    onEmoji(targetType, messageId, emoji);
+    setOpen(false);
+  };
+
+  return (
+    <div className="relative shrink-0" ref={rootRef}>
+      <button
+        type="button"
+        className="btn btn-ghost btn-xs btn-square"
+        title="React"
+        aria-expanded={open}
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen((v) => !v);
+        }}
+      >
+        <EmojiIcon />
+      </button>
+      {open && (
+        <div
+          role="menu"
+          className={`absolute top-0 z-30 bg-base-100 rounded-2xl shadow-lg border p-1 flex gap-0.5 ${
+            align === 'left' ? 'right-full mr-1' : 'left-full ml-1'
+          }`}
+        >
+          {QUICK_EMOJIS.map((em) => (
+            <button
+              key={em}
+              type="button"
+              className="btn btn-ghost btn-xs px-1"
+              onClick={() => pick(em)}
+            >
+              {em}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function MessageActions({ targetType, message, isOwn, onEmoji, onReply, onReport, onDelete }) {
   return (
     <div className="msg-actions flex flex-col items-center gap-0 bg-base-100 rounded-full shadow border border-base-200 px-0.5 py-0.5 shrink-0 self-start">
@@ -42,26 +98,12 @@ function MessageActions({ targetType, message, isOwn, onEmoji, onReply, onReport
           <TrashIcon />
         </button>
       )}
-      <div className="dropdown dropdown-top">
-        <button tabIndex={0} className="btn btn-ghost btn-xs btn-square" type="button" title="React">
-          <EmojiIcon />
-        </button>
-        <div
-          tabIndex={0}
-          className="dropdown-content bg-base-100 rounded-2xl shadow-lg border p-1 flex gap-0.5 mb-1 z-30"
-        >
-          {QUICK_EMOJIS.map((em) => (
-            <button
-              key={em}
-              type="button"
-              className="btn btn-ghost btn-xs px-1"
-              onClick={() => onEmoji(targetType, message._id, em)}
-            >
-              {em}
-            </button>
-          ))}
-        </div>
-      </div>
+      <EmojiReactionPicker
+        targetType={targetType}
+        messageId={message._id}
+        onEmoji={onEmoji}
+        align={isOwn ? 'left' : 'right'}
+      />
       <button
         type="button"
         className="btn btn-ghost btn-xs btn-square"
@@ -101,7 +143,10 @@ export default function MessageBubble({
   onScrollToParent,
   messageRef,
 }) {
-  const isOwn = message.anonymousUsername === myUsername;
+  const isOwn =
+    message.isMine ||
+    (myId && message.senderId && String(message.senderId) === String(myId)) ||
+    (message.pending && message.anonymousUsername === myUsername);
   const targetType = message.itemType === 'reply' ? 'reply' : 'message';
   const grouped = groupReactions(message.reactions, myId);
   const myReaction = myReactions[message._id] ?? message.myVote ?? null;

@@ -4,7 +4,8 @@ import ApiError from './ApiError.js';
  * Emoji reactions for chat. Works on any document with a `reactions` array of
  * subdocuments shaped like { emoji: String, userId: ObjectId }.
  *
- * A user may react with several DIFFERENT emojis, but only once per emoji.
+ * Chat uses toggleSingleEmojiReaction (one emoji per user). Posts still use
+ * toggleEmojiReaction (multiple different emojis per user).
  */
 export const toggleEmojiReaction = (doc, userId, emoji) => {
   const clean = (emoji || '').trim();

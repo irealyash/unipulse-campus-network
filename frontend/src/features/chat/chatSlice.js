@@ -8,6 +8,11 @@ const normalizeItem = (raw, userId) => {
   const likeCount = Array.isArray(likes) ? likes.length : raw.likeCount ?? raw.likes ?? 0;
   const dislikeCount = Array.isArray(dislikes) ? dislikes.length : raw.dislikeCount ?? raw.dislikes ?? 0;
 
+  const senderId = raw.senderId ? String(raw.senderId) : null;
+  const isMine = Boolean(
+    raw.isMine || (userId && senderId && String(senderId) === String(userId))
+  );
+
   return {
     _id: raw._id || raw.id,
     itemType: raw.itemType || (raw.parentMessageId ? 'reply' : 'message'),
@@ -25,6 +30,8 @@ const normalizeItem = (raw, userId) => {
     dislikeCount,
     score: raw.score ?? likeCount - dislikeCount,
     myVote: raw.myVote ?? voteFromArrays(likes, dislikes, userId),
+    senderId,
+    isMine,
     reactions: raw.reactions || [],
     pending: Boolean(raw.pending),
     clientKey: raw.clientKey || null,
@@ -75,7 +82,7 @@ const chatSlice = createSlice({
           itemType: 'message',
           pending: true,
         },
-        null
+        action.payload.senderId
       );
       const bucket = state.byCommunity[item.communityId];
       if (bucket && !bucket.timeline.some((t) => String(t._id) === String(item._id))) {
@@ -92,7 +99,7 @@ const chatSlice = createSlice({
           itemType: 'reply',
           pending: true,
         },
-        null
+        action.payload.senderId
       );
       const bucket = state.byCommunity[item.communityId];
       if (bucket && !bucket.timeline.some((t) => String(t._id) === String(item._id))) {

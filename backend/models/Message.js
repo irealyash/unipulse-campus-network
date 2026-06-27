@@ -34,8 +34,7 @@ const messageSchema = new mongoose.Schema({
     ref: 'User',
     default: []
   },
-  // Free-form emoji reactions. A user may add several different emojis but only
-  // once per emoji (enforced in utils/emojiReaction.js).
+  // Free-form emoji reactions — one emoji per user (replaces any prior emoji).
   reactions: {
     type: [emojiReactionSchema],
     default: []

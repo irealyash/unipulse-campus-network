@@ -4,7 +4,7 @@ import asyncHandler from '../utils/asyncHandler.js';
 import ApiError from '../utils/ApiError.js';
 import { assertCommunityAccess } from '../utils/membership.js';
 import { applyLikeDislike } from '../utils/likeDislike.js';
-import { toggleEmojiReaction } from '../utils/emojiReaction.js';
+import { toggleSingleEmojiReaction } from '../utils/emojiReaction.js';
 import { serializeVotable } from '../utils/serializeVotes.js';
 
 /**
@@ -117,7 +117,7 @@ export const reactWithEmoji = asyncHandler(async (req, res) => {
 
   await assertCommunityAccess(req.user, message.communityId);
 
-  const state = toggleEmojiReaction(message, req.user._id, req.body.emoji);
+  const state = toggleSingleEmojiReaction(message, req.user._id, req.body.emoji);
   await message.save();
 
   res.json({ success: true, state, reactions: message.reactions, message });

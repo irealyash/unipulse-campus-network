@@ -5,7 +5,7 @@ import MessageReply from '../models/MessageReply.js';
 import { verifyToken } from '../utils/token.js';
 import { canAccessCommunity } from '../utils/membership.js';
 import { applyLikeDislike } from '../utils/likeDislike.js';
-import { toggleEmojiReaction } from '../utils/emojiReaction.js';
+import { toggleSingleEmojiReaction } from '../utils/emojiReaction.js';
 import { deleteMessage, deleteMessageReplyCascade } from '../utils/contentDeletion.js';
 
 /**
@@ -57,8 +57,13 @@ const socketAuth = async (socket, next) => {
   }
 };
 
+const ownerUserId = (doc) => {
+  const sid = doc.senderId;
+  if (!sid) return null;
+  return (sid._id ?? sid).toString();
+};
+
 /**
- * Shared handler for live reactions (both like/dislike and emoji). It loads the
  * target message/reply, enforces room access, applies the supplied mutation,
  * persists, and broadcasts the updated reaction state to the room.
  *
@@ -197,6 +202,7 @@ export const initChat = (io) => {
 
         io.to(communityId).emit(EVT.MESSAGE, {
           id: message._id,
+          senderId: message.senderId,
           communityId,
           anonymousUsername: message.anonymousUsername,
           content: message.content,
@@ -255,6 +261,7 @@ export const initChat = (io) => {
 
         io.to(parent.communityId).emit(EVT.REPLY, {
           id: reply._id,
+          senderId: reply.senderId,
           communityId: reply.communityId,
           parentMessageId: parentId,
           parentType,
@@ -286,50 +293,83 @@ export const initChat = (io) => {
      */
     socket.on('chat:emoji', async ({ targetType, targetId, emoji } = {}) => {
       await handleReaction(socket, io, { targetType, targetId, mutate: (doc) =>
-        toggleEmojiReaction(doc, socket.user._id, emoji) });
+        toggleSingleEmojiReaction(doc, socket.user._id, emoji) });
     });
 
     /**
      * chat:delete { targetType, targetId }
      * Authors may delete their own message or reply.
      */
-    socket.on('chat:delete', async ({ targetType, targetId } = {}) => {
+    socket.on('chat:delete', async ({ targetType, targetId } = {}, ack) => {
       try {
         if (!targetId || !['message', 'reply'].includes(targetType)) {
-          return socket.emit(EVT.ERROR, { message: 'Valid targetType and targetId are required.' });
+          const message = 'Valid targetType and targetId are required.';
+          socket.emit(EVT.ERROR, { message });
+          return ack?.({ ok: false, message });
         }
 
         const freshUser = await User.findById(socket.user._id);
+        if (!freshUser) {
+          const message = 'User not found.';
+          socket.emit(EVT.ERROR, { message });
+          return ack?.({ ok: false, message });
+        }
         if (freshUser.isBanned) {
-          return socket.emit(EVT.ERROR, { message: 'You are banned from chatting.' });
+          const message = 'You are banned from chatting.';
+          socket.emit(EVT.ERROR, { message });
+          return ack?.({ ok: false, message });
+        }
+
+        if (String(targetId).startsWith('temp-')) {
+          const message = 'Wait for the message to send before deleting.';
+          socket.emit(EVT.ERROR, { message });
+          return ack?.({ ok: false, message });
         }
 
         let communityId;
         let removedIds;
+        const actorId = freshUser._id.toString();
 
         if (targetType === 'message') {
           const doc = await Message.findById(targetId);
-          if (!doc) return socket.emit(EVT.ERROR, { message: 'Message not found.' });
-          if (doc.senderId.toString() !== socket.user._id.toString()) {
-            return socket.emit(EVT.ERROR, { message: 'You can only delete your own messages.' });
+          if (!doc) {
+            const message = 'Message not found.';
+            socket.emit(EVT.ERROR, { message });
+            return ack?.({ ok: false, message });
+          }
+          const ownerId = ownerUserId(doc);
+          if (!ownerId || ownerId !== actorId) {
+            const message = 'You can only delete your own messages.';
+            socket.emit(EVT.ERROR, { message });
+            return ack?.({ ok: false, message });
           }
           communityId = doc.communityId;
           const result = await deleteMessage(doc._id);
-          removedIds = result.removedIds;
+          removedIds = result.removedIds.map(String);
         } else {
           const doc = await MessageReply.findById(targetId);
-          if (!doc) return socket.emit(EVT.ERROR, { message: 'Reply not found.' });
-          if (doc.senderId.toString() !== socket.user._id.toString()) {
-            return socket.emit(EVT.ERROR, { message: 'You can only delete your own replies.' });
+          if (!doc) {
+            const message = 'Reply not found.';
+            socket.emit(EVT.ERROR, { message });
+            return ack?.({ ok: false, message });
+          }
+          const ownerId = ownerUserId(doc);
+          if (!ownerId || ownerId !== actorId) {
+            const message = 'You can only delete your own replies.';
+            socket.emit(EVT.ERROR, { message });
+            return ack?.({ ok: false, message });
           }
           communityId = doc.communityId;
           const result = await deleteMessageReplyCascade(doc._id);
-          removedIds = result.removedIds;
+          removedIds = result.removedIds.map(String);
         }
 
         io.to(communityId).emit(EVT.DELETED, { communityId, removedIds });
-      } catch {
-        socket.emit(EVT.ERROR, { message: 'Failed to delete message.' });
+        ack?.({ ok: true, removedIds });
+      } catch (err) {
+        const message = err.message || 'Failed to delete message.';
+        socket.emit(EVT.ERROR, { message });
+        ack?.({ ok: false, message });
       }
     });
 

@@ -4,7 +4,7 @@ import asyncHandler from '../utils/asyncHandler.js';
 import ApiError from '../utils/ApiError.js';
 import { assertCommunityAccess } from '../utils/membership.js';
 import { applyLikeDislike } from '../utils/likeDislike.js';
-import { toggleEmojiReaction } from '../utils/emojiReaction.js';
+import { toggleSingleEmojiReaction } from '../utils/emojiReaction.js';
 import { deleteMessageReplyCascade } from '../utils/contentDeletion.js';
 
 /**
@@ -132,7 +132,7 @@ export const reactToReplyWithEmoji = asyncHandler(async (req, res) => {
 
   await assertCommunityAccess(req.user, reply.communityId);
 
-  const state = toggleEmojiReaction(reply, req.user._id, req.body.emoji);
+  const state = toggleSingleEmojiReaction(reply, req.user._id, req.body.emoji);
   await reply.save();
 
   res.json({ success: true, state, reactions: reply.reactions, reply });

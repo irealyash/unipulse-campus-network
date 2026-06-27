@@ -36,13 +36,14 @@ export function applyOptimisticVote(entity, action, userId) {
   };
 }
 
-/** Toggle emoji reaction optimistically (chat allows multiple emojis per user). */
+/** Toggle emoji reaction optimistically — one emoji per user on chat messages. */
 export function applyOptimisticEmoji(entity, emoji, userId) {
   const uid = String(userId);
-  const reactions = [...(entity.reactions || [])];
-  const idx = reactions.findIndex((r) => r.emoji === emoji && String(r.userId) === uid);
-  if (idx >= 0) reactions.splice(idx, 1);
-  else reactions.push({ emoji, userId: uid });
+  const reactions = (entity.reactions || []).filter((r) => String(r.userId) !== uid);
+  const existing = (entity.reactions || []).find(
+    (r) => String(r.userId) === uid && r.emoji === emoji
+  );
+  if (!existing) reactions.push({ emoji, userId: uid });
 
   return { ...entity, reactions };
 }
