@@ -46,38 +46,90 @@ export default function CommunityRail({ sidebarOpen, onToggleSidebar }) {
   const courses = list.filter((c) => c.type === 'course');
   const railCommunities = [...general, ...courses];
 
-  const Item = ({ c }) => {
+  const RailCommunityItem = ({ c }) => {
+    const itemRef = useRef(null);
+    const [hovered, setHovered] = useState(false);
+    const [tipPos, setTipPos] = useState({ top: 0, left: 0 });
     const selected = c._id === communityId;
 
-    return (
-      <NavLink
-        to={`/c/${encodeURIComponent(c._id)}/${currentTab}`}
-        title={c.name}
-        onMouseDown={(e) => e.preventDefault()}
-        className={({ isActive }) => {
-          const active = isActive || selected;
-          return `group relative flex items-center justify-center w-12 h-12 transition-all ${
-            active
-              ? 'rounded-xl ring-2 ring-primary bg-primary/20'
-              : 'rounded-2xl hover:rounded-xl hover:bg-primary/20'
-          }`;
-        }}
-      >
-        {selected && (
-          <span className="absolute -left-3 top-1/2 -translate-y-1/2 w-1 h-8 bg-base-content rounded-r-full" />
-        )}
+    const updateTipPos = () => {
+      if (!itemRef.current) return;
+      const rect = itemRef.current.getBoundingClientRect();
+      setTipPos({ top: rect.top + rect.height / 2, left: rect.right + 14 });
+    };
+
+    useEffect(() => {
+      if (!hovered) return;
+      updateTipPos();
+      const onScroll = () => updateTipPos();
+      window.addEventListener('scroll', onScroll, true);
+      window.addEventListener('resize', onScroll);
+      return () => {
+        window.removeEventListener('scroll', onScroll, true);
+        window.removeEventListener('resize', onScroll);
+      };
+    }, [hovered]);
+
+    const tooltip =
+      hovered &&
+      createPortal(
         <div
-          className={`w-12 h-12 overflow-hidden transition-all ${
-            selected ? 'rounded-xl' : 'rounded-2xl group-hover:rounded-xl'
-          }`}
+          className="fixed z-[400] pointer-events-none -translate-y-1/2"
+          style={{ top: tipPos.top, left: tipPos.left }}
+          role="tooltip"
         >
-          {c.type === 'course' ? (
-            <CourseCommunityAvatar sectionId={c._id} className="w-full h-full" boxPx={48} />
-          ) : (
-            <img src={communityAvatar(c)} alt={c.name} className="w-full h-full object-cover" />
-          )}
+          <div className="relative bg-neutral text-neutral-content text-sm font-semibold px-3 py-2 rounded-lg shadow-xl whitespace-nowrap max-w-[14rem] truncate">
+            <span
+              className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0 border-y-[7px] border-y-transparent border-r-[7px] border-r-neutral"
+              aria-hidden
+            />
+            {c.name}
+          </div>
+        </div>,
+        document.body
+      );
+
+    return (
+      <>
+        <div
+          ref={itemRef}
+          className="relative"
+          onMouseEnter={() => {
+            updateTipPos();
+            setHovered(true);
+          }}
+          onMouseLeave={() => setHovered(false)}
+        >
+          <NavLink
+            to={`/c/${encodeURIComponent(c._id)}/${currentTab}`}
+            onMouseDown={(e) => e.preventDefault()}
+            className={({ isActive }) => {
+              const active = isActive || selected;
+              return `group relative flex items-center justify-center w-12 h-12 transition-all ${
+                active
+                  ? 'rounded-xl ring-2 ring-primary bg-primary/20'
+                  : 'rounded-2xl hover:rounded-xl hover:bg-primary/20'
+              }`;
+            }}
+          >
+            {selected && (
+              <span className="absolute -left-3 top-1/2 -translate-y-1/2 w-1 h-8 bg-base-content rounded-r-full" />
+            )}
+            <div
+              className={`w-12 h-12 overflow-hidden transition-all ${
+                selected ? 'rounded-xl' : 'rounded-2xl group-hover:rounded-xl'
+              }`}
+            >
+              {c.type === 'course' ? (
+                <CourseCommunityAvatar sectionId={c._id} className="w-full h-full" boxPx={48} />
+              ) : (
+                <img src={communityAvatar(c)} alt="" className="w-full h-full object-cover" />
+              )}
+            </div>
+          </NavLink>
         </div>
-      </NavLink>
+        {tooltip}
+      </>
     );
   };
 
@@ -136,7 +188,7 @@ export default function CommunityRail({ sidebarOpen, onToggleSidebar }) {
         style={{ overscrollBehavior: 'contain' }}
       >
         {railCommunities.map((c) => (
-          <Item key={c._id} c={c} />
+          <RailCommunityItem key={c._id} c={c} />
         ))}
       </div>
 
