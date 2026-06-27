@@ -11,7 +11,7 @@ const SIDEBAR_KEY = 'unipulse_channel_sidebar';
 export default function CommunityShell() {
   const location = useLocation();
   const navigate = useNavigate();
-  const isAllEvents = location.pathname === '/c/events';
+  const isAllEvents = location.pathname === '/c/events' || location.pathname.startsWith('/c/events/');
 
   const [sidebarOpen, setSidebarOpen] = useState(
     () => localStorage.getItem(SIDEBAR_KEY) !== 'closed'

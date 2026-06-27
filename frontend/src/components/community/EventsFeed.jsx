@@ -70,7 +70,9 @@ export default function EventsFeed({
   const loading = bucket?.status === 'loading';
 
   const eventPath = (ev) =>
-    `/c/${encodeURIComponent(ev.communityId)}/events/${ev._id}`;
+    mode === 'all'
+      ? `/c/events/${ev._id}`
+      : `/c/${encodeURIComponent(ev.communityId)}/events/${ev._id}`;
 
   const resetForm = () => {
     setForm({

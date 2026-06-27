@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchEvent, rsvpEvent, clearCurrentEvent } from '../features/events/eventsSlice';
 import Loader from '../components/Loader';
@@ -16,6 +16,8 @@ import {
 /** Full-page view for a single event (no likes or comments). */
 export default function EventPage() {
   const { communityId, eventId } = useParams();
+  const location = useLocation();
+  const fromAllEvents = location.pathname.startsWith('/c/events/');
   const dispatch = useDispatch();
   const event = useSelector((s) => s.events.currentEvent);
   const [reportTarget, setReportTarget] = useState(null);
@@ -41,10 +43,10 @@ export default function EventPage() {
     <div className="flex flex-col h-full min-h-0">
       <div className="shrink-0 border-b border-base-200 bg-base-100 px-4 py-3">
         <Link
-          to={`/c/${encodeURIComponent(communityId)}/events`}
+          to={fromAllEvents ? '/c/events' : `/c/${encodeURIComponent(communityId)}/events`}
           className="text-sm text-primary link link-hover"
         >
-          ← Back to events
+          {fromAllEvents ? '← Back to all events' : '← Back to events'}
         </Link>
       </div>
 

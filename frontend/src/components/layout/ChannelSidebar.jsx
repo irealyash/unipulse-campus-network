@@ -1,8 +1,9 @@
 import { NavLink, useParams, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { communityAvatar } from '../../lib/avatars';
+import usePinnedCommunities from '../../hooks/usePinnedCommunities';
 import CourseCommunityAvatar from '../CourseCommunityAvatar';
-import { ChatIcon, PostIcon, CalendarIcon, ShieldIcon } from '../icons';
+import { ChatIcon, PostIcon, CalendarIcon, ShieldIcon, PinIcon } from '../icons';
 
 const TABS = [
   { id: 'posts', label: 'Posts', icon: <PostIcon /> },
@@ -15,9 +16,11 @@ export default function ChannelSidebar() {
   const location = useLocation();
   const isModeratorRoute = location.pathname === '/c/moderator';
   const user = useSelector((s) => s.auth.user);
+  const { togglePin, isPinned } = usePinnedCommunities();
   const community = useSelector((s) =>
     s.communities.list.find((c) => c._id === communityId) || s.communities.current
   );
+  const pinned = communityId ? isPinned(communityId) : false;
 
   if (isModeratorRoute) {
     return (
@@ -38,9 +41,9 @@ export default function ChannelSidebar() {
 
   return (
     <aside className="w-60 bg-base-300 flex flex-col min-h-0 border-r border-base-content/10 shrink-0 pt-10">
-      <div className="h-12 px-3 flex items-center border-b border-base-content/10 shadow-sm">
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="avatar">
+      <div className="h-12 px-3 flex items-center gap-2 border-b border-base-content/10 shadow-sm shrink-0">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <div className="avatar shrink-0">
             <div className="w-8 h-8 rounded-xl overflow-hidden">
               {community?.type === 'course' ? (
                 <CourseCommunityAvatar sectionId={community._id} className="w-full h-full" boxPx={32} />
@@ -51,9 +54,22 @@ export default function ChannelSidebar() {
           </div>
           <span className="font-bold truncate text-sm">{community?.name || communityId}</span>
         </div>
+        {communityId && (
+          <button
+            type="button"
+            className={`btn btn-ghost btn-xs btn-square shrink-0 ${
+              pinned ? 'text-primary' : 'text-base-content/45 hover:text-base-content'
+            }`}
+            title={pinned ? 'Unpin community' : 'Pin community'}
+            aria-label={pinned ? `Unpin ${community?.name || communityId}` : `Pin ${community?.name || communityId}`}
+            onClick={() => togglePin(communityId)}
+          >
+            <PinIcon pinned={pinned} className="text-base" />
+          </button>
+        )}
       </div>
 
-      <nav className="flex-1 overflow-y-auto p-2 space-y-0.5">
+      <nav className="flex-1 overflow-y-auto p-2 space-y-0.5 min-h-0">
         <p className="text-[10px] uppercase font-bold text-base-content/40 px-2 mb-1 tracking-wider">
           Channels
         </p>

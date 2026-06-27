@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
 import { useDispatch } from 'react-redux';
+import { Outlet } from 'react-router-dom';
 import { clearCurrentCommunity } from '../features/communities/communitiesSlice';
-import EventsFeed from '../components/community/EventsFeed';
 
-/** All upcoming events from public communities (no channel sidebar). */
+/** All-events layout — clears selected community; child routes render feed or detail. */
 export default function AllEventsPage() {
   const dispatch = useDispatch();
 
@@ -11,11 +11,5 @@ export default function AllEventsPage() {
     dispatch(clearCurrentCommunity());
   }, [dispatch]);
 
-  return (
-    <EventsFeed
-      mode="all"
-      subtitle="Does not include events from private communities."
-      showCommunityName
-    />
-  );
+  return <Outlet />;
 }

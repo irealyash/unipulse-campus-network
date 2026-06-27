@@ -4,9 +4,11 @@ import { useDispatch, useSelector } from 'react-redux';
 import { NavLink, useParams } from 'react-router-dom';
 import { fetchCommunities } from '../../features/communities/communitiesSlice';
 import { communityAvatar } from '../../lib/avatars';
+import { sortCommunities } from '../../lib/communityPins';
+import usePinnedCommunities from '../../hooks/usePinnedCommunities';
 import CourseCommunityAvatar from '../CourseCommunityAvatar';
 import UserAvatar from '../UserAvatar';
-import { ShieldIcon, ChevronIcon } from '../icons';
+import { ShieldIcon, ChevronIcon, PinIcon } from '../icons';
 
 export default function CommunityRail({ sidebarOpen, onToggleSidebar }) {
   const dispatch = useDispatch();
@@ -14,9 +16,12 @@ export default function CommunityRail({ sidebarOpen, onToggleSidebar }) {
   const currentTab = tab || 'chat';
   const list = useSelector((s) => s.communities.list);
   const user = useSelector((s) => s.auth.user);
+  const { pinnedIds, togglePin, isPinned } = usePinnedCommunities();
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuPos, setMenuPos] = useState({ left: 0, bottom: 0 });
+  const [pinMenu, setPinMenu] = useState(null);
   const btnRef = useRef(null);
+  const pinMenuRef = useRef(null);
 
   useEffect(() => {
     dispatch(fetchCommunities());
@@ -34,6 +39,20 @@ export default function CommunityRail({ sidebarOpen, onToggleSidebar }) {
     return () => document.removeEventListener('mousedown', close);
   }, [menuOpen]);
 
+  useEffect(() => {
+    if (!pinMenu) return;
+    const close = (e) => {
+      if (pinMenuRef.current?.contains(e.target)) return;
+      setPinMenu(null);
+    };
+    document.addEventListener('mousedown', close);
+    document.addEventListener('scroll', close, true);
+    return () => {
+      document.removeEventListener('mousedown', close);
+      document.removeEventListener('scroll', close, true);
+    };
+  }, [pinMenu]);
+
   const toggleMenu = () => {
     if (!menuOpen && btnRef.current) {
       const r = btnRef.current.getBoundingClientRect();
@@ -42,9 +61,19 @@ export default function CommunityRail({ sidebarOpen, onToggleSidebar }) {
     setMenuOpen((o) => !o);
   };
 
-  const general = list.filter((c) => c.type !== 'course');
-  const courses = list.filter((c) => c.type === 'course');
-  const railCommunities = [...general, ...courses];
+  const railCommunities = sortCommunities(list, pinnedIds);
+
+  const openPinMenu = (c, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    setPinMenu({
+      communityId: c._id,
+      name: c.name,
+      top: rect.top + rect.height / 2,
+      left: rect.right + 8,
+    });
+  };
 
   const RailCommunityItem = ({ c }) => {
     const itemRef = useRef(null);
@@ -108,6 +137,7 @@ export default function CommunityRail({ sidebarOpen, onToggleSidebar }) {
             setHovered(true);
           }}
           onMouseLeave={() => setHovered(false)}
+          onContextMenu={(e) => openPinMenu(c, e)}
         >
           <NavLink
             to={`/c/${encodeURIComponent(c._id)}/${currentTab}`}
@@ -216,6 +246,37 @@ export default function CommunityRail({ sidebarOpen, onToggleSidebar }) {
       </div>
 
       {profileMenu}
+
+      {pinMenu &&
+        createPortal(
+          <div
+            ref={pinMenuRef}
+            className="fixed z-[500] -translate-y-1/2 bg-base-100 border border-base-content/10 rounded-lg shadow-xl p-1"
+            style={{ top: pinMenu.top, left: pinMenu.left }}
+            role="menu"
+          >
+            <button
+              type="button"
+              role="menuitem"
+              className={`btn btn-ghost btn-sm btn-square ${
+                isPinned(pinMenu.communityId) ? 'text-primary' : 'text-base-content/70'
+              }`}
+              title={isPinned(pinMenu.communityId) ? 'Unpin community' : 'Pin community'}
+              aria-label={
+                isPinned(pinMenu.communityId)
+                  ? `Unpin ${pinMenu.name}`
+                  : `Pin ${pinMenu.name}`
+              }
+              onClick={() => {
+                togglePin(pinMenu.communityId);
+                setPinMenu(null);
+              }}
+            >
+              <PinIcon pinned={isPinned(pinMenu.communityId)} className="text-lg" />
+            </button>
+          </div>,
+          document.body
+        )}
     </aside>
   );
 }
