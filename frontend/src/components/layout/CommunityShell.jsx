@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
 import CommunityRail from './CommunityRail';
 import ChannelSidebar from './ChannelSidebar';
 import ThemeToggle from '../ThemeToggle';
@@ -11,6 +11,7 @@ const SIDEBAR_KEY = 'unipulse_channel_sidebar';
 export default function CommunityShell() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { communityId } = useParams();
   const isAllEvents = location.pathname === '/c/events' || location.pathname.startsWith('/c/events/');
 
   const [sidebarOpen, setSidebarOpen] = useState(
@@ -21,6 +22,12 @@ export default function CommunityShell() {
   useEffect(() => {
     if (isAllEvents) setSidebarOpen(false);
   }, [isAllEvents]);
+
+  useEffect(() => {
+    if (communityId && communityId !== 'moderator' && !isAllEvents) {
+      setSidebarOpen(true);
+    }
+  }, [communityId, isAllEvents]);
 
   useEffect(() => {
     localStorage.setItem(SIDEBAR_KEY, sidebarOpen ? 'open' : 'closed');
@@ -57,6 +64,7 @@ export default function CommunityShell() {
         <CommunityRail
           sidebarOpen={sidebarOpen}
           onToggleSidebar={() => setSidebarOpen((o) => !o)}
+          onOpenSidebar={() => setSidebarOpen(true)}
         />
         {sidebarOpen && !isAllEvents && <ChannelSidebar />}
         <main className="flex-1 flex flex-col min-w-0 min-h-0 bg-base-100 overflow-hidden">

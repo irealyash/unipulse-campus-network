@@ -10,7 +10,7 @@ import CourseCommunityAvatar from '../CourseCommunityAvatar';
 import UserAvatar from '../UserAvatar';
 import { ShieldIcon, ChevronIcon, PinIcon } from '../icons';
 
-export default function CommunityRail({ sidebarOpen, onToggleSidebar }) {
+export default function CommunityRail({ sidebarOpen, onToggleSidebar, onOpenSidebar }) {
   const dispatch = useDispatch();
   const { communityId, tab } = useParams();
   const currentTab = tab || 'chat';
@@ -142,6 +142,7 @@ export default function CommunityRail({ sidebarOpen, onToggleSidebar }) {
           <NavLink
             to={`/c/${encodeURIComponent(c._id)}/${currentTab}`}
             onMouseDown={(e) => e.preventDefault()}
+            onClick={() => onOpenSidebar?.()}
             className={({ isActive }) => {
               const active = isActive || selected;
               return `group relative flex items-center justify-center w-12 h-12 transition-all ${
