@@ -371,7 +371,6 @@ const moderatorSlice = createSlice({
         state.pendingEvents = state.pendingEvents.filter((e) => e._id !== action.payload.id);
         state.notice = action.payload.message || 'Event rejected.';
       })
-      // Generic error capture for all moderator thunks.
       .addMatcher(
         (action) => action.type.startsWith('mod/') && action.type.endsWith('/rejected'),
         (state, action) => {
