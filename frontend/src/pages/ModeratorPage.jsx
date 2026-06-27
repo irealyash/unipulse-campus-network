@@ -12,6 +12,7 @@ import {
   modUpdateCommunity,
   modCreateCommunity,
   modDeleteCommunity,
+  modDeleteAllCommunities,
   modAddCommunityMember,
   modFetchPendingPosts,
   modApprovePost,
@@ -611,6 +612,19 @@ function CommunitiesTab() {
     dispatch(fetchCommunities());
   };
 
+  const handleDeleteAll = async () => {
+    if (
+      !window.confirm(
+        'Delete ALL communities (public, private, and course sections) and all of their content? This cannot be undone.'
+      )
+    ) {
+      return;
+    }
+    await dispatch(modDeleteAllCommunities());
+    fetchList();
+    dispatch(fetchCommunities());
+  };
+
   const submitAddMember = async (e) => {
     e.preventDefault();
     if (!memberUserId.trim()) return;
@@ -623,9 +637,18 @@ function CommunitiesTab() {
     <div>
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <h2 className="text-lg font-bold">Communities</h2>
-        <button type="button" className="btn btn-primary btn-sm rounded-full" onClick={() => setCreateOpen(true)}>
-          + New community
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            className="btn btn-error btn-sm rounded-full gap-1"
+            onClick={handleDeleteAll}
+          >
+            <TrashIcon /> Delete all
+          </button>
+          <button type="button" className="btn btn-primary btn-sm rounded-full" onClick={() => setCreateOpen(true)}>
+            + New community
+          </button>
+        </div>
       </div>
       <form onSubmit={doSearch} className="flex flex-wrap gap-2 mb-4">
         <input

@@ -3,12 +3,24 @@ import api from '../../lib/api';
 
 export const fetchEvents = createAsyncThunk(
   'events/fetch',
-  async ({ communityId, past = false }, { rejectWithValue }) => {
+  async ({ communityId, past = false, sort = 'date' }, { rejectWithValue }) => {
     try {
       const { data } = await api.get(`/communities/${encodeURIComponent(communityId)}/events`, {
-        params: { past: past ? 'true' : 'false' },
+        params: { past: past ? 'true' : 'false', sort },
       });
       return { communityId, events: data.events };
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
+export const fetchEvent = createAsyncThunk(
+  'events/fetchOne',
+  async (eventId, { rejectWithValue }) => {
+    try {
+      const { data } = await api.get(`/events/${eventId}`);
+      return data.event;
     } catch (err) {
       return rejectWithValue(err.message);
     }
@@ -43,6 +55,7 @@ const eventsSlice = createSlice({
   name: 'events',
   initialState: {
     byCommunity: {},
+    currentEvent: null,
     status: 'idle',
     error: null,
     notice: null,
@@ -50,6 +63,9 @@ const eventsSlice = createSlice({
   reducers: {
     clearEventNotice(state) {
       state.notice = null;
+    },
+    clearCurrentEvent(state) {
+      state.currentEvent = null;
     },
   },
   extraReducers: (builder) => {
@@ -64,6 +80,9 @@ const eventsSlice = createSlice({
           status: 'succeeded',
         };
       })
+      .addCase(fetchEvent.fulfilled, (state, action) => {
+        state.currentEvent = action.payload;
+      })
       .addCase(createEvent.fulfilled, (state, action) => {
         const { communityId, event, message } = action.payload;
         state.notice = message || 'Event submitted for moderator approval.';
@@ -74,6 +93,9 @@ const eventsSlice = createSlice({
       })
       .addCase(rsvpEvent.fulfilled, (state, action) => {
         const updated = action.payload;
+        if (state.currentEvent?._id === updated._id) {
+          state.currentEvent = updated;
+        }
         Object.values(state.byCommunity).forEach((b) => {
           const i = b.events?.findIndex((e) => e._id === updated._id);
           if (i >= 0) b.events[i] = updated;
@@ -82,5 +104,5 @@ const eventsSlice = createSlice({
   },
 });
 
-export const { clearEventNotice } = eventsSlice.actions;
+export const { clearEventNotice, clearCurrentEvent } = eventsSlice.actions;
 export default eventsSlice.reducer;

@@ -17,24 +17,27 @@ export const PROTECTED_COMMUNITY_IDS = new Set(GENERAL_COMMUNITIES.map((c) => c.
 
 /**
  * Idempotently ensures the default general communities exist.
- * Called on server boot so a fresh DB never returns 404 for /c/general/...
+ * Only runs when SEED_DEFAULT_COMMUNITIES=true so moderator deletes are not
+ * undone on every server restart. Use `npm run seed` for a fresh DB.
  */
 export const ensureDefaultCommunities = async () => {
-  for (const c of GENERAL_COMMUNITIES) {
-    await Community.updateOne(
-      { _id: c._id },
-      {
-        $setOnInsert: {
-          _id: c._id,
-          name: c.name,
-          description: c.description,
-          type: 'general',
-          private: false,
-          allowedTags: POST_TAGS,
+  if (process.env.SEED_DEFAULT_COMMUNITIES === 'true') {
+    for (const c of GENERAL_COMMUNITIES) {
+      await Community.updateOne(
+        { _id: c._id },
+        {
+          $setOnInsert: {
+            _id: c._id,
+            name: c.name,
+            description: c.description,
+            type: 'general',
+            private: false,
+            allowedTags: POST_TAGS,
+          },
         },
-      },
-      { upsert: true }
-    );
+        { upsert: true }
+      );
+    }
   }
 
   // Legacy posts/events created before moderation — treat as already approved.

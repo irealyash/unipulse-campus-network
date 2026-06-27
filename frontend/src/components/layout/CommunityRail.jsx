@@ -19,8 +19,8 @@ export default function CommunityRail({ sidebarOpen, onToggleSidebar }) {
   const btnRef = useRef(null);
 
   useEffect(() => {
-    if (!list.length) dispatch(fetchCommunities());
-  }, [dispatch, list.length]);
+    dispatch(fetchCommunities());
+  }, [dispatch]);
 
   useEffect(() => {
     if (!menuOpen) return;

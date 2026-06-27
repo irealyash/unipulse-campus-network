@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import api from '../../lib/api';
+import { modDeleteCommunity, modDeleteAllCommunities } from '../moderator/moderatorSlice';
 
 /**
  * COMMUNITIES SLICE
@@ -40,7 +41,17 @@ const communitiesSlice = createSlice({
     status: 'idle',
     error: null,
   },
-  reducers: {},
+  reducers: {
+    removeCommunity(state, action) {
+      const id = action.payload;
+      state.list = state.list.filter((c) => c._id !== id);
+      if (state.current?._id === id) state.current = null;
+    },
+    clearCommunities(state) {
+      state.list = [];
+      state.current = null;
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(fetchCommunities.pending, (state) => {
@@ -60,8 +71,18 @@ const communitiesSlice = createSlice({
         if (!state.list.some((c) => c._id === action.payload._id)) {
           state.list.push(action.payload);
         }
+      })
+      .addCase(modDeleteCommunity.fulfilled, (state, action) => {
+        const id = action.payload.communityId;
+        state.list = state.list.filter((c) => c._id !== id);
+        if (state.current?._id === id) state.current = null;
+      })
+      .addCase(modDeleteAllCommunities.fulfilled, (state) => {
+        state.list = [];
+        state.current = null;
       });
   },
 });
 
+export const { removeCommunity, clearCommunities } = communitiesSlice.actions;
 export default communitiesSlice.reducer;

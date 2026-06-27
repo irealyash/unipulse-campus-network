@@ -23,6 +23,15 @@ const eventSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  media: {
+    type: [
+      {
+        url: { type: String, required: true },
+        mediaType: { type: String, enum: ['image', 'video', 'gif'], required: true },
+      },
+    ],
+    default: [],
+  },
   eventDate: { 
     type: Date, 
     required: true 

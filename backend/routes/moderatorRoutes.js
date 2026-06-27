@@ -4,6 +4,7 @@ import {
   updateCommunity,
   createCommunity,
   deleteCommunity,
+  deleteAllCommunities,
   addCommunityMember,
   listAllCommunities,
   browseCommunityPosts,
@@ -70,6 +71,7 @@ router.get('/communities', listAllCommunities);
 router.post('/communities', createCommunity);
 router.patch('/communities/:communityId', updateCommunity);
 router.post('/communities/:communityId/members', addCommunityMember);
+router.delete('/communities/all', deleteAllCommunities);
 router.delete('/communities/:communityId', deleteCommunity);
 router.get('/communities/:communityId/posts', browseCommunityPosts);
 router.get('/communities/:communityId/messages', browseCommunityMessages);

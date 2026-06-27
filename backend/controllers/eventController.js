@@ -12,6 +12,16 @@ import { withEventImage } from '../utils/avatars.js';
  * approval before they appear in the community list.
  */
 
+const normalizeMedia = (raw) => {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((m) => m?.url && m?.mediaType)
+    .map((m) => ({
+      url: String(m.url).trim(),
+      mediaType: m.mediaType,
+    }));
+};
+
 /** Shape an event for the API: image default, RSVP counts, caller's RSVP. */
 const serializeEvent = (event, userId) => {
   const e = withEventImage(event.toObject ? event.toObject() : event);
@@ -22,6 +32,7 @@ const serializeEvent = (event, userId) => {
 
   return {
     ...e,
+    media: e.media || [],
     comingCount: e.coming?.length || 0,
     busyCount: e.busy?.length || 0,
     myRsvp,
@@ -29,17 +40,28 @@ const serializeEvent = (event, userId) => {
 };
 
 /**
- * GET /api/communities/:communityId/events?past=false
+ * GET /api/communities/:communityId/events?past=false&sort=date|rsvp
  */
 export const listEvents = asyncHandler(async (req, res) => {
   const { communityId } = req.params;
   await assertCommunityAccess(req.user, communityId);
 
   const includePast = req.query.past === 'true';
+  const sortBy = req.query.sort === 'rsvp' ? 'rsvp' : 'date';
   const filter = { communityId, status: 'approved' };
   if (!includePast) filter.eventDate = { $gte: new Date() };
 
-  const events = await Event.find(filter).sort({ eventDate: 1 });
+  let events;
+  if (sortBy === 'rsvp') {
+    events = await Event.aggregate([
+      { $match: filter },
+      { $addFields: { comingCount: { $size: { $ifNull: ['$coming', []] } } } },
+      { $sort: { comingCount: -1, eventDate: 1 } },
+    ]);
+  } else {
+    const docs = await Event.find(filter).sort({ eventDate: 1 }).lean();
+    events = docs;
+  }
 
   res.json({
     success: true,
@@ -67,27 +89,34 @@ export const getEvent = asyncHandler(async (req, res) => {
 
 /**
  * POST /api/communities/:communityId/events
- * Body: { title, description?, eventDate, imageUrl? }
+ * Body: { title, description?, eventDate, imageUrl?, media?: [{ url, mediaType }] }
  */
 export const createEvent = asyncHandler(async (req, res) => {
   const { communityId } = req.params;
   await assertCommunityAccess(req.user, communityId);
 
   const { title, description, eventDate, imageUrl } = req.body;
+  const mediaItems = normalizeMedia(req.body.media);
 
   if (!title || !title.trim()) throw new ApiError(400, 'Event title is required.');
   if (!eventDate) throw new ApiError(400, 'Event date is required.');
 
   const when = new Date(eventDate);
   if (isNaN(when.getTime())) throw new ApiError(400, 'Invalid event date.');
-  if (when.getTime() < Date.now()) throw new ApiError(400, 'Event date must be in the future.');
+  if (when.getTime() <= Date.now()) {
+    throw new ApiError(400, 'Event date and time must be after the current moment.');
+  }
+
+  const coverUrl =
+    mediaItems[0]?.url || imageUrl?.trim() || null;
 
   const event = await Event.create({
     communityId,
     creatorId: req.user._id,
     title: title.trim(),
     description: description?.trim() || '',
-    imageUrl: imageUrl?.trim() || null,
+    imageUrl: coverUrl,
+    media: mediaItems,
     eventDate: when,
     status: 'pending',
   });

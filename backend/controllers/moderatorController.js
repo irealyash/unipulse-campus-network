@@ -182,7 +182,41 @@ export const deleteCommunity = asyncHandler(async (req, res) => {
   res.json({
     success: true,
     message: `Community "${community.name}" deleted.`,
+    communityId: community._id,
     ...stats,
+  });
+});
+
+/**
+ * DELETE /api/moderator/communities/all
+ * Hard-deletes every community (public, private, course) and all related content.
+ */
+export const deleteAllCommunities = asyncHandler(async (req, res) => {
+  const communities = await Community.find({}).select('_id type name').lean();
+
+  let deletedPosts = 0;
+  let deletedMessages = 0;
+
+  for (const community of communities) {
+    if (community.type === 'course') {
+      await User.updateMany(
+        { enrolledSections: community._id },
+        { $pull: { enrolledSections: community._id } }
+      );
+    }
+    const stats = await deleteCommunityCascade(community._id, req.user._id);
+    deletedPosts += stats.deletedPosts || 0;
+    deletedMessages += stats.deletedMessages || 0;
+  }
+
+  await User.updateMany({}, { $set: { enrolledSections: [] } });
+
+  res.json({
+    success: true,
+    message: `Deleted ${communities.length} communities.`,
+    deletedCommunities: communities.length,
+    deletedPosts,
+    deletedMessages,
   });
 });
 

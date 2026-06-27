@@ -104,7 +104,11 @@ export const withCommunityImage = (community) => {
   };
 };
 
-export const withEventImage = (event) => ({
-  ...(event.toObject?.() ?? event),
-  imageUrl: event.imageUrl || defaultEventImage(event._id),
-});
+export const withEventImage = (event) => {
+  const obj = event.toObject?.() ?? event;
+  const cover =
+    obj.imageUrl ||
+    obj.media?.[0]?.url ||
+    defaultEventImage(obj._id);
+  return { ...obj, imageUrl: cover };
+};
