@@ -613,6 +613,8 @@ function CommunitiesTab() {
   const [createIconFile, setCreateIconFile] = useState(null);
   const [addUsersId, setAddUsersId] = useState(null);
   const [memberUserId, setMemberUserId] = useState('');
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 40;
 
   const refreshList = () => dispatch(modFetchCommunities({}));
 
@@ -636,6 +638,13 @@ function CommunitiesTab() {
     }
     return list;
   }, [allCommunities, typeFilter, categoryFilter, query]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [typeFilter, categoryFilter, query]);
+
+  const pageCount = Math.max(1, Math.ceil(communities.length / PAGE_SIZE));
+  const pagedCommunities = communities.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const doSearch = (e) => {
     e.preventDefault();
@@ -772,8 +781,13 @@ function CommunitiesTab() {
       {communities.length === 0 ? (
         <EmptyState text="No communities match your filters." />
       ) : (
+      <>
+      <p className="text-sm text-base-content/60 mb-3">
+        Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, communities.length)} of{' '}
+        {communities.length}
+      </p>
       <div className="grid gap-3 sm:grid-cols-2">
-        {communities.map((c) => (
+        {pagedCommunities.map((c) => (
           <div key={c._id} className="card bg-base-100 border border-base-200 shadow-sm">
             <div className="card-body p-4">
               <div className="flex items-center gap-3">
@@ -834,6 +848,30 @@ function CommunitiesTab() {
           </div>
         ))}
       </div>
+      {pageCount > 1 && (
+        <div className="flex justify-center gap-2 mt-4">
+          <button
+            type="button"
+            className="btn btn-sm btn-ghost rounded-full"
+            disabled={page <= 1}
+            onClick={() => setPage((p) => p - 1)}
+          >
+            Previous
+          </button>
+          <span className="text-sm self-center text-base-content/60">
+            Page {page} of {pageCount}
+          </span>
+          <button
+            type="button"
+            className="btn btn-sm btn-ghost rounded-full"
+            disabled={page >= pageCount}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            Next
+          </button>
+        </div>
+      )}
+      </>
       )}
 
       {createOpen && (

@@ -1,5 +1,5 @@
-import Flags from 'country-flag-icons/react/3x2';
 import CourseCommunityAvatar from './CourseCommunityAvatar';
+import CountryFlag from './CountryFlag';
 import { communityAvatar } from '../lib/avatars';
 import { countryNameToCode } from '../lib/countryCodes';
 
@@ -15,10 +15,10 @@ export default function CommunityAvatar({ community, className = '', boxPx = 48 
 
   if (community?.category === 'international') {
     const code = countryNameToCode(community.name);
-    const Flag = Flags[code];
-    if (Flag) {
+    if (code) {
       return (
-        <Flag
+        <CountryFlag
+          code={code}
           title={community.name}
           className={`w-full h-full object-cover ${className}`}
         />
