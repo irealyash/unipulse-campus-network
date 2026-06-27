@@ -11,15 +11,19 @@ import api from '../../lib/api';
 
 export const modFetchCommunities = createAsyncThunk(
   'mod/communities',
-  async ({ search = '', type = 'all', category = '' } = {}, { rejectWithValue }) => {
+  async (filters = {}, { rejectWithValue, signal }) => {
     try {
+      const { search = '', type = 'all', category = 'all' } = filters;
       const params = {};
       if (search) params.search = search;
       if (type && type !== 'all') params.type = type;
       if (category && category !== 'all') params.category = category;
-      const { data } = await api.get('/moderator/communities', { params });
+      const { data } = await api.get('/moderator/communities', { params, signal });
       return data.communities;
     } catch (err) {
+      if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED') {
+        return rejectWithValue('Request canceled.');
+      }
       return rejectWithValue(err.message);
     }
   }
@@ -371,6 +375,7 @@ const moderatorSlice = createSlice({
       .addMatcher(
         (action) => action.type.startsWith('mod/') && action.type.endsWith('/rejected'),
         (state, action) => {
+          if (action.payload === 'Request canceled.') return;
           state.error = action.payload || 'Action failed.';
         }
       );

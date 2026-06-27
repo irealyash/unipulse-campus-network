@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   modFetchReports,
@@ -600,8 +600,9 @@ function ContentList({ title, items, render, kind, className = '' }) {
 /* --------------------------- Communities tab --------------------------- */
 function CommunitiesTab() {
   const dispatch = useDispatch();
-  const communities = useSelector((s) => s.moderator.communities);
+  const allCommunities = useSelector((s) => s.moderator.communities);
   const [search, setSearch] = useState('');
+  const [query, setQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [editId, setEditId] = useState(null);
@@ -613,23 +614,32 @@ function CommunitiesTab() {
   const [addUsersId, setAddUsersId] = useState(null);
   const [memberUserId, setMemberUserId] = useState('');
 
-  const fetchList = (overrides = {}) => {
-    dispatch(
-      modFetchCommunities({
-        search: overrides.search ?? search.trim(),
-        type: overrides.type ?? typeFilter,
-        category: overrides.category ?? categoryFilter,
-      })
-    );
-  };
+  const refreshList = () => dispatch(modFetchCommunities({}));
 
   useEffect(() => {
-    fetchList({ search: '', type: typeFilter, category: categoryFilter });
-  }, [dispatch, typeFilter, categoryFilter]);
+    refreshList();
+  }, [dispatch]);
+
+  const communities = useMemo(() => {
+    let list = allCommunities;
+    if (typeFilter !== 'all') {
+      list = list.filter((c) => c.type === typeFilter);
+    }
+    if (categoryFilter !== 'all') {
+      list = list.filter((c) => c.category === categoryFilter);
+    }
+    const q = query.trim().toLowerCase();
+    if (q) {
+      list = list.filter(
+        (c) => c._id.toLowerCase().includes(q) || c.name.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [allCommunities, typeFilter, categoryFilter, query]);
 
   const doSearch = (e) => {
     e.preventDefault();
-    fetchList();
+    setQuery(search.trim());
   };
 
   const openEdit = (c) => {
@@ -645,14 +655,14 @@ function CommunitiesTab() {
       const up = await uploadMedia(iconFile);
       imageUrl = up.url;
     }
-    const community = communities.find((c) => c._id === editId);
+    const community = allCommunities.find((c) => c._id === editId);
     const payload = { name: editForm.name, imageUrl };
     if (community?.type !== 'course') {
       payload.private = editForm.private;
     }
     await dispatch(modUpdateCommunity({ communityId: editId, payload }));
     setEditId(null);
-    fetchList();
+    refreshList();
     dispatch(fetchCommunities());
   };
 
@@ -675,7 +685,7 @@ function CommunitiesTab() {
     setCreateOpen(false);
     setCreateForm({ name: '', description: '', id: '', private: false });
     setCreateIconFile(null);
-    fetchList();
+    refreshList();
     dispatch(fetchCommunities());
   };
 
@@ -688,7 +698,7 @@ function CommunitiesTab() {
       return;
     }
     await dispatch(modDeleteAllCourseCommunities());
-    fetchList();
+    refreshList();
     dispatch(fetchCommunities());
     dispatch(fetchMe());
   };
@@ -696,7 +706,7 @@ function CommunitiesTab() {
   const handleDelete = async (c) => {
     if (!window.confirm(`Delete community "${c.name}" and all of its content? This cannot be undone.`)) return;
     await dispatch(modDeleteCommunity(c._id));
-    fetchList();
+    refreshList();
     dispatch(fetchCommunities());
   };
 
@@ -921,7 +931,7 @@ function CommunitiesTab() {
                 onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                 required
               />
-              {communities.find((c) => c._id === editId)?.type !== 'course' && (
+              {allCommunities.find((c) => c._id === editId)?.type !== 'course' && (
                 <label className="label cursor-pointer justify-start gap-3 py-0">
                   <input
                     type="checkbox"
