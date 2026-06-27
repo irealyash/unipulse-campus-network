@@ -6,6 +6,7 @@ import { applyLikeDislike } from '../utils/likeDislike.js';
 import { toggleEmojiReaction } from '../utils/emojiReaction.js';
 import { deletePostCascade } from '../utils/contentDeletion.js';
 import { serializeVotable } from '../utils/serializeVotes.js';
+import { normalizeMediaInput, withPostMedia } from '../utils/postMedia.js';
 
 /** Tags users can pick when creating a post (order matters for the UI). */
 export const POST_TAGS = [
@@ -72,7 +73,7 @@ export const listPosts = asyncHandler(async (req, res) => {
     limit,
     total,
     hasMore: skip + posts.length < total,
-    posts: posts.map((p) => serializeVotable(p, req.user._id)),
+    posts: posts.map((p) => serializeVotable(withPostMedia(p), req.user._id)),
   });
 });
 
@@ -91,12 +92,12 @@ export const getPost = asyncHandler(async (req, res) => {
     throw new ApiError(404, 'Post not found.');
   }
 
-  res.json({ success: true, post: serializeVotable(post, req.user._id) });
+  res.json({ success: true, post: serializeVotable(withPostMedia(post), req.user._id) });
 });
 
 /**
  * POST /api/communities/:communityId/posts
- * Body: { title, content, tag?, media? { url, mediaType } }
+ * Body: { title, content, tag?, media?: [{ url, mediaType }] }
  * Creates a post. The author's current alias is frozen onto the post.
  */
 export const createPost = asyncHandler(async (req, res) => {
@@ -111,6 +112,8 @@ export const createPost = asyncHandler(async (req, res) => {
     throw new ApiError(400, `Tag is required. Allowed tags: ${POST_TAGS.join(', ')}`);
   }
 
+  const mediaItems = normalizeMediaInput(req.body.media);
+
   const post = await Post.create({
     communityId,
     authorId: req.user._id,
@@ -119,15 +122,12 @@ export const createPost = asyncHandler(async (req, res) => {
     content: content.trim(),
     tag,
     status: 'pending',
-    media: {
-      url: media?.url || null,
-      mediaType: media?.mediaType || null
-    }
+    media: mediaItems,
   });
 
   res.status(201).json({
     success: true,
-    post: serializeVotable(post, req.user._id),
+    post: serializeVotable(withPostMedia(post), req.user._id),
     message: 'Your post has been submitted for moderator approval.'
   });
 });

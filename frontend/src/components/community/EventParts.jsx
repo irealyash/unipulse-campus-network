@@ -59,43 +59,79 @@ export function EventRsvpButtons({ ev, onRsvp }) {
   );
 }
 
-export function EventMediaCarousel({ event, compact = false }) {
-  const items = getEventMediaItems(event);
+export function EventMediaCarousel({
+  event,
+  items: itemsProp,
+  fallbackImage,
+  compact = false,
+  feed = false,
+}) {
+  const items = itemsProp ?? getEventMediaItems(event);
+  const fallback = fallbackImage ?? (event ? eventAvatar(event) : null);
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
     setIndex(0);
-  }, [event?._id]);
+  }, [event?._id, items.length]);
 
-  const goPrev = () => setIndex((i) => (i - 1 + items.length) % items.length);
-  const goNext = () => setIndex((i) => (i + 1) % items.length);
+  const goPrev = (e) => {
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
+    setIndex((i) => (i - 1 + items.length) % items.length);
+  };
+  const goNext = (e) => {
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
+    setIndex((i) => (i + 1) % items.length);
+  };
 
   const heightClass = compact ? 'h-48' : 'h-72 sm:h-96';
   const hasMultiple = items.length > 1;
   const current = items[index];
 
-  const renderSlide = (m) =>
-    m.mediaType === 'video' ? (
+  const renderSlide = (m) => {
+    if (feed) {
+      const fitClass = 'max-h-52 max-w-full object-contain rounded-xl';
+      return m.mediaType === 'video' ? (
+        <video src={m.url} controls className={fitClass} />
+      ) : (
+        <img src={m.url} alt="" className={fitClass} />
+      );
+    }
+    return m.mediaType === 'video' ? (
       <video src={m.url} controls className={`w-full ${heightClass} object-contain bg-base-200 rounded-xl`} />
     ) : (
       <img src={m.url} alt="" className={`w-full ${heightClass} object-contain bg-base-200 rounded-xl`} />
     );
+  };
+
+  const slideWrapClass = feed
+    ? 'flex-1 min-w-0 flex items-center justify-center min-h-[8rem] max-h-52 bg-base-200 rounded-xl px-2'
+    : `flex-1 min-w-0 ${!hasMultiple ? 'w-full' : ''}`;
 
   if (!items.length) {
+    if (!fallback) return null;
+    if (feed) {
+      return (
+        <div className="mt-2 flex items-center justify-center min-h-[8rem] max-h-52 bg-base-200 rounded-xl px-2">
+          <img src={fallback} alt="" className="max-h-52 max-w-full object-contain rounded-xl" />
+        </div>
+      );
+    }
     return (
-      <figure className={`${compact ? 'mt-2' : 'mt-4'} ${heightClass} bg-base-200 rounded-xl overflow-hidden`}>
-        <img src={eventAvatar(event)} alt="" className="w-full h-full object-cover" />
+      <figure className={`${compact || feed ? 'mt-2' : 'mt-4'} ${heightClass} bg-base-200 rounded-xl overflow-hidden`}>
+        <img src={fallback} alt="" className="w-full h-full object-cover" />
       </figure>
     );
   }
 
   return (
-    <div className={`relative min-w-0 overflow-hidden ${compact ? 'mt-2' : 'mt-4'}`}>
+    <div className={`relative min-w-0 overflow-hidden ${compact || feed ? 'mt-2' : 'mt-4'}`}>
       <div className="relative flex items-center gap-2 min-w-0">
         {hasMultiple && (
           <button
             type="button"
-            className="btn btn-circle shrink-0 bg-neutral text-neutral-content border-0 hover:bg-neutral/90 shadow-lg"
+            className="btn btn-circle btn-sm shrink-0 bg-neutral text-neutral-content border-0 hover:bg-neutral/90 shadow-lg"
             onClick={goPrev}
             aria-label="Previous media"
           >
@@ -103,12 +139,12 @@ export function EventMediaCarousel({ event, compact = false }) {
           </button>
         )}
 
-        <div className={`flex-1 min-w-0 ${!hasMultiple ? 'w-full' : ''}`}>{renderSlide(current)}</div>
+        <div className={slideWrapClass}>{renderSlide(current)}</div>
 
         {hasMultiple && (
           <button
             type="button"
-            className="btn btn-circle shrink-0 bg-neutral text-neutral-content border-0 hover:bg-neutral/90 shadow-lg"
+            className="btn btn-circle btn-sm shrink-0 bg-neutral text-neutral-content border-0 hover:bg-neutral/90 shadow-lg"
             onClick={goNext}
             aria-label="Next media"
           >

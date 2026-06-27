@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchEvent, rsvpEvent, clearCurrentEvent } from '../features/events/eventsSlice';
 import Loader from '../components/Loader';
+import { timeAgo } from '../lib/timeAgo';
 import ReportModal from '../components/chat/ReportModal';
 import ReportFlagButton from '../components/ReportFlagButton';
 import {
@@ -70,7 +71,9 @@ export default function EventPage() {
             <EventMediaCarousel event={event} />
 
             <div className="mt-4 space-y-3 min-w-0 overflow-hidden">
-              <p className="text-sm text-base-content/60 break-words">{formatEventDate(event.eventDate)}</p>
+              <p className="text-sm text-base-content/60 break-words">
+                {formatEventDate(event.eventDate)} · {timeAgo(event.createdAt)}
+              </p>
               {event.description && (
                 <p className="text-sm whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-base-content/80">
                   {event.description}

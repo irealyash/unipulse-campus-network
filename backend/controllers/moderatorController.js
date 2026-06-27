@@ -19,6 +19,7 @@ import {
 import { withCommunityImage } from '../utils/avatars.js';
 import MessageReply from '../models/MessageReply.js';
 import { POST_TAGS } from './postController.js';
+import { withPostMedia } from '../utils/postMedia.js';
 
 /**
  * MODERATOR CONTROLLER
@@ -582,7 +583,7 @@ export const listPostsForReview = asyncHandler(async (req, res) => {
     limit,
     total,
     hasMore: skip + posts.length < total,
-    posts
+    posts: posts.map((p) => withPostMedia(p)),
   });
 });
 

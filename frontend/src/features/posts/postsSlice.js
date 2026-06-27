@@ -138,6 +138,9 @@ const postsSlice = createSlice({
     clearPostNotice(state) {
       state.notice = null;
     },
+    showPostNotice(state, action) {
+      state.notice = action.payload;
+    },
     removeOptimisticComment(state, action) {
       const { postId, tempId } = action.payload;
       const strip = (nodes) =>
@@ -267,5 +270,5 @@ const postsSlice = createSlice({
   },
 });
 
-export const { clearCurrentPost, clearPostNotice, removeOptimisticComment } = postsSlice.actions;
+export const { clearCurrentPost, clearPostNotice, showPostNotice, removeOptimisticComment } = postsSlice.actions;
 export default postsSlice.reducer;

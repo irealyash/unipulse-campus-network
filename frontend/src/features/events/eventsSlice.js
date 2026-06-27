@@ -64,6 +64,9 @@ const eventsSlice = createSlice({
     clearEventNotice(state) {
       state.notice = null;
     },
+    showEventNotice(state, action) {
+      state.notice = action.payload;
+    },
     clearCurrentEvent(state) {
       state.currentEvent = null;
     },
@@ -104,5 +107,5 @@ const eventsSlice = createSlice({
   },
 });
 
-export const { clearEventNotice, clearCurrentEvent } = eventsSlice.actions;
+export const { clearEventNotice, clearCurrentEvent, showEventNotice } = eventsSlice.actions;
 export default eventsSlice.reducer;

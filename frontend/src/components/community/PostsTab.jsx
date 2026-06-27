@@ -5,6 +5,8 @@ import { fetchPosts, createPost, reactToPost } from '../../features/posts/postsS
 import Loader from '../Loader';
 import { POST_TAGS, PostMedia, VoteColumn } from './PostCommentSection';
 import { uploadMedia } from '../../lib/media';
+import { timeAgo } from '../../lib/timeAgo';
+import { showPostNotice } from '../../features/posts/postsSlice';
 import ReportModal from '../chat/ReportModal';
 import ReportFlagButton from '../ReportFlagButton';
 
@@ -21,7 +23,7 @@ export default function PostsTab() {
   const [sort, setSort] = useState('new');
   const [createOpen, setCreateOpen] = useState(false);
   const [form, setForm] = useState({ title: '', content: '', tag: 'General' });
-  const [mediaFile, setMediaFile] = useState(null);
+  const [mediaFiles, setMediaFiles] = useState([]);
   const [reportTarget, setReportTarget] = useState(null);
 
   useEffect(() => {
@@ -30,13 +32,23 @@ export default function PostsTab() {
 
   const submitPost = async (e) => {
     e.preventDefault();
-    let media;
-    if (mediaFile) media = await uploadMedia(mediaFile);
-    await dispatch(createPost({ communityId, payload: { ...form, media } }));
+    const payload = { ...form };
+    const files = [...mediaFiles];
+
     setCreateOpen(false);
     setForm({ title: '', content: '', tag: 'General' });
-    setMediaFile(null);
-    dispatch(fetchPosts({ communityId, sort }));
+    setMediaFiles([]);
+    dispatch(showPostNotice('Your post has been submitted for moderator approval.'));
+
+    try {
+      const media = [];
+      for (const file of files) {
+        media.push(await uploadMedia(file));
+      }
+      await dispatch(createPost({ communityId, payload: { ...payload, media } })).unwrap();
+    } catch {
+      dispatch(showPostNotice('Could not submit your post. Please try again.'));
+    }
   };
 
   const posts = bucket?.posts || [];
@@ -83,7 +95,10 @@ export default function PostsTab() {
             </div>
           </div>
         )}
-        {posts.map((p) => (
+        {posts.map((p) => {
+          const hasMedia = Array.isArray(p.media) ? p.media.length > 0 : Boolean(p.media?.url);
+
+          return (
           <article
             key={p._id}
             className="card bg-base-100 border border-base-200 shadow-sm hover:shadow-md transition"
@@ -116,7 +131,7 @@ export default function PostsTab() {
               <div className="flex-1 py-3 pr-4 min-w-0">
                 <p className="text-xs text-base-content/50 flex flex-wrap items-center gap-1">
                   Posted by <span className="font-medium text-primary">{p.anonymousUsername}</span> ·{' '}
-                  {new Date(p.createdAt).toLocaleDateString()}
+                  {timeAgo(p.createdAt)}
                   {p.tag && <span className="badge badge-outline badge-xs">{p.tag}</span>}
                   <ReportFlagButton
                     onClick={() => setReportTarget({ contentType: 'post', contentId: p._id })}
@@ -128,18 +143,21 @@ export default function PostsTab() {
                 >
                   {p.title}
                 </Link>
-                <p className="text-sm text-base-content/80 line-clamp-3 mt-1">{p.content}</p>
-                <PostMedia media={p.media} />
+                {!hasMedia && (
+                  <p className="text-sm text-base-content/80 line-clamp-3 mt-1">{p.content}</p>
+                )}
+                {hasMedia && <PostMedia media={p.media} feed />}
                 <Link
                   to={`/c/${encodeURIComponent(communityId)}/posts/${p._id}`}
                   className="text-xs text-base-content/40 mt-2 link link-hover inline-block"
                 >
-                  {p.commentCount || 0} comments
+                  {hasMedia ? 'View more details' : `${p.commentCount || 0} comments`}
                 </Link>
               </div>
             </div>
           </article>
-        ))}
+          );
+        })}
       </div>
 
       {createOpen && (
@@ -176,12 +194,21 @@ export default function PostsTab() {
                   </option>
                 ))}
               </select>
-              <input
-                type="file"
-                accept="image/*,video/*"
-                className="file-input file-input-bordered rounded-2xl w-full"
-                onChange={(e) => setMediaFile(e.target.files?.[0] || null)}
-              />
+              <div>
+                <label className="label py-0">
+                  <span className="label-text text-xs">Photos & videos (optional, multiple)</span>
+                </label>
+                <input
+                  type="file"
+                  accept="image/*,video/*"
+                  multiple
+                  className="file-input file-input-bordered rounded-2xl w-full"
+                  onChange={(e) => setMediaFiles(Array.from(e.target.files || []))}
+                />
+                {mediaFiles.length > 0 && (
+                  <p className="text-xs text-base-content/50 mt-1">{mediaFiles.length} file(s) selected</p>
+                )}
+              </div>
               <div className="modal-action">
                 <button type="button" className="btn btn-ghost rounded-2xl" onClick={() => setCreateOpen(false)}>
                   Cancel

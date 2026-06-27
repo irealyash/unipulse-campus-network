@@ -4,6 +4,7 @@ import { createComment, reactToComment } from '../../features/posts/postsSlice';
 import { ThumbUpIcon, ThumbDownIcon, CloseIcon, GifIcon } from '../icons';
 import GifPicker from '../chat/GifPicker';
 import ReportFlagButton from '../ReportFlagButton';
+import { EventMediaCarousel } from './EventParts';
 
 export const POST_TAGS = [
   'General',
@@ -276,10 +277,14 @@ export default function PostCommentSection({
   );
 }
 
-export function PostMedia({ media }) {
-  if (!media?.url) return null;
-  if (media.mediaType === 'video') {
-    return <video src={media.url} controls className="rounded-xl max-h-96 mt-2 w-full" />;
+export function PostMedia({ media, compact = false, feed = false }) {
+  let items = [];
+  if (Array.isArray(media)) {
+    items = media.filter((m) => m?.url);
+  } else if (media?.url) {
+    items = [{ url: media.url, mediaType: media.mediaType || 'image' }];
   }
-  return <img src={media.url} alt="" className="rounded-xl max-h-96 mt-2 object-contain" />;
+  if (!items.length) return null;
+
+  return <EventMediaCarousel items={items} compact={compact} feed={feed} />;
 }

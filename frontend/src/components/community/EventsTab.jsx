@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, useParams } from 'react-router-dom';
-import { fetchEvents, createEvent, rsvpEvent } from '../../features/events/eventsSlice';
-import { eventAvatar } from '../../lib/avatars';
+import { fetchEvents, createEvent, rsvpEvent, showEventNotice } from '../../features/events/eventsSlice';
+import { timeAgo } from '../../lib/timeAgo';
 import { uploadMedia } from '../../lib/media';
 import Loader from '../Loader';
 import { CalendarIcon } from '../icons';
@@ -10,13 +10,15 @@ import ReportModal from '../chat/ReportModal';
 import ReportFlagButton from '../ReportFlagButton';
 import {
   buildEventDateTime,
-  EventMediaGallery,
+  EventMediaCarousel,
   EventRsvpButtons,
   formatEventDate,
   todayDateInputValue,
 } from './EventParts';
 
-const DESC_CLAMP = 160;
+function hasUserMedia(items) {
+  return Array.isArray(items) && items.length > 0;
+}
 
 /** Events tab — full-width cards, route-based detail view, RSVP, sort, multi-media. */
 export default function EventsTab() {
@@ -82,26 +84,35 @@ export default function EventsTab() {
       return;
     }
 
-    const media = [];
-    for (const file of mediaFiles) {
-      media.push(await uploadMedia(file));
-    }
+    const payload = {
+      title: form.title,
+      description: form.description,
+      eventDate: when.toISOString(),
+    };
+    const files = [...mediaFiles];
 
-    await dispatch(
-      createEvent({
-        communityId,
-        payload: {
-          title: form.title,
-          description: form.description,
-          eventDate: when.toISOString(),
-          media,
-          imageUrl: media[0]?.url,
-        },
-      })
-    );
     setCreateOpen(false);
     resetForm();
-    dispatch(fetchEvents({ communityId, sort }));
+    dispatch(showEventNotice('Your event has been submitted for moderator approval.'));
+
+    try {
+      const media = [];
+      for (const file of files) {
+        media.push(await uploadMedia(file));
+      }
+      await dispatch(
+        createEvent({
+          communityId,
+          payload: {
+            ...payload,
+            media,
+            imageUrl: media[0]?.url,
+          },
+        })
+      ).unwrap();
+    } catch {
+      dispatch(showEventNotice('Could not submit your event. Please try again.'));
+    }
   };
 
   const handleRsvp = (eventId, status) => {
@@ -152,50 +163,40 @@ export default function EventsTab() {
         )}
 
         {events.map((ev) => {
-          const longDesc = (ev.description?.length || 0) > DESC_CLAMP;
-          const preview = longDesc
-            ? `${ev.description.slice(0, DESC_CLAMP).trim()}…`
-            : ev.description;
+          const hasMedia = hasUserMedia(ev.media);
 
           return (
             <article
               key={ev._id}
               className="card bg-base-100 border border-base-200 shadow-sm hover:shadow-md transition overflow-hidden"
             >
-              <div className="card-body p-0 flex-row gap-0">
+              <div className="card-body py-3 px-4 min-w-0">
+                <p className="text-xs text-base-content/50 flex flex-wrap items-center gap-1">
+                  {formatEventDate(ev.eventDate)} · {timeAgo(ev.createdAt)}
+                  <ReportFlagButton
+                    onClick={() => setReportTarget({ contentType: 'event', contentId: ev._id })}
+                  />
+                </p>
                 <Link
                   to={eventPath(ev._id)}
-                  className="shrink-0 w-36 sm:w-44 h-32 sm:h-36 bg-base-200 overflow-hidden block"
+                  className="font-bold text-base mt-1 link link-hover text-left block line-clamp-2"
                 >
-                  <img src={eventAvatar(ev)} alt="" className="w-full h-full object-cover" />
+                  {ev.title}
                 </Link>
-                <div className="flex-1 py-3 pr-4 pl-3 min-w-0 relative">
-                  <p className="text-xs text-base-content/50 flex flex-wrap items-center gap-1">
-                    {formatEventDate(ev.eventDate)}
-                    <ReportFlagButton
-                      onClick={() => setReportTarget({ contentType: 'event', contentId: ev._id })}
-                    />
-                  </p>
-                  <Link
-                    to={eventPath(ev._id)}
-                    className="font-bold text-base mt-1 link link-hover text-left block line-clamp-2"
-                  >
-                    {ev.title}
-                  </Link>
-                  {preview && (
-                    <p className="text-sm text-base-content/80 line-clamp-3 mt-1">{preview}</p>
-                  )}
-                  <div className="badge badge-success badge-outline gap-1 w-fit mt-2">
-                    {ev.comingCount ?? 0} coming
-                  </div>
-                  <EventRsvpButtons ev={ev} onRsvp={handleRsvp} />
-                  <Link
-                    to={eventPath(ev._id)}
-                    className="text-xs text-primary mt-2 link link-hover inline-block"
-                  >
-                    View more details
-                  </Link>
+                {!hasMedia && ev.description && (
+                  <p className="text-sm text-base-content/80 line-clamp-3 mt-1">{ev.description}</p>
+                )}
+                {hasMedia && <EventMediaCarousel event={ev} feed />}
+                <div className="badge badge-success badge-outline gap-1 w-fit mt-2">
+                  {ev.comingCount ?? 0} coming
                 </div>
+                <EventRsvpButtons ev={ev} onRsvp={handleRsvp} />
+                <Link
+                  to={eventPath(ev._id)}
+                  className="text-xs text-primary mt-2 link link-hover inline-block"
+                >
+                  View more details
+                </Link>
               </div>
             </article>
           );
@@ -260,7 +261,7 @@ export default function EventsTab() {
                       value={form.eventMinute}
                       onChange={(e) => setForm({ ...form, eventMinute: e.target.value })}
                     >
-                      {['00', '15', '30', '45'].map((m) => (
+                      {Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0')).map((m) => (
                         <option key={m} value={m}>
                           {m}
                         </option>

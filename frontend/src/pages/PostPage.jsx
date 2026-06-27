@@ -9,6 +9,7 @@ import {
 } from '../features/posts/postsSlice';
 import Loader from '../components/Loader';
 import PostCommentSection, { PostMedia, VoteColumn } from '../components/community/PostCommentSection';
+import { timeAgo } from '../lib/timeAgo';
 import ReportModal from '../components/chat/ReportModal';
 import ReportFlagButton from '../components/ReportFlagButton';
 
@@ -74,7 +75,7 @@ export default function PostPage() {
 
             <p className="text-xs text-base-content/50 flex flex-wrap items-center gap-1">
               Posted by <span className="font-medium text-primary">{post.anonymousUsername}</span> ·{' '}
-              {new Date(post.createdAt).toLocaleString()}
+              {timeAgo(post.createdAt)}
               {post.tag && <span className="badge badge-outline badge-xs">{post.tag}</span>}
               <ReportFlagButton
                 onClick={() => setReportTarget({ contentType: 'post', contentId: post._id })}

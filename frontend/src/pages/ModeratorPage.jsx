@@ -28,6 +28,8 @@ import { communityAvatar, eventAvatar } from '../lib/avatars';
 import CourseCommunityAvatar from '../components/CourseCommunityAvatar';
 import { uploadMedia } from '../lib/media';
 import { PostMedia } from '../components/community/PostCommentSection';
+import { EventMediaCarousel, formatEventDate } from '../components/community/EventParts';
+import { timeAgo } from '../lib/timeAgo';
 import {
   ShieldIcon,
   FlagIcon,
@@ -181,7 +183,7 @@ function PostsTab() {
                   <span className="badge badge-ghost badge-sm">{p.communityId}</span>
                   <span className="badge badge-outline badge-sm">{p.status || 'pending'}</span>
                   <span className="text-xs text-base-content/40 ml-auto">
-                    {new Date(p.createdAt).toLocaleString()}
+                    {timeAgo(p.createdAt)}
                   </span>
                 </div>
                 <h3 className="font-bold mt-1">{p.title}</h3>
@@ -191,7 +193,13 @@ function PostsTab() {
                   by <span className="font-medium">{p.anonymousUsername}</span>
                 </p>
 
-                <div className="card-actions justify-end mt-2 gap-2">
+                <div className="card-actions justify-end mt-2 gap-2 flex-wrap">
+                  <Link
+                    to={`/c/${encodeURIComponent(p.communityId)}/posts/${p._id}`}
+                    className="btn btn-ghost btn-sm rounded-full"
+                  >
+                    View details
+                  </Link>
                   {p.status === 'pending' && (
                     <>
                       <button
@@ -283,18 +291,25 @@ function ModEventsTab() {
                   <span className="badge badge-ghost badge-sm">{ev.communityId}</span>
                   <span className="badge badge-outline badge-sm">{ev.status || 'pending'}</span>
                   <span className="text-xs text-base-content/40 ml-auto">
-                    {new Date(ev.createdAt).toLocaleString()}
+                    {timeAgo(ev.createdAt)}
                   </span>
                 </div>
                 <h3 className="font-bold mt-1">{ev.title}</h3>
                 <p className="text-xs text-base-content/50">
-                  {new Date(ev.eventDate).toLocaleString()}
+                  {formatEventDate(ev.eventDate)}
                 </p>
                 {ev.description && (
                   <p className="text-sm text-base-content/80 line-clamp-3">{ev.description}</p>
                 )}
+                <EventMediaCarousel event={ev} compact />
 
-                <div className="card-actions justify-end mt-2 gap-2">
+                <div className="card-actions justify-end mt-2 gap-2 flex-wrap">
+                  <Link
+                    to={`/c/${encodeURIComponent(ev.communityId)}/events/${ev._id}`}
+                    className="btn btn-ghost btn-sm rounded-full"
+                  >
+                    View details
+                  </Link>
                   {ev.status === 'pending' && (
                     <>
                       <button

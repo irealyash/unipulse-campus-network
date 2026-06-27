@@ -24,15 +24,15 @@ const postSchema = new mongoose.Schema({
         trim: true
     },
     media: {
-        url: {
-            type: String,
-            default: null
-        }, // The public cloud storage link (e.g., AWS S3 or Cloudinary URL)
-        mediaType: {
-            type: String,
-            enum: ['image', 'video', 'gif', null],
-            default: null
-        } // Helps the frontend immediately know whether to render an <img> or <video> tag
+        type: [{
+            url: { type: String, required: true },
+            mediaType: {
+                type: String,
+                enum: ['image', 'video', 'gif'],
+                required: true
+            }
+        }],
+        default: []
     },
     tag: {
         type: String,
