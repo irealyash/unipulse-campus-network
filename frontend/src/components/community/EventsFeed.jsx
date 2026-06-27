@@ -141,8 +141,8 @@ export default function EventsFeed({
     }
   };
 
-  const handleRsvp = (eventId, status) => {
-    dispatch(rsvpEvent({ eventId, status }));
+  const handleRsvp = (eventId, status, previousRsvp) => {
+    dispatch(rsvpEvent({ eventId, status, previousRsvp }));
   };
 
   const title = mode === 'all' ? 'All events' : 'Events';

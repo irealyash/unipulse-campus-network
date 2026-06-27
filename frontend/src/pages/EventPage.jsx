@@ -28,8 +28,8 @@ export default function EventPage() {
     return () => dispatch(clearCurrentEvent());
   }, [dispatch, eventId]);
 
-  const handleRsvp = (id, status) => {
-    dispatch(rsvpEvent({ eventId: id, status }));
+  const handleRsvp = (id, status, previousRsvp) => {
+    dispatch(rsvpEvent({ eventId: id, status, previousRsvp }));
   };
 
   if (!event || event._id !== eventId) {

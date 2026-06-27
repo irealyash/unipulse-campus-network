@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import ThemeToggle from '../components/ThemeToggle';
+import TermsModal from '../components/TermsModal';
 import { SparkleIcon, ChatIcon, ShieldIcon, UsersIcon } from '../components/icons';
 
 const signupState = { showWelcome: true };
@@ -9,8 +11,10 @@ const signupState = { showWelcome: true };
  * vibe and points users to signup / login.
  */
 export default function LandingPage() {
+  const [termsOpen, setTermsOpen] = useState(false);
+
   return (
-    <div className="relative min-h-screen overflow-hidden bg-base-200">
+    <div className="relative min-h-screen overflow-hidden bg-base-200 flex flex-col">
       {/* Floating gradient blobs for a bubbly feel */}
       <div className="pointer-events-none absolute -top-32 -left-20 w-[28rem] h-[28rem] rounded-full bg-primary/30 blur-3xl" />
       <div className="pointer-events-none absolute top-1/4 -right-24 w-[26rem] h-[26rem] rounded-full bg-secondary/30 blur-3xl" />
@@ -63,7 +67,7 @@ export default function LandingPage() {
       </section>
 
       {/* Feature cards */}
-      <section className="relative z-10 max-w-5xl mx-auto px-4 pb-20 grid gap-5 sm:grid-cols-3">
+      <section className="relative z-10 max-w-5xl mx-auto px-4 pb-8 grid gap-5 sm:grid-cols-3">
         {[
           {
             icon: <UsersIcon />,
@@ -94,9 +98,22 @@ export default function LandingPage() {
         ))}
       </section>
 
-      <footer className="relative z-10 text-center pb-8 text-sm text-base-content/50">
-        Built for University students · Anonymous by design
-      </footer>
+      <div className="relative z-10 mt-auto">
+        <footer className="text-center pt-10 text-sm text-base-content/50">
+          <p>Built for University students · Anonymous by design</p>
+        </footer>
+        <div className="text-center pb-[3px]">
+          <button
+            type="button"
+            className="text-[10px] leading-tight text-base-content/35 hover:text-base-content/50 font-normal transition-colors"
+            onClick={() => setTermsOpen(true)}
+          >
+            Terms and Conditions
+          </button>
+        </div>
+      </div>
+
+      <TermsModal open={termsOpen} onClose={() => setTermsOpen(false)} />
     </div>
   );
 }

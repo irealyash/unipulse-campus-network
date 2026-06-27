@@ -44,7 +44,7 @@ export function EventRsvpButtons({ ev, onRsvp }) {
         className={`btn btn-sm rounded-full ${
           ev.myRsvp === 'coming' ? 'btn-success' : 'btn-outline btn-success'
         }`}
-        onClick={() => onRsvp(ev._id, ev.myRsvp === 'coming' ? 'none' : 'coming')}
+        onClick={() => onRsvp(ev._id, ev.myRsvp === 'coming' ? 'none' : 'coming', ev.myRsvp)}
       >
         I will come
       </button>
@@ -53,7 +53,7 @@ export function EventRsvpButtons({ ev, onRsvp }) {
         className={`btn btn-sm rounded-full ${
           ev.myRsvp === 'busy' ? 'btn-error' : 'btn-outline btn-error'
         }`}
-        onClick={() => onRsvp(ev._id, ev.myRsvp === 'busy' ? 'none' : 'busy')}
+        onClick={() => onRsvp(ev._id, ev.myRsvp === 'busy' ? 'none' : 'busy', ev.myRsvp)}
       >
         I am busy
       </button>

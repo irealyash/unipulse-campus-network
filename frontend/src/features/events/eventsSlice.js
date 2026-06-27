@@ -3,10 +3,27 @@ import api from '../../lib/api';
 
 export const ALL_PUBLIC_EVENTS_KEY = '__all_public__';
 
+const eventIdStr = (id) => String(id);
+
+const normalizeEvent = (raw) => {
+  if (!raw) return raw;
+  const comingCount =
+    raw.comingCount ?? (Array.isArray(raw.coming) ? raw.coming.length : 0);
+  const busyCount = raw.busyCount ?? (Array.isArray(raw.busy) ? raw.busy.length : 0);
+  const { coming, busy, ...rest } = raw;
+  return {
+    ...rest,
+    comingCount,
+    busyCount,
+    myRsvp: raw.myRsvp ?? null,
+  };
+};
+
 const applyOptimisticRsvp = (event, status) => {
   const prev = event.myRsvp;
-  let comingCount = event.comingCount ?? 0;
-  let busyCount = event.busyCount ?? 0;
+  let comingCount =
+    event.comingCount ?? (Array.isArray(event.coming) ? event.coming.length : 0);
+  let busyCount = event.busyCount ?? (Array.isArray(event.busy) ? event.busy.length : 0);
 
   if (prev === 'coming') comingCount = Math.max(0, comingCount - 1);
   if (prev === 'busy') busyCount = Math.max(0, busyCount - 1);
@@ -19,15 +36,28 @@ const applyOptimisticRsvp = (event, status) => {
     myRsvp: status === 'none' ? null : status,
     comingCount,
     busyCount,
+    rsvpPending: true,
+  };
+};
+
+const preservePendingRsvp = (incoming, prev) => {
+  if (!prev?.rsvpPending) return incoming;
+  return {
+    ...incoming,
+    comingCount: prev.comingCount,
+    busyCount: prev.busyCount,
+    myRsvp: prev.myRsvp,
+    rsvpPending: true,
   };
 };
 
 const patchEventInState = (state, eventId, patch) => {
-  if (state.currentEvent?._id === eventId) {
+  const id = eventIdStr(eventId);
+  if (state.currentEvent && eventIdStr(state.currentEvent._id) === id) {
     state.currentEvent = patch(state.currentEvent);
   }
   Object.values(state.byCommunity).forEach((b) => {
-    const i = b.events?.findIndex((e) => e._id === eventId);
+    const i = b.events?.findIndex((e) => eventIdStr(e._id) === id);
     if (i >= 0) b.events[i] = patch(b.events[i]);
   });
 };
@@ -99,6 +129,7 @@ const eventsSlice = createSlice({
   initialState: {
     byCommunity: {},
     currentEvent: null,
+    rsvpInFlight: null,
     status: 'idle',
     error: null,
     notice: null,
@@ -118,25 +149,45 @@ const eventsSlice = createSlice({
     builder
       .addCase(fetchEvents.pending, (state, action) => {
         const cid = action.meta.arg.communityId;
-        state.byCommunity[cid] = { events: [], status: 'loading' };
+        const prev = state.byCommunity[cid];
+        state.byCommunity[cid] = { events: prev?.events ?? [], status: 'loading' };
       })
       .addCase(fetchEvents.fulfilled, (state, action) => {
-        state.byCommunity[action.payload.communityId] = {
-          events: action.payload.events,
-          status: 'succeeded',
-        };
+        const { communityId, events } = action.payload;
+        const prevEvents = state.byCommunity[communityId]?.events ?? [];
+        const merged = events.map(normalizeEvent).map((ev) => {
+          const prev = prevEvents.find((p) => eventIdStr(p._id) === eventIdStr(ev._id));
+          return preservePendingRsvp(ev, prev);
+        });
+        state.byCommunity[communityId] = { events: merged, status: 'succeeded' };
       })
       .addCase(fetchAllPublicEvents.pending, (state) => {
-        state.byCommunity[ALL_PUBLIC_EVENTS_KEY] = { events: [], status: 'loading' };
+        const prev = state.byCommunity[ALL_PUBLIC_EVENTS_KEY];
+        state.byCommunity[ALL_PUBLIC_EVENTS_KEY] = {
+          events: prev?.events ?? [],
+          status: 'loading',
+        };
       })
       .addCase(fetchAllPublicEvents.fulfilled, (state, action) => {
+        const prevEvents = state.byCommunity[ALL_PUBLIC_EVENTS_KEY]?.events ?? [];
+        const merged = action.payload.events.map(normalizeEvent).map((ev) => {
+          const prev = prevEvents.find((p) => eventIdStr(p._id) === eventIdStr(ev._id));
+          return preservePendingRsvp(ev, prev);
+        });
         state.byCommunity[ALL_PUBLIC_EVENTS_KEY] = {
-          events: action.payload.events,
+          events: merged,
           status: 'succeeded',
         };
       })
       .addCase(fetchEvent.fulfilled, (state, action) => {
-        state.currentEvent = action.payload;
+        const incoming = normalizeEvent(action.payload);
+        const id = eventIdStr(incoming._id);
+        if (state.rsvpInFlight && eventIdStr(state.rsvpInFlight) === id) return;
+        if (state.currentEvent?.rsvpPending && eventIdStr(state.currentEvent._id) === id) {
+          state.currentEvent = preservePendingRsvp(incoming, state.currentEvent);
+          return;
+        }
+        state.currentEvent = incoming;
       })
       .addCase(createEvent.fulfilled, (state, action) => {
         const { communityId, event, message } = action.payload;
@@ -148,16 +199,32 @@ const eventsSlice = createSlice({
       })
       .addCase(rsvpEvent.pending, (state, action) => {
         const { eventId, status } = action.meta.arg;
+        state.rsvpInFlight = eventId;
         patchEventInState(state, eventId, (ev) => applyOptimisticRsvp(ev, status));
       })
       .addCase(rsvpEvent.fulfilled, (state, action) => {
-        const updated = action.payload;
-        if (state.currentEvent?._id === updated._id) {
-          state.currentEvent = updated;
-        }
-        Object.values(state.byCommunity).forEach((b) => {
-          const i = b.events?.findIndex((e) => e._id === updated._id);
-          if (i >= 0) b.events[i] = updated;
+        state.rsvpInFlight = null;
+        const updated = { ...normalizeEvent(action.payload), rsvpPending: false };
+        patchEventInState(state, updated._id, () => updated);
+      })
+      .addCase(rsvpEvent.rejected, (state, action) => {
+        state.rsvpInFlight = null;
+        const { eventId, status, previousRsvp } = action.meta.arg;
+        patchEventInState(state, eventId, (ev) => {
+          if (!ev.rsvpPending) return { ...ev, rsvpPending: false };
+          let comingCount = ev.comingCount ?? 0;
+          let busyCount = ev.busyCount ?? 0;
+          if (status === 'coming') comingCount = Math.max(0, comingCount - 1);
+          if (status === 'busy') busyCount = Math.max(0, busyCount - 1);
+          if (previousRsvp === 'coming') comingCount += 1;
+          if (previousRsvp === 'busy') busyCount += 1;
+          return {
+            ...ev,
+            comingCount,
+            busyCount,
+            myRsvp: previousRsvp ?? null,
+            rsvpPending: false,
+          };
         });
       });
   },
