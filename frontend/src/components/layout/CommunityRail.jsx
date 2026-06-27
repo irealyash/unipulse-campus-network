@@ -55,7 +55,7 @@ export default function CommunityRail({ sidebarOpen, onToggleSidebar }) {
     const updateTipPos = () => {
       if (!itemRef.current) return;
       const rect = itemRef.current.getBoundingClientRect();
-      setTipPos({ top: rect.top + rect.height / 2, left: rect.right + 14 });
+      setTipPos({ top: rect.top + rect.height / 2, left: rect.right + 3 });
     };
 
     useEffect(() => {
@@ -74,15 +74,24 @@ export default function CommunityRail({ sidebarOpen, onToggleSidebar }) {
       hovered &&
       createPortal(
         <div
-          className="fixed z-[400] pointer-events-none -translate-y-1/2"
+          className="fixed z-[400] pointer-events-none -translate-y-1/2 flex items-center"
           style={{ top: tipPos.top, left: tipPos.left }}
           role="tooltip"
         >
-          <div className="relative bg-neutral text-neutral-content text-sm font-semibold px-3 py-2 rounded-lg shadow-xl whitespace-nowrap max-w-[14rem] truncate">
-            <span
-              className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0 border-y-[7px] border-y-transparent border-r-[7px] border-r-neutral"
-              aria-hidden
+          <svg
+            width="6"
+            height="12"
+            viewBox="0 0 6 12"
+            className="shrink-0 text-base-100 -mr-px"
+            aria-hidden
+          >
+            <path
+              fill="currentColor"
+              shapeRendering="geometricPrecision"
+              d="M6 0.75 L1.12 5.72 A0.32 0.32 0 0 0 1.12 6.28 L6 11.25 Z"
             />
+          </svg>
+          <div className="bg-base-100 text-base-content text-sm font-semibold px-3 py-1.5 rounded-[5px] shadow-xl whitespace-nowrap max-w-[14rem] truncate">
             {c.name}
           </div>
         </div>,
