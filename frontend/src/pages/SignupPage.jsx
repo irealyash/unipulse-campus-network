@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { signup } from '../features/auth/authSlice';
 import AuthShell from '../components/AuthShell';
+import CommunityWelcomeModal from '../components/CommunityWelcomeModal';
+
+const AGREED_KEY = 'unipulse_community_agreed';
 
 /**
  * Signup step 1: collect UBC email, alias and password. On success the backend
@@ -11,8 +14,24 @@ import AuthShell from '../components/AuthShell';
 export default function SignupPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const { status } = useSelector((s) => s.auth);
   const loading = status === 'loading';
+
+  const [welcomeOpen, setWelcomeOpen] = useState(
+    () => Boolean(location.state?.showWelcome) && !sessionStorage.getItem(AGREED_KEY)
+  );
+
+  useEffect(() => {
+    if (location.state?.showWelcome) {
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.pathname, location.state?.showWelcome, navigate]);
+
+  const handleAgree = () => {
+    sessionStorage.setItem(AGREED_KEY, '1');
+    setWelcomeOpen(false);
+  };
 
   const [form, setForm] = useState({ email: '', username: '', password: '', confirm: '' });
   const [localError, setLocalError] = useState('');
@@ -43,7 +62,9 @@ export default function SignupPage() {
   };
 
   return (
-    <AuthShell
+    <>
+      <CommunityWelcomeModal open={welcomeOpen} onAgree={handleAgree} />
+      <AuthShell
       title="Create your account"
       subtitle="Anonymous to classmates · verified as a UBC student"
       footer={
@@ -125,5 +146,6 @@ export default function SignupPage() {
         </button>
       </form>
     </AuthShell>
+    </>
   );
 }

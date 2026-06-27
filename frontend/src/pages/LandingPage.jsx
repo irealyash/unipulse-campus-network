@@ -2,6 +2,8 @@ import { Link } from 'react-router-dom';
 import ThemeToggle from '../components/ThemeToggle';
 import { SparkleIcon, ChatIcon, ShieldIcon, UsersIcon } from '../components/icons';
 
+const signupState = { showWelcome: true };
+
 /**
  * Public marketing/landing page. Anonymous, UBC-only social app — sells the
  * vibe and points users to signup / login.
@@ -31,7 +33,7 @@ export default function LandingPage() {
           <Link to="/login" className="btn btn-ghost btn-sm rounded-full">
             Log in
           </Link>
-          <Link to="/signup" className="btn btn-primary btn-sm rounded-full">
+          <Link to="/signup" state={signupState} className="btn btn-primary btn-sm rounded-full">
             Get started
           </Link>
         </div>
@@ -51,7 +53,7 @@ export default function LandingPage() {
           plus campus-wide rooms for everything else.
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <Link to="/signup" className="btn btn-primary btn-lg rounded-full shadow-lg">
+          <Link to="/signup" state={signupState} className="btn btn-primary btn-lg rounded-full shadow-lg">
             Join UniPulse
           </Link>
           <Link to="/login" className="btn btn-outline btn-lg rounded-full">
