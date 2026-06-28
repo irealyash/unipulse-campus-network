@@ -44,8 +44,7 @@ export default function RequestModeratorModal({ open, onClose, communityId = nul
           </button>
         </div>
         <p className="text-sm text-base-content/60 mb-3">
-          Request a new community, suggest changes, or report an issue. Your username is attached so
-          mods can follow up.
+          Request a new community, suggest changes, or report an issue.
         </p>
 
         {result && (
