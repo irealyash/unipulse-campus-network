@@ -57,13 +57,16 @@ export function EventRsvpButtons({ ev, onRsvp }) {
   const comingSelected = ev.myRsvp === 'coming';
   const busySelected = ev.myRsvp === 'busy';
   const count = ev.comingCount ?? 0;
+  const atCapacity =
+    ev.capacity != null && count >= ev.capacity && !comingSelected;
 
   return (
     <div className="mt-2">
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
-          className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all cursor-pointer ${
+          disabled={atCapacity}
+          className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
             comingSelected
               ? 'bg-emerald-300 text-emerald-950 ring-2 ring-emerald-400/60'
               : 'bg-emerald-300/90 text-emerald-950 hover:bg-emerald-300'
@@ -71,7 +74,7 @@ export function EventRsvpButtons({ ev, onRsvp }) {
           onClick={() => onRsvp(ev._id, comingSelected ? 'none' : 'coming', ev.myRsvp)}
         >
           <CheckIcon />
-          {comingSelected ? 'Attending' : 'Attend'}
+          {comingSelected ? 'Attending' : atCapacity ? 'Full' : 'Attend'}
         </button>
         <button
           type="button"
@@ -88,6 +91,7 @@ export function EventRsvpButtons({ ev, onRsvp }) {
       </div>
       <p className="text-xs text-base-content/45 mt-2">
         {count} student{count === 1 ? '' : 's'} attending
+        {ev.capacity != null ? ` · ${ev.capacity} max` : ''}
       </p>
     </div>
   );

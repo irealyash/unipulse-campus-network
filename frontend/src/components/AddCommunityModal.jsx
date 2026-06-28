@@ -66,7 +66,7 @@ export default function AddCommunityModal({ open, onClose, initialCategory = nul
                 <button
                   key={cat}
                   type="button"
-                  className="btn btn-outline justify-start rounded-2xl h-auto py-3"
+                  className="btn btn-outline btn-primary justify-start rounded-2xl h-auto py-3 w-full shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer"
                   onClick={() => pickCategory(cat)}
                 >
                   <span className="font-semibold">{CATEGORY_LABELS[cat]}</span>

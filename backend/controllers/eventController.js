@@ -140,6 +140,19 @@ export const createEvent = asyncHandler(async (req, res) => {
   const { title, description, eventDate, imageUrl, moderatorNote } = req.body;
   const mediaItems = normalizeMedia(req.body.media);
 
+  let capacity = null;
+  const unlimited =
+    req.body.unlimitedCapacity === true ||
+    req.body.unlimitedCapacity === 'true' ||
+    req.body.unlimitedCapacity == null;
+  if (!unlimited) {
+    const raw = parseInt(req.body.capacity, 10);
+    if (!Number.isFinite(raw) || raw < 1) {
+      throw new ApiError(400, 'Capacity must be a positive number, or choose no limit.');
+    }
+    capacity = raw;
+  }
+
   if (!title || !title.trim()) throw new ApiError(400, 'Event title is required.');
   if (!eventDate) throw new ApiError(400, 'Event date is required.');
 
@@ -160,6 +173,7 @@ export const createEvent = asyncHandler(async (req, res) => {
     imageUrl: coverUrl,
     media: mediaItems,
     eventDate: when,
+    capacity,
     status: 'pending',
     moderatorNote: typeof moderatorNote === 'string' ? moderatorNote.trim() : '',
   });
@@ -194,7 +208,15 @@ export const rsvpEvent = asyncHandler(async (req, res) => {
   event.coming = event.coming.filter((id) => id.toString() !== uid);
   event.busy = event.busy.filter((id) => id.toString() !== uid);
 
-  if (status === 'coming') event.coming.push(req.user._id);
+  if (status === 'coming') {
+    if (
+      event.capacity != null &&
+      event.coming.length >= event.capacity
+    ) {
+      throw new ApiError(400, 'This event is at capacity.');
+    }
+    event.coming.push(req.user._id);
+  }
   if (status === 'busy') event.busy.push(req.user._id);
 
   await event.save();

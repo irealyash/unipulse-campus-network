@@ -55,6 +55,8 @@ export default function EventsFeed({
     eventHour: '6',
     eventMinute: '00',
     eventAmPm: 'PM',
+    noCapacityLimit: true,
+    capacity: '',
   });
   const [mediaFiles, setMediaFiles] = useState([]);
   const [formError, setFormError] = useState('');
@@ -85,6 +87,8 @@ export default function EventsFeed({
       eventHour: '6',
       eventMinute: '00',
       eventAmPm: 'PM',
+      noCapacityLimit: true,
+      capacity: '',
     });
     setMediaFiles([]);
     setFormError('');
@@ -108,12 +112,21 @@ export default function EventsFeed({
       setFormError('Event date and time must be after the current moment.');
       return;
     }
+    if (!form.noCapacityLimit) {
+      const cap = parseInt(form.capacity, 10);
+      if (!Number.isFinite(cap) || cap < 1) {
+        setFormError('Enter a valid capacity (at least 1), or choose no limit.');
+        return;
+      }
+    }
 
     const payload = {
       title: form.title,
       description: form.description,
       moderatorNote: form.moderatorNote,
       eventDate: when.toISOString(),
+      unlimitedCapacity: form.noCapacityLimit,
+      ...(form.noCapacityLimit ? {} : { capacity: parseInt(form.capacity, 10) }),
     };
     const files = [...mediaFiles];
 
@@ -315,6 +328,33 @@ export default function EventsFeed({
                     </select>
                   </div>
                 </div>
+              </div>
+              <div>
+                <label className="label py-0">
+                  <span className="label-text text-xs">Capacity</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer mb-2">
+                  <input
+                    type="checkbox"
+                    className="checkbox checkbox-sm checkbox-primary rounded"
+                    checked={form.noCapacityLimit}
+                    onChange={(e) =>
+                      setForm({ ...form, noCapacityLimit: e.target.checked, capacity: '' })
+                    }
+                  />
+                  <span className="text-sm text-base-content/80">No limit — open to all students</span>
+                </label>
+                {!form.noCapacityLimit && (
+                  <input
+                    type="number"
+                    min={1}
+                    className="input input-bordered rounded-2xl w-full"
+                    placeholder="Maximum number of attendees"
+                    value={form.capacity}
+                    onChange={(e) => setForm({ ...form, capacity: e.target.value })}
+                    required
+                  />
+                )}
               </div>
               <div>
                 <label className="label py-0">

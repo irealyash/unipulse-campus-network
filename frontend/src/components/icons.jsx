@@ -153,6 +153,21 @@ export const TrashIcon = (p) => (
   </svg>
 );
 
+export const PlusIcon = (p) => (
+  <svg {...base(p)}>
+    <line x1="12" y1="5" x2="12" y2="19" />
+    <line x1="5" y1="12" x2="19" y2="12" />
+  </svg>
+);
+
+export const LightbulbIcon = (p) => (
+  <svg {...base(p)}>
+    <path d="M9 18h6" />
+    <path d="M10 22h4" />
+    <path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z" />
+  </svg>
+);
+
 export const SearchIcon = (p) => (
   <svg {...base(p)}>
     <circle cx="11" cy="11" r="8" />

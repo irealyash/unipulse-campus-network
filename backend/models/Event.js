@@ -47,6 +47,12 @@ const eventSchema = new mongoose.Schema({
     ref: 'User',
     default: []
   },
+  /** Max attendees; null means unlimited. */
+  capacity: {
+    type: Number,
+    default: null,
+    min: 1,
+  },
   status: {
     type: String,
     enum: ['pending', 'approved', 'rejected'],

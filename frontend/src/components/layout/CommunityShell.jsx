@@ -4,7 +4,7 @@ import CommunityRail from './CommunityRail';
 import ChannelSidebar from './ChannelSidebar';
 import ThemeToggle from '../ThemeToggle';
 import RequestModeratorModal from '../RequestModeratorModal';
-import { InboxIcon, CalendarIcon } from '../icons';
+import { CalendarIcon, PlusIcon, LightbulbIcon } from '../icons';
 import AddCommunityModal from '../AddCommunityModal';
 
 const SIDEBAR_KEY = 'unipulse_channel_sidebar';
@@ -46,28 +46,33 @@ export default function CommunityShell() {
         <div className="justify-self-start">
           <button
             type="button"
-            className={`btn btn-ghost btn-xs gap-1 rounded-full ${isAllEvents ? 'btn-active' : ''}`}
+            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-sm font-medium border transition-all cursor-pointer shadow-sm ${
+              isAllEvents
+                ? 'bg-primary/15 border-primary/50 text-primary'
+                : 'bg-base-300/90 border-base-content/20 text-base-content/75 hover:bg-base-100 hover:border-primary/35 hover:text-base-content hover:shadow-md'
+            }`}
             onClick={openAllEvents}
           >
-            <CalendarIcon /> All events
+            <CalendarIcon className="text-base shrink-0" /> All events
           </button>
         </div>
 
         <button
           type="button"
-          className="btn btn-sm btn-outline border-base-content/20 rounded-xl gap-1.5 px-8 min-w-[13rem] min-h-8 h-8 font-medium justify-center"
+          className="inline-flex items-center justify-center gap-2 min-w-[11rem] h-8 px-3 rounded-lg bg-base-300 border border-base-content/15 text-base-content/50 hover:border-base-content/25 hover:bg-base-200/80 transition-colors cursor-pointer"
           onClick={() => setAddOpen(true)}
         >
-          + Add Community
+          <PlusIcon className="w-4 h-4 shrink-0 text-base-content/45" />
+          <span className="text-sm">Add Community</span>
         </button>
 
         <div className="justify-self-end flex items-center gap-2">
           <button
             type="button"
-            className="btn btn-ghost btn-xs gap-1 rounded-full"
+            className="btn btn-ghost btn-xs gap-1.5 rounded-full text-base-content/70 hover:text-base-content"
             onClick={() => setRequestOpen(true)}
           >
-            <InboxIcon /> Suggest
+            <LightbulbIcon className="w-4 h-4 shrink-0" /> Suggest
           </button>
           <ThemeToggle />
         </div>
