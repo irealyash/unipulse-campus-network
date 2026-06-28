@@ -10,7 +10,7 @@ import {
   ALL_PUBLIC_EVENTS_KEY,
 } from '../../features/events/eventsSlice';
 import { timeAgo } from '../../lib/timeAgo';
-import { EventTagBadge } from '../../lib/eventTags';
+import { EventTagBadge, EVENT_FEED_TAG_FILTERS } from '../../lib/eventTags';
 import { uploadMedia } from '../../lib/media';
 import Loader from '../Loader';
 import { CalendarIcon } from '../icons';
@@ -46,6 +46,7 @@ export default function EventsFeed({
   const bucket = useSelector((s) => s.events.byCommunity[bucketKey]);
 
   const [sort, setSort] = useState('date');
+  const [tagFilter, setTagFilter] = useState('all');
   const [createOpen, setCreateOpen] = useState(false);
   const [form, setForm] = useState({
     title: '',
@@ -64,11 +65,11 @@ export default function EventsFeed({
 
   useEffect(() => {
     if (mode === 'all') {
-      dispatch(fetchAllPublicEvents({ sort }));
+      dispatch(fetchAllPublicEvents({ sort, tag: tagFilter }));
     } else if (communityId) {
-      dispatch(fetchEvents({ communityId, sort }));
+      dispatch(fetchEvents({ communityId, sort, tag: tagFilter }));
     }
-  }, [dispatch, mode, communityId, sort]);
+  }, [dispatch, mode, communityId, sort, tagFilter]);
 
   const events = bucket?.events || [];
   const loading = bucket?.status === 'loading';
@@ -162,25 +163,46 @@ export default function EventsFeed({
 
   return (
     <div className="flex flex-col h-full min-h-0">
-      <div className="shrink-0 border-b border-base-200 bg-base-100 px-4 py-3 flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h1 className="font-bold text-lg">{title}</h1>
-          {subtitle && <p className="text-xs text-base-content/50">{subtitle}</p>}
+      <div className="shrink-0 border-b border-base-200 bg-base-100 px-4 py-2 flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="font-bold text-lg leading-tight">{title}</h1>
+          {subtitle && (
+            <p className="text-xs text-base-content/50 leading-tight mt-0.5">{subtitle}</p>
+          )}
         </div>
-        <div className="flex gap-2 items-center flex-wrap">
-          <div role="tablist" className="tabs tabs-box tabs-sm">
+        <div className="flex items-center gap-2 shrink-0 flex-nowrap">
+          <select
+            className="select select-bordered select-sm rounded-lg min-w-[5.5rem]"
+            value={tagFilter}
+            onChange={(e) => setTagFilter(e.target.value)}
+            aria-label="Filter by tag"
+          >
+            <option value="all">Tag</option>
+            {EVENT_FEED_TAG_FILTERS.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+          <div className="inline-flex flex-row items-center shrink-0 rounded-lg bg-base-200 p-1 gap-0.5">
             <button
               type="button"
-              role="tab"
-              className={`tab ${sort === 'date' ? 'tab-active' : ''}`}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors whitespace-nowrap cursor-pointer ${
+                sort === 'date'
+                  ? 'bg-base-100 text-base-content shadow-sm'
+                  : 'text-base-content/60 hover:text-base-content'
+              }`}
               onClick={() => setSort('date')}
             >
               Upcoming
             </button>
             <button
               type="button"
-              role="tab"
-              className={`tab ${sort === 'rsvp' ? 'tab-active' : ''}`}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors whitespace-nowrap cursor-pointer ${
+                sort === 'rsvp'
+                  ? 'bg-base-100 text-base-content shadow-sm'
+                  : 'text-base-content/60 hover:text-base-content'
+              }`}
               onClick={() => setSort('rsvp')}
             >
               Popular
@@ -348,7 +370,7 @@ export default function EventsFeed({
                   <input
                     type="number"
                     min={1}
-                    className="input input-bordered rounded-2xl w-full"
+                    className="input input-bordered rounded-2xl w-full input-no-spin"
                     placeholder="Maximum number of attendees"
                     value={form.capacity}
                     onChange={(e) => setForm({ ...form, capacity: e.target.value })}

@@ -64,9 +64,11 @@ const patchEventInState = (state, eventId, patch) => {
 
 export const fetchAllPublicEvents = createAsyncThunk(
   'events/fetchAllPublic',
-  async ({ sort = 'date' }, { rejectWithValue }) => {
+  async ({ sort = 'date', tag = 'all' }, { rejectWithValue }) => {
     try {
-      const { data } = await api.get('/events/public', { params: { sort } });
+      const { data } = await api.get('/events/public', {
+        params: { sort, ...(tag && tag !== 'all' ? { tag } : {}) },
+      });
       return { events: data.events, sort };
     } catch (err) {
       return rejectWithValue(err.message);
@@ -76,10 +78,14 @@ export const fetchAllPublicEvents = createAsyncThunk(
 
 export const fetchEvents = createAsyncThunk(
   'events/fetch',
-  async ({ communityId, past = false, sort = 'date' }, { rejectWithValue }) => {
+  async ({ communityId, past = false, sort = 'date', tag = 'all' }, { rejectWithValue }) => {
     try {
       const { data } = await api.get(`/communities/${encodeURIComponent(communityId)}/events`, {
-        params: { past: past ? 'true' : 'false', sort },
+        params: {
+          past: past ? 'true' : 'false',
+          sort,
+          ...(tag && tag !== 'all' ? { tag } : {}),
+        },
       });
       return { communityId, events: data.events };
     } catch (err) {

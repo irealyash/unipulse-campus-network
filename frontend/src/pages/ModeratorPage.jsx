@@ -322,6 +322,12 @@ function ModEventsTab() {
                 </div>
                 <h3 className="font-bold mt-1 break-words [overflow-wrap:anywhere]">{ev.title}</h3>
                 <p className="text-xs text-base-content/50">{formatEventDate(ev.eventDate)}</p>
+                <p className="text-xs text-base-content/50">
+                  Capacity:{' '}
+                  <span className="font-medium text-base-content/70">
+                    {ev.capacity != null ? ev.capacity : 'No limit'}
+                  </span>
+                </p>
                 {ev.description && (
                   <p className="text-sm text-base-content/80 line-clamp-3 break-words [overflow-wrap:anywhere]">
                     {ev.description}

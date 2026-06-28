@@ -65,6 +65,16 @@ const attachCommunityNames = async (events) => {
   return events.map((ev) => ({ ...ev, communityName: names[ev.communityId] || ev.communityId }));
 };
 
+const FEED_TAG_FILTERS = ['Official', 'Student-Led'];
+
+const applyTagFilter = (filter, tagQuery) => {
+  if (!tagQuery || tagQuery === 'all') return filter;
+  if (FEED_TAG_FILTERS.includes(tagQuery)) {
+    filter.tag = tagQuery;
+  }
+  return filter;
+};
+
 /**
  * GET /api/communities/:communityId/events?past=false&sort=date|rsvp
  */
@@ -76,6 +86,7 @@ export const listEvents = asyncHandler(async (req, res) => {
   const sortBy = req.query.sort === 'rsvp' ? 'rsvp' : 'date';
   const filter = { communityId, status: 'approved' };
   if (!includePast) filter.eventDate = { $gte: new Date() };
+  applyTagFilter(filter, req.query.tag);
 
   let events = await fetchSortedEvents(filter, sortBy);
 
@@ -101,6 +112,7 @@ export const listAllPublicEvents = asyncHandler(async (req, res) => {
     status: 'approved',
     eventDate: { $gte: new Date() },
   };
+  applyTagFilter(filter, req.query.tag);
 
   let events = await fetchSortedEvents(filter, sortBy);
   events = await attachCommunityNames(events);

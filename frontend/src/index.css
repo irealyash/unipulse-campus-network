@@ -100,3 +100,14 @@ body {
 .animate-pop-in {
   animation: pop-in 0.18s ease-out;
 }
+
+/* Hide number input spinners (e.g. event capacity). */
+.input-no-spin {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.input-no-spin::-webkit-outer-spin-button,
+.input-no-spin::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
