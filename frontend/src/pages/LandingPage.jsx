@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import ThemeToggle from '../components/ThemeToggle';
 import TermsModal from '../components/TermsModal';
+import PrivacyModal from '../components/PrivacyModal';
 import { SparkleIcon, ChatIcon, ShieldIcon, UsersIcon } from '../components/icons';
 
 const signupState = { showWelcome: true };
@@ -12,6 +13,10 @@ const signupState = { showWelcome: true };
  */
 export default function LandingPage() {
   const [termsOpen, setTermsOpen] = useState(false);
+  const [privacyOpen, setPrivacyOpen] = useState(false);
+
+  const legalLinkClass =
+    'text-[10px] leading-tight text-base-content/35 hover:text-base-content/50 font-normal transition-colors';
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-base-200 flex flex-col">
@@ -101,19 +106,20 @@ export default function LandingPage() {
       <div className="relative z-10 mt-auto">
         <footer className="text-center pt-10 text-sm text-base-content/50">
           <p>Built for University students · Anonymous by design</p>
+          <br mt-1></br>
         </footer>
-        <div className="text-center pb-[3px]">
-          <button
-            type="button"
-            className="text-[10px] leading-tight text-base-content/35 hover:text-base-content/50 font-normal transition-colors"
-            onClick={() => setTermsOpen(true)}
-          >
+        <div className="text-center pb-[3px] flex items-center justify-center gap-8">
+          <button type="button" className={legalLinkClass} onClick={() => setTermsOpen(true)}>
             Terms and Conditions
+          </button>
+          <button type="button" className={legalLinkClass} onClick={() => setPrivacyOpen(true)}>
+            Privacy Policy
           </button>
         </div>
       </div>
 
       <TermsModal open={termsOpen} onClose={() => setTermsOpen(false)} />
+      <PrivacyModal open={privacyOpen} onClose={() => setPrivacyOpen(false)} />
     </div>
   );
 }

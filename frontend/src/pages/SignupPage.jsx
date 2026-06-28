@@ -4,6 +4,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { signup } from '../features/auth/authSlice';
 import AuthShell from '../components/AuthShell';
 import CommunityWelcomeModal from '../components/CommunityWelcomeModal';
+import TermsModal from '../components/TermsModal';
+import PrivacyModal from '../components/PrivacyModal';
 
 const AGREED_KEY = 'unipulse_community_agreed';
 
@@ -35,6 +37,9 @@ export default function SignupPage() {
 
   const [form, setForm] = useState({ email: '', username: '', password: '', confirm: '' });
   const [localError, setLocalError] = useState('');
+  const [acceptedLegal, setAcceptedLegal] = useState(false);
+  const [termsOpen, setTermsOpen] = useState(false);
+  const [privacyOpen, setPrivacyOpen] = useState(false);
 
   const update = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
@@ -50,6 +55,9 @@ export default function SignupPage() {
     }
     if (form.password !== form.confirm) {
       return setLocalError('Passwords do not match.');
+    }
+    if (!acceptedLegal) {
+      return setLocalError('You must accept the Terms and Conditions and Privacy Policy.');
     }
 
     const res = await dispatch(
@@ -136,16 +144,55 @@ export default function SignupPage() {
           />
         </label>
 
+        <div className="flex items-start gap-2.5 text-sm text-base-content/80 mt-1">
+          <input
+            id="legal-accept"
+            type="checkbox"
+            className="checkbox checkbox-sm checkbox-primary mt-0.5 shrink-0"
+            checked={acceptedLegal}
+            onChange={(e) => setAcceptedLegal(e.target.checked)}
+          />
+          <label htmlFor="legal-accept" className="leading-snug cursor-pointer">
+            I accept the{' '}
+            <button
+              type="button"
+              className="link link-primary align-baseline"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setTermsOpen(true);
+              }}
+            >
+              Terms and Conditions
+            </button>{' '}
+            and{' '}
+            <button
+              type="button"
+              className="link link-primary align-baseline"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setPrivacyOpen(true);
+              }}
+            >
+              Privacy Policy
+            </button>
+            .
+          </label>
+        </div>
+
         <button
           type="submit"
           className="btn btn-primary rounded-2xl mt-2"
-          disabled={loading}
+          disabled={loading || !acceptedLegal}
         >
           {loading && <span className="loading loading-spinner loading-sm" />}
           Send verification code
         </button>
       </form>
     </AuthShell>
+      <TermsModal open={termsOpen} onClose={() => setTermsOpen(false)} />
+      <PrivacyModal open={privacyOpen} onClose={() => setPrivacyOpen(false)} />
     </>
   );
 }
