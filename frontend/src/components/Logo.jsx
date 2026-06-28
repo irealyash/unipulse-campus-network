@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 export function BrandText({ className = 'text-2xl' }) {
   return (
     <span className={`font-extrabold tracking-tight ${className}`}>
-      Uni<span className="text-primary">Pulse</span>
+      <span className="text-primary">Uni</span>
+      <span className="text-secondary">Pulse</span>
     </span>
   );
 }
