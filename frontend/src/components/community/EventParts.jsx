@@ -63,7 +63,7 @@ export function EventRsvpButtons({ ev, onRsvp }) {
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
-          className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+          className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all cursor-pointer ${
             comingSelected
               ? 'bg-emerald-300 text-emerald-950 ring-2 ring-emerald-400/60'
               : 'bg-emerald-300/90 text-emerald-950 hover:bg-emerald-300'
@@ -71,11 +71,11 @@ export function EventRsvpButtons({ ev, onRsvp }) {
           onClick={() => onRsvp(ev._id, comingSelected ? 'none' : 'coming', ev.myRsvp)}
         >
           <CheckIcon />
-          Attend
+          {comingSelected ? 'Attending' : 'Attend'}
         </button>
         <button
           type="button"
-          className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+          className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all cursor-pointer ${
             busySelected
               ? 'bg-neutral/70 text-rose-400 ring-2 ring-rose-400/40'
               : 'bg-neutral/50 text-rose-400/90 hover:bg-neutral/60'
