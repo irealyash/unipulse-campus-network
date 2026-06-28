@@ -1,27 +1,8 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
-/**
- * A lazily-created, reused Nodemailer transport. We build it once and cache it
- * so we are not opening a new SMTP connection on every email.
- */
-let transporter = null;
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
-const getTransporter = () => {
-  if (transporter) return transporter;
-
-  transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT || '587', 10),
-    // secure:true for port 465, false for 587 (STARTTLS).
-    secure: process.env.SMTP_SECURE === 'true',
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS
-    }
-  });
-
-  return transporter;
-};
+const defaultFrom = process.env.MAIL_FROM || 'UniPulse <no-reply@unipulse.live>';
 
 /**
  * Generic email sender used across the app.
@@ -32,8 +13,22 @@ const getTransporter = () => {
  * @param {string} [opts.text]  - optional plaintext fallback
  */
 export const sendEmail = async ({ to, subject, html, text }) => {
-  const from = process.env.MAIL_FROM || process.env.SMTP_USER;
-  await getTransporter().sendMail({ from, to, subject, html, text });
+  if (!resend) {
+    throw new Error('RESEND_API_KEY is not configured.');
+  }
+
+  const { error } = await resend.emails.send({
+    from: defaultFrom,
+    to,
+    subject,
+    html,
+    ...(text ? { text } : {}),
+  });
+
+  if (error) {
+    console.error('Resend Error:', error);
+    throw new Error(error.message || 'Failed to send email.');
+  }
 };
 
 /**
@@ -41,30 +36,23 @@ export const sendEmail = async ({ to, subject, html, text }) => {
  * Keeping the template here keeps the auth controller clean.
  */
 export const sendOtpEmail = async (to, code) => {
-  // DEV convenience: if SMTP isn't configured, print the code to the server
-  // console instead of trying (and failing) to send a real email. This lets you
-  // test the full signup/login/reset flows without setting up an inbox.
-  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+  if (!process.env.RESEND_API_KEY) {
     console.log('\n==================== DEV OTP ====================');
     console.log(`  Code for ${to}:  ${code}`);
-    console.log('  (Set SMTP_* in .env to email codes for real.)');
+    console.log('  (Set RESEND_API_KEY in .env to email codes for real.)');
     console.log('================================================\n');
     return;
   }
 
-  const subject = 'Your UniPulse verification code';
-  const text = `Your UniPulse verification code is ${code}. It expires in ${
+  const subject = 'Verify your UniPulse account';
+  const text = `Your verification code is ${code}. It expires in ${
     process.env.OTP_TTL_MINUTES || 10
   } minutes.`;
 
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 480px; margin: auto;">
       <h2 style="color:#1d4ed8;">Welcome to UniPulse</h2>
-      <p>Use the code below to verify your UBC student email:</p>
-      <div style="font-size: 32px; font-weight: bold; letter-spacing: 6px;
-                  background:#f1f5f9; padding:16px; text-align:center; border-radius:8px;">
-        ${code}
-      </div>
+      <p>Your verification code is: <strong>${code}</strong></p>
       <p style="color:#64748b; font-size: 13px; margin-top:16px;">
         This code expires in ${process.env.OTP_TTL_MINUTES || 10} minutes.
         If you did not request it, you can safely ignore this email.
