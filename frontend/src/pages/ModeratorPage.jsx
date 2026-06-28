@@ -29,7 +29,7 @@ import CommunityAvatar from '../components/CommunityAvatar';
 import { uploadMedia } from '../lib/media';
 import { PostMedia } from '../components/community/PostCommentSection';
 import { EventMediaCarousel, formatEventDate, hasEventUserMedia } from '../components/community/EventParts';
-import { CATEGORY_LABELS } from '../lib/communityCategories';
+import { CATEGORY_LABELS, CATALOG_CATEGORIES } from '../lib/communityCategories';
 import { EVENT_TAGS, EventTagBadge } from '../lib/eventTags';
 import { timeAgo } from '../lib/timeAgo';
 import {
@@ -606,10 +606,16 @@ function CommunitiesTab() {
   const [typeFilter, setTypeFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [editId, setEditId] = useState(null);
-  const [editForm, setEditForm] = useState({ name: '', imageUrl: '', private: false });
+  const [editForm, setEditForm] = useState({ name: '', imageUrl: '', private: false, category: 'general' });
   const [iconFile, setIconFile] = useState(null);
   const [createOpen, setCreateOpen] = useState(false);
-  const [createForm, setCreateForm] = useState({ name: '', description: '', id: '', private: false });
+  const [createForm, setCreateForm] = useState({
+    name: '',
+    description: '',
+    id: '',
+    private: false,
+    category: 'general',
+  });
   const [createIconFile, setCreateIconFile] = useState(null);
   const [addUsersId, setAddUsersId] = useState(null);
   const [memberUserId, setMemberUserId] = useState('');
@@ -653,7 +659,12 @@ function CommunitiesTab() {
 
   const openEdit = (c) => {
     setEditId(c._id);
-    setEditForm({ name: c.name, imageUrl: c.imageUrl || '', private: Boolean(c.private) });
+    setEditForm({
+      name: c.name,
+      imageUrl: c.imageUrl || '',
+      private: Boolean(c.private),
+      category: c.category || 'general',
+    });
     setIconFile(null);
   };
 
@@ -668,6 +679,7 @@ function CommunitiesTab() {
     const payload = { name: editForm.name, imageUrl };
     if (community?.type !== 'course') {
       payload.private = editForm.private;
+      payload.category = editForm.category;
     }
     await dispatch(modUpdateCommunity({ communityId: editId, payload }));
     setEditId(null);
@@ -689,10 +701,11 @@ function CommunitiesTab() {
         id: createForm.id.trim() || undefined,
         imageUrl,
         private: createForm.private,
+        category: createForm.category,
       })
     );
     setCreateOpen(false);
-    setCreateForm({ name: '', description: '', id: '', private: false });
+    setCreateForm({ name: '', description: '', id: '', private: false, category: 'general' });
     setCreateIconFile(null);
     refreshList();
     dispatch(fetchCommunities());
@@ -898,6 +911,18 @@ function CommunitiesTab() {
                 value={createForm.description}
                 onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
               />
+              <label className="text-sm font-medium text-base-content/70">Category</label>
+              <select
+                className="select select-bordered rounded-2xl w-full"
+                value={createForm.category}
+                onChange={(e) => setCreateForm({ ...createForm, category: e.target.value })}
+              >
+                {CATALOG_CATEGORIES.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {CATEGORY_LABELS[cat]}
+                  </option>
+                ))}
+              </select>
               <label className="label cursor-pointer justify-start gap-3 py-0">
                 <input
                   type="checkbox"
@@ -970,15 +995,29 @@ function CommunitiesTab() {
                 required
               />
               {allCommunities.find((c) => c._id === editId)?.type !== 'course' && (
-                <label className="label cursor-pointer justify-start gap-3 py-0">
-                  <input
-                    type="checkbox"
-                    className="toggle toggle-primary"
-                    checked={editForm.private}
-                    onChange={(e) => setEditForm({ ...editForm, private: e.target.checked })}
-                  />
-                  <span className="label-text">Private community</span>
-                </label>
+                <>
+                  <label className="text-sm font-medium text-base-content/70">Category</label>
+                  <select
+                    className="select select-bordered rounded-2xl w-full"
+                    value={editForm.category}
+                    onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
+                  >
+                    {CATALOG_CATEGORIES.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {CATEGORY_LABELS[cat]}
+                      </option>
+                    ))}
+                  </select>
+                  <label className="label cursor-pointer justify-start gap-3 py-0">
+                    <input
+                      type="checkbox"
+                      className="toggle toggle-primary"
+                      checked={editForm.private}
+                      onChange={(e) => setEditForm({ ...editForm, private: e.target.checked })}
+                    />
+                    <span className="label-text">Private community</span>
+                  </label>
+                </>
               )}
               <input
                 type="file"

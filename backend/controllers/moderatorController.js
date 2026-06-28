@@ -17,6 +17,7 @@ import {
   deleteEventById,
 } from '../utils/contentDeletion.js';
 import { withCommunityImage } from '../utils/avatars.js';
+import { CATALOG_CATEGORIES, catalogCommunityId } from '../utils/communityCategories.js';
 import MessageReply from '../models/MessageReply.js';
 import { POST_TAGS } from './postController.js';
 import { withPostMedia } from '../utils/postMedia.js';
@@ -76,9 +77,16 @@ export const updateCommunity = asyncHandler(async (req, res) => {
   const community = await Community.findById(req.params.communityId);
   if (!community) throw new ApiError(404, 'Community not found.');
 
-  const { name, imageUrl, private: isPrivate } = req.body;
+  const { name, imageUrl, private: isPrivate, category } = req.body;
   if (name?.trim()) community.name = name.trim();
   if (imageUrl !== undefined) community.imageUrl = imageUrl?.trim() || null;
+  if (
+    category &&
+    CATALOG_CATEGORIES.includes(category) &&
+    community.type === 'general'
+  ) {
+    community.category = category;
+  }
   if (typeof isPrivate === 'boolean') {
     if (community.type === 'course' && isPrivate === false) {
       throw new ApiError(400, 'Course section communities must remain private.');
@@ -92,7 +100,7 @@ export const updateCommunity = asyncHandler(async (req, res) => {
 
 /**
  * POST /api/moderator/communities
- * Body: { name, description?, imageUrl?, id? }
+ * Body: { name, description?, imageUrl?, id?, category?, private? }
  * Creates a new general community (moderator tab only).
  */
 export const createCommunity = asyncHandler(async (req, res) => {
@@ -102,8 +110,17 @@ export const createCommunity = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'Community name is required.');
   }
 
-  const rawId = (req.body.id || name).toString().trim().toLowerCase();
-  const id = rawId.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  const category = CATALOG_CATEGORIES.includes(req.body.category)
+    ? req.body.category
+    : 'general';
+
+  const customId = req.body.id?.toString().trim();
+  let id;
+  if (customId) {
+    id = customId.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  } else {
+    id = catalogCommunityId(category, name);
+  }
 
   if (!id) {
     throw new ApiError(400, 'Could not derive a valid community id from the name.');
@@ -120,6 +137,7 @@ export const createCommunity = asyncHandler(async (req, res) => {
     description: description?.trim() || '',
     imageUrl: imageUrl?.trim() || null,
     type: 'general',
+    category,
     private: Boolean(req.body.private),
     allowedTags: POST_TAGS,
   });
