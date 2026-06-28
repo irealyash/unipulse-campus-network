@@ -3,7 +3,8 @@ import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { logout } from '../features/auth/authSlice';
 import ThemeToggle from './ThemeToggle';
 import UserAvatar from './UserAvatar';
-import { ShieldIcon, LogoutIcon, SparkleIcon } from './icons';
+import { BrandLink } from './Logo';
+import { ShieldIcon, LogoutIcon } from './icons';
 
 /**
  * Top navigation bar. Shows the brand, primary links (Communities, and the
@@ -25,14 +26,7 @@ export default function Navbar() {
   return (
     <div className="navbar bg-base-100/80 backdrop-blur sticky top-0 z-50 border-b border-base-200 px-3 sm:px-6">
       <div className="flex-1">
-        <Link to="/c" className="btn btn-ghost text-xl gap-2 normal-case">
-          <span className="text-primary">
-            <SparkleIcon className="text-2xl" />
-          </span>
-          <span className="font-extrabold tracking-tight">
-            Uni<span className="text-primary">Pulse</span>
-          </span>
-        </Link>
+        <BrandLink to="/c" />
       </div>
 
       <div className="flex items-center gap-1">

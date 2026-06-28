@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { SparkleIcon } from './icons';
+import { BrandText } from './Logo';
 import ThemeToggle from './ThemeToggle';
 
 /**
@@ -20,13 +20,8 @@ export default function AuthShell({ title, subtitle, children, footer }) {
 
       <div className="card w-full max-w-md bg-base-100/80 backdrop-blur-xl shadow-2xl border border-base-content/5 z-10 animate-pop-in">
         <div className="card-body">
-          <Link to="/" className="flex items-center gap-2 justify-center mb-2">
-            <span className="text-primary text-3xl">
-              <SparkleIcon />
-            </span>
-            <span className="text-2xl font-extrabold tracking-tight">
-              Uni<span className="text-primary">Pulse</span>
-            </span>
+          <Link to="/" className="flex justify-center mb-4">
+            <BrandText className="text-3xl" />
           </Link>
 
           {title ? <h1 className="text-center text-xl font-bold">{title}</h1> : null}

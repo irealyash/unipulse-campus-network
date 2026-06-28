@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import ThemeToggle from '../components/ThemeToggle';
 import TermsModal from '../components/TermsModal';
 import PrivacyModal from '../components/PrivacyModal';
+import { BrandText } from '../components/Logo';
 import { SparkleIcon, ChatIcon, ShieldIcon, UsersIcon } from '../components/icons';
 
 const signupState = { showWelcome: true };
@@ -28,13 +29,8 @@ export default function LandingPage() {
       {/* Top bar */}
       <header className="navbar max-w-6xl mx-auto px-4 sm:px-6 relative z-20">
         <div className="flex-1">
-          <span className="btn btn-ghost text-xl gap-2 normal-case">
-            <span className="text-primary text-2xl">
-              <SparkleIcon />
-            </span>
-            <span className="font-extrabold tracking-tight">
-              Uni<span className="text-primary">Pulse</span>
-            </span>
+          <span className="px-2">
+            <BrandText className="text-xl" />
           </span>
         </div>
         <div className="flex items-center gap-2">

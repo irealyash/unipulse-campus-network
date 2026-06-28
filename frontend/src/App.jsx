@@ -54,7 +54,7 @@ export default function App() {
   if (booting) {
     return (
       <div className="min-h-screen grid place-items-center bg-base-200">
-        <Loader label="Warming up UniPulse…" />
+        <Loader label="Warming up UniPulse…" showLogo />
       </div>
     );
   }
