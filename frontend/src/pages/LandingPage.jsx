@@ -30,7 +30,7 @@ export default function LandingPage() {
       <header className="navbar max-w-6xl mx-auto px-4 sm:px-6 relative z-20">
         <div className="flex-1">
           <span className="px-2">
-            <BrandText className="text-xl" />
+            <BrandText className="text-[1.5625rem]" />
           </span>
         </div>
         <div className="flex items-center gap-2">

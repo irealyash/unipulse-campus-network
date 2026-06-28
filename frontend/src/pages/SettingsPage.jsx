@@ -85,7 +85,7 @@ export default function SettingsPage() {
         <div className="card-body">
           <h2 className="card-title">Change username</h2>
           <p className="text-sm text-base-content/60">
-            You can change your anonymous alias once every 7 days.
+            You can change your username once every 7 days.
           </p>
 
           {msg && (
