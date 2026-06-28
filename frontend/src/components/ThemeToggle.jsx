@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { updateThemeFavicon } from '../lib/favicon';
 
 // The themes we registered in index.css (@plugin "daisyui").
 const THEMES = [
@@ -33,6 +34,7 @@ export default function ThemeToggle() {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem(STORAGE_KEY, theme);
+    updateThemeFavicon();
   }, [theme]);
 
   const updatePosition = () => {
