@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import {
@@ -13,7 +14,7 @@ import { timeAgo } from '../../lib/timeAgo';
 import { EventTagBadge, EVENT_FEED_TAG_FILTERS } from '../../lib/eventTags';
 import { uploadMedia } from '../../lib/media';
 import Loader from '../Loader';
-import { CalendarIcon } from '../icons';
+import { CalendarIcon, ChevronIcon } from '../icons';
 import ReportModal from '../chat/ReportModal';
 import ReportFlagButton from '../ReportFlagButton';
 import {
@@ -24,6 +25,104 @@ import {
   hasEventUserMedia,
   todayDateInputValue,
 } from './EventParts';
+
+const SEGMENT_BTN =
+  'px-3 py-1.5 text-sm font-medium rounded-md transition-colors whitespace-nowrap cursor-pointer';
+const SEGMENT_ACTIVE = 'bg-base-100 text-base-content shadow-sm';
+const SEGMENT_IDLE = 'text-base-content/60 hover:text-base-content';
+
+function EventTagFilter({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
+  const btnRef = useRef(null);
+  const menuRef = useRef(null);
+
+  const label = value === 'all' ? 'Tag' : value;
+  const options = [{ value: 'all', label: 'Tag' }, ...EVENT_FEED_TAG_FILTERS.map((t) => ({ value: t, label: t }))];
+
+  const updatePosition = () => {
+    if (!btnRef.current) return;
+    const rect = btnRef.current.getBoundingClientRect();
+    setMenuPos({ top: rect.bottom + 4, left: rect.left });
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    updatePosition();
+
+    const onPointerDown = (e) => {
+      const target = e.target;
+      if (btnRef.current?.contains(target) || menuRef.current?.contains(target)) return;
+      setOpen(false);
+    };
+
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+    document.addEventListener('pointerdown', onPointerDown);
+
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+      document.removeEventListener('pointerdown', onPointerDown);
+    };
+  }, [open]);
+
+  const pick = (next) => {
+    onChange(next);
+    setOpen(false);
+  };
+
+  const menu = open
+    ? createPortal(
+        <ul
+          ref={menuRef}
+          role="listbox"
+          style={{ top: menuPos.top, left: menuPos.left }}
+          className="fixed z-[9999] min-w-[8.5rem] rounded-lg bg-base-200 p-1 shadow-xl border border-base-content/10"
+        >
+          {options.map((opt) => (
+            <li key={opt.value}>
+              <button
+                type="button"
+                role="option"
+                aria-selected={value === opt.value}
+                className={`w-full text-left ${SEGMENT_BTN} ${
+                  value === opt.value ? SEGMENT_ACTIVE : SEGMENT_IDLE
+                }`}
+                onClick={() => pick(opt.value)}
+              >
+                {opt.label}
+              </button>
+            </li>
+          ))}
+        </ul>,
+        document.body
+      )
+    : null;
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        className={`inline-flex items-center gap-1.5 ${SEGMENT_BTN} ${
+          value !== 'all' || open ? SEGMENT_ACTIVE : SEGMENT_IDLE
+        }`}
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-haspopup="listbox"
+      >
+        {label}
+        <ChevronIcon
+          className={`w-4 h-4 shrink-0 transition-transform duration-200 ${
+            open ? 'rotate-180' : 'rotate-0'
+          }`}
+        />
+      </button>
+      {menu}
+    </>
+  );
+}
 
 /**
  * Shared events feed — community tab or all public communities.
@@ -171,38 +270,18 @@ export default function EventsFeed({
           )}
         </div>
         <div className="flex items-center gap-2 shrink-0 flex-nowrap">
-          <select
-            className="select select-bordered select-sm rounded-lg min-w-[5.5rem]"
-            value={tagFilter}
-            onChange={(e) => setTagFilter(e.target.value)}
-            aria-label="Filter by tag"
-          >
-            <option value="all">Tag</option>
-            {EVENT_FEED_TAG_FILTERS.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
           <div className="inline-flex flex-row items-center shrink-0 rounded-lg bg-base-200 p-1 gap-0.5">
+            <EventTagFilter value={tagFilter} onChange={setTagFilter} />
             <button
               type="button"
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors whitespace-nowrap cursor-pointer ${
-                sort === 'date'
-                  ? 'bg-base-100 text-base-content shadow-sm'
-                  : 'text-base-content/60 hover:text-base-content'
-              }`}
+              className={`${SEGMENT_BTN} ${sort === 'date' ? SEGMENT_ACTIVE : SEGMENT_IDLE}`}
               onClick={() => setSort('date')}
             >
               Upcoming
             </button>
             <button
               type="button"
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors whitespace-nowrap cursor-pointer ${
-                sort === 'rsvp'
-                  ? 'bg-base-100 text-base-content shadow-sm'
-                  : 'text-base-content/60 hover:text-base-content'
-              }`}
+              className={`${SEGMENT_BTN} ${sort === 'rsvp' ? SEGMENT_ACTIVE : SEGMENT_IDLE}`}
               onClick={() => setSort('rsvp')}
             >
               Popular
