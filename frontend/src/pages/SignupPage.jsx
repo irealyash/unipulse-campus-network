@@ -110,7 +110,7 @@ export default function SignupPage() {
             required
             minLength={3}
             maxLength={20}
-            placeholder="e.g. night_owl"
+            placeholder="username"
             className="input input-bordered w-full rounded-2xl"
             value={form.username}
             onChange={update('username')}

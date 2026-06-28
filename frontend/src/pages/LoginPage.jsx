@@ -41,7 +41,7 @@ export default function LoginPage() {
           <input
             type="text"
             required
-            placeholder="you@student.ubc.ca or night_owl"
+            placeholder="you@student.ubc.ca or username"
             className="input input-bordered w-full rounded-2xl"
             value={form.identifier}
             onChange={update('identifier')}
