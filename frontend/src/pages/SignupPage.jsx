@@ -144,11 +144,11 @@ export default function SignupPage() {
           />
         </label>
 
-        <div className="flex items-start gap-2.5 text-sm text-base-content/80 mt-1">
+        <div className="flex items-center gap-2.5 text-sm text-base-content/80 mt-1">
           <input
             id="legal-accept"
             type="checkbox"
-            className="checkbox checkbox-sm checkbox-primary mt-0.5 shrink-0"
+            className="checkbox checkbox-sm checkbox-primary shrink-0"
             checked={acceptedLegal}
             onChange={(e) => setAcceptedLegal(e.target.checked)}
           />
