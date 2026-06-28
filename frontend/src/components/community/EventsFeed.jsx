@@ -227,9 +227,6 @@ export default function EventsFeed({
                   </p>
                 )}
                 {hasMedia && <EventMediaCarousel event={ev} feed />}
-                <div className="badge badge-success badge-outline gap-1 w-fit mt-2">
-                  {ev.comingCount ?? 0} coming
-                </div>
                 <EventRsvpButtons ev={ev} onRsvp={handleRsvp} />
                 <Link
                   to={eventPath(ev)}

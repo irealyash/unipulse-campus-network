@@ -89,9 +89,6 @@ export default function EventPage() {
             </div>
 
             <div className="mt-6 pt-4 border-t border-base-200">
-              <div className="badge badge-success badge-outline gap-1 w-fit">
-                {event.comingCount ?? 0} coming
-              </div>
               <EventRsvpButtons ev={event} onRsvp={handleRsvp} />
             </div>
           </div>

@@ -220,7 +220,6 @@ export default function ChatTab() {
           <Loader label="Loading messages…" />
         ) : timeline.length === 0 ? (
           <div className="text-center text-base-content/50 py-12">
-            <div className="text-4xl mb-2">👋</div>
             <p className="font-medium">No messages yet</p>
           </div>
         ) : (

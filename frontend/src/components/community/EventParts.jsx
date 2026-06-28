@@ -36,27 +36,59 @@ export function formatEventDate(iso) {
   });
 }
 
-export function EventRsvpButtons({ ev, onRsvp }) {
+function CheckIcon({ className = 'w-3.5 h-3.5' }) {
   return (
-    <div className="flex flex-wrap gap-2 mt-2">
-      <button
-        type="button"
-        className={`btn btn-sm rounded-full ${
-          ev.myRsvp === 'coming' ? 'btn-success' : 'btn-outline btn-success'
-        }`}
-        onClick={() => onRsvp(ev._id, ev.myRsvp === 'coming' ? 'none' : 'coming', ev.myRsvp)}
-      >
-        I will come
-      </button>
-      <button
-        type="button"
-        className={`btn btn-sm rounded-full ${
-          ev.myRsvp === 'busy' ? 'btn-error' : 'btn-outline btn-error'
-        }`}
-        onClick={() => onRsvp(ev._id, ev.myRsvp === 'busy' ? 'none' : 'busy', ev.myRsvp)}
-      >
-        I am busy
-      </button>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
+
+function XIcon({ className = 'w-3.5 h-3.5' }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  );
+}
+
+export function EventRsvpButtons({ ev, onRsvp }) {
+  const comingSelected = ev.myRsvp === 'coming';
+  const busySelected = ev.myRsvp === 'busy';
+  const count = ev.comingCount ?? 0;
+
+  return (
+    <div className="mt-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+            comingSelected
+              ? 'bg-emerald-300 text-emerald-950 ring-2 ring-emerald-400/60'
+              : 'bg-emerald-300/90 text-emerald-950 hover:bg-emerald-300'
+          }`}
+          onClick={() => onRsvp(ev._id, comingSelected ? 'none' : 'coming', ev.myRsvp)}
+        >
+          <CheckIcon />
+          Attend
+        </button>
+        <button
+          type="button"
+          className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+            busySelected
+              ? 'bg-neutral/70 text-rose-400 ring-2 ring-rose-400/40'
+              : 'bg-neutral/50 text-rose-400/90 hover:bg-neutral/60'
+          }`}
+          onClick={() => onRsvp(ev._id, busySelected ? 'none' : 'busy', ev.myRsvp)}
+        >
+          <XIcon />
+          Busy
+        </button>
+      </div>
+      <p className="text-xs text-base-content/45 mt-2">
+        {count} student{count === 1 ? '' : 's'} attending
+      </p>
     </div>
   );
 }
