@@ -1,5 +1,16 @@
+/**
+ * CommunityWelcomeModal — community standards agreement modal shown to new
+ * users during signup. Lists the key rules (respect, no hate, privacy,
+ * academic integrity) and requires the user to click "I agree" before
+ * proceeding to account creation.
+ *
+ * Props:
+ * @param {boolean}    open    — controls modal visibility
+ * @param {() => void} onAgree — called when the user clicks "I agree"
+ */
 import { ShieldIcon, UsersIcon, FlagIcon, SparkleIcon } from './icons';
 
+// Community standard rules displayed in the modal
 const STANDARDS = [
   {
     icon: UsersIcon,
@@ -23,10 +34,6 @@ const STANDARDS = [
   },
 ];
 
-/**
- * Shown on signup when arriving from the landing page. User must agree before
- * creating an account.
- */
 export default function CommunityWelcomeModal({ open, onAgree }) {
   if (!open) return null;
 

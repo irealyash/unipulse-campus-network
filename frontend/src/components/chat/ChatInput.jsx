@@ -1,11 +1,21 @@
+/**
+ * ChatInput — Discord-style message composer with optional reply bar,
+ * GIF picker, and photo/video upload.
+ *
+ * Used in ChatTab (group chat) and ModUserMessagesPanel (mod DMs).
+ *
+ * Props:
+ * @param {(msg: object) => void} onSend        — called with { content, media?, parentId? }
+ * @param {() => void}            [onTyping]     — fires on each keystroke for typing indicators
+ * @param {boolean}               disabled       — disables all inputs (e.g. when socket is disconnected)
+ * @param {{ id, author, preview }} [replyTo]    — if set, shows the reply-to bar above the input
+ * @param {() => void}            [onCancelReply]— clears the reply-to target
+ */
 import { useRef, useState } from 'react';
 import { SendIcon, CloseIcon, GifIcon, ImageIcon } from '../icons';
 import GifPicker from './GifPicker';
 import { uploadMedia } from '../../lib/media';
 
-/**
- * Discord-style composer: optional reply bar, GIF picker, photo/video upload.
- */
 export default function ChatInput({
   onSend,
   onTyping,
@@ -13,11 +23,16 @@ export default function ChatInput({
   replyTo,
   onCancelReply,
 }) {
+  // Current text in the input field
   const [text, setText] = useState('');
+  // Whether the GIF picker popover is open
   const [gifOpen, setGifOpen] = useState(false);
+  // True while a file upload is in progress
   const [uploading, setUploading] = useState(false);
+  // Hidden file input ref for photo/video upload
   const fileRef = useRef(null);
 
+  // Form submission — sends a text message (optionally as a reply)
   const submit = (e) => {
     e.preventDefault();
     const trimmed = text.trim();
@@ -27,6 +42,7 @@ export default function ChatInput({
     onCancelReply?.();
   };
 
+  // Callback from GifPicker — sends a GIF-only message
   const sendGif = (url) => {
     onSend({
       content: '',
@@ -36,6 +52,7 @@ export default function ChatInput({
     onCancelReply?.();
   };
 
+  // File input change handler — uploads the selected photo/video then sends it
   const onFile = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -55,6 +72,7 @@ export default function ChatInput({
 
   return (
     <div className="shrink-0 border-t border-base-200 bg-base-100">
+      {/* Reply-to preview bar — shown when replying to a specific message */}
       {replyTo && (
         <div className="mx-3 mt-2 mb-0 rounded-lg overflow-hidden bg-base-300 border-l-[3px] border-primary">
           <div className="flex items-start gap-2 px-3 py-2">
@@ -69,9 +87,12 @@ export default function ChatInput({
         </div>
       )}
 
+      {/* Composer form: [image btn] [text input] [GIF btn] [send btn] */}
       <form onSubmit={submit} className="flex items-center gap-1 p-3 relative">
+        {/* Hidden file input for photo/video selection */}
         <input ref={fileRef} type="file" accept="image/*,video/*" className="hidden" onChange={onFile} />
 
+        {/* Photo/video upload button */}
         <button
           type="button"
           className="btn btn-ghost btn-sm btn-circle shrink-0"

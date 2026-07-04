@@ -1,11 +1,22 @@
+/**
+ * AuthShell — shared layout wrapper for authentication pages (login, signup,
+ * verify email, forgot password, etc.).
+ *
+ * Renders a full-screen gradient background with decorative blurred blobs,
+ * a theme toggle in the top-right corner, and a centered frosted-glass card
+ * containing the brand logo, an optional title/subtitle, the form children,
+ * and an optional footer.
+ *
+ * Props:
+ * @param {string}      [title]    — heading inside the card
+ * @param {string}      [subtitle] — secondary text below the title
+ * @param {ReactNode}   children   — the form content
+ * @param {ReactNode}   [footer]   — footer links (e.g. "Already have an account?")
+ */
 import { Link } from 'react-router-dom';
 import { BrandText } from './Logo';
 import ThemeToggle from './ThemeToggle';
 
-/**
- * Shared shell for all auth pages: a soft gradient backdrop with floating
- * blobs, the UniPulse brand, and a centered glass card for the form.
- */
 export default function AuthShell({ title, subtitle, children, footer }) {
   return (
     <div className="relative min-h-screen overflow-hidden bg-base-200 flex items-center justify-center p-4">

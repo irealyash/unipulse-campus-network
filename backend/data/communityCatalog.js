@@ -1,5 +1,16 @@
+/**
+ * Community Catalog – static seed data for all predefined UniPulse communities.
+ *
+ * Each array below defines one category of community that can be created during
+ * the database seeding process. The `buildCatalogEntries()` function at the
+ * bottom merges every category into a single flat list of catalog entries
+ * consumed by the seed script (backend/scripts/seed.js) and the
+ * seedCommunityCatalog utility.
+ */
+
 import { COUNTRIES } from './countries.js';
 
+// Academic major communities — each object carries a display name and category tag.
 export const MAJOR_COMMUNITIES = [
   { name: 'Astronomy Major', category: 'Academic' },
   { name: 'Atmospheric Science Major', category: 'Academic' },
@@ -29,6 +40,7 @@ export const MAJOR_COMMUNITIES = [
   { name: 'Statistics Major', category: 'Academic' },
 ];
 
+// On-campus residence communities — simple string names (no category needed).
 export const RESIDENCE_COMMUNITIES = [
   'Acadia Park',
   'Brock Commons',
@@ -48,6 +60,7 @@ export const RESIDENCE_COMMUNITIES = [
   'Walter Gage',
 ];
 
+// General / campus-wide communities open to all students.
 export const GENERAL_COMMUNITIES = [
   'UBC General',
   'UBC Casual',
@@ -63,6 +76,7 @@ export const GENERAL_COMMUNITIES = [
   'UBC Foodies',
 ];
 
+// Faculty / school communities — one per UBC faculty or professional school.
 export const FACULTY_COMMUNITIES = [
   { name: 'Applied Science Faculty', category: 'Faculty' },
   { name: 'Architecture and Landscape Architecture School', category: 'Faculty' },
@@ -92,6 +106,11 @@ export const FACULTY_COMMUNITIES = [
   { name: 'Vancouver School of Economics', category: 'Faculty' },
 ];
 
+/**
+ * Merges all community arrays into a unified list of catalog entry objects.
+ * Each entry has { category, name, description } and is used by the seed
+ * script to upsert Community documents into the database.
+ */
 export const buildCatalogEntries = () => {
   const entries = [];
 

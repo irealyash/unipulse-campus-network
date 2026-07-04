@@ -1,17 +1,35 @@
+/**
+ * MEDIA UTILITIES
+ * ----------------------------------------------------------------------------
+ * Handles file uploads (images/videos to Cloudinary via the backend) and
+ * GIF search/trending via the Giphy API. Used by chat, posts, comments,
+ * events, and moderator messages wherever media attachments are supported.
+ */
+
 import api from './api';
 
-/** Upload image/video to Cloudinary via the backend. */
+/**
+ * Upload an image or video file to Cloudinary through the backend proxy.
+ * Sends a multipart form POST to /uploads/media.
+ * @param {File} file - The file to upload.
+ * @returns {Promise<{ url: string, mediaType: string }>} The Cloudinary URL and type ('image'|'video').
+ */
 export async function uploadMedia(file) {
   const form = new FormData();
   form.append('file', file);
-  // Do not set Content-Type — axios must add the multipart boundary automatically.
   const { data } = await api.post('/uploads/media', form);
   return { url: data.url, mediaType: data.mediaType };
 }
 
+/** Giphy API key — falls back to a public default if env var is not set. */
 const GIPHY_KEY = import.meta.env.VITE_GIPHY_API_KEY || 'uPpK0Xdj6CjrdOOquxhsbVJvQY04hsA1';
 
-/** Search Giphy for GIFs. */
+/**
+ * Search Giphy for GIFs matching a query string.
+ * @param {string} query  - Search term (falls back to 'trending' if empty).
+ * @param {number} offset - Pagination offset for loading more results.
+ * @returns {Promise<Array<Object>>} Array of Giphy GIF objects.
+ */
 export async function searchGifs(query, offset = 0) {
   const res = await fetch(
     `https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_KEY}&q=${encodeURIComponent(query || 'trending')}&limit=20&offset=${offset}&rating=g`
@@ -21,7 +39,11 @@ export async function searchGifs(query, offset = 0) {
   return json.data || [];
 }
 
-/** Trending GIFs when the picker first opens. */
+/**
+ * Fetch trending GIFs from Giphy (shown when the GIF picker first opens).
+ * @param {number} offset - Pagination offset for loading more results.
+ * @returns {Promise<Array<Object>>} Array of Giphy GIF objects.
+ */
 export async function trendingGifs(offset = 0) {
   const res = await fetch(
     `https://api.giphy.com/v1/gifs/trending?api_key=${GIPHY_KEY}&limit=20&offset=${offset}&rating=g`

@@ -1,3 +1,20 @@
+/**
+ * contentDeletion.js
+ *
+ * Cascading deletion utilities for all user-generated content in UniPulse.
+ * Provides functions to safely delete posts, comments, messages, message replies,
+ * events, and entire communities along with all of their dependent content.
+ *
+ * Used by both the normal author-delete flows and the moderator delete-anything
+ * flows. Centralizing deletion logic here guarantees consistent cascading
+ * behaviour across the app (no orphaned comments, replies, or dangling reports).
+ *
+ * Key design decisions:
+ *   - Related moderation reports are marked "resolved" (not deleted) to preserve audit history
+ *   - BFS traversal is used for comment/reply trees to collect all descendants efficiently
+ *   - Community deletion cascades through all posts, events, and chat messages within it
+ */
+
 import Post from '../models/Post.js';
 import Comment from '../models/Comment.js';
 import Message from '../models/Message.js';
@@ -5,15 +22,6 @@ import MessageReply from '../models/MessageReply.js';
 import Event from '../models/Event.js';
 import Community from '../models/Community.js';
 import Reported from '../models/Reported.js';
-
-/**
- * Shared deletion helpers used by BOTH the normal author-delete flows and the
- * moderator delete-anything flows. Centralizing this guarantees the same
- * cascading behaviour everywhere (no orphaned comments or dangling reports).
- *
- * Whenever content is deleted we also flip any related reports to "resolved"
- * (rather than deleting them) so the moderation history is preserved.
- */
 
 /**
  * Returns the id of a comment plus every descendant (replies, replies-of-replies,

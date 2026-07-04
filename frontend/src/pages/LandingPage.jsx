@@ -1,3 +1,13 @@
+/**
+ * LandingPage.jsx
+ *
+ * Public marketing/landing page for UniPulse.
+ * Route: "/" (unauthenticated visitors only)
+ * Role: First page anonymous visitors see — promotes the app's value props
+ * (anonymous student communities, course chat, moderation) and funnels
+ * users toward signup or login.
+ */
+
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import ThemeToggle from '../components/ThemeToggle';
@@ -6,6 +16,7 @@ import PrivacyModal from '../components/PrivacyModal';
 import { BrandText } from '../components/Logo';
 import { SparkleIcon, ChatIcon, ShieldIcon, UsersIcon } from '../components/icons';
 
+// Navigation state passed to SignupPage so it can show a welcome modal on arrival
 const signupState = { showWelcome: true };
 
 /**
@@ -13,20 +24,22 @@ const signupState = { showWelcome: true };
  * vibe and points users to signup / login.
  */
 export default function LandingPage() {
+  // State: controls visibility of the Terms and Privacy modals
   const [termsOpen, setTermsOpen] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
 
+  // Tailwind classes shared by the footer legal links
   const legalLinkClass =
     'text-[10px] leading-tight text-base-content/35 hover:text-base-content/50 font-normal transition-colors';
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-base-200 flex flex-col">
-      {/* Floating gradient blobs for a bubbly feel */}
+      {/* Decorative gradient blobs — purely visual, non-interactive background elements */}
       <div className="pointer-events-none absolute -top-32 -left-20 w-[28rem] h-[28rem] rounded-full bg-primary/30 blur-3xl" />
       <div className="pointer-events-none absolute top-1/4 -right-24 w-[26rem] h-[26rem] rounded-full bg-secondary/30 blur-3xl" />
       <div className="pointer-events-none absolute bottom-0 left-1/3 w-80 h-80 rounded-full bg-accent/20 blur-3xl" />
 
-      {/* Top bar */}
+      {/* Top navigation bar — brand logo, theme toggle, login/signup CTAs */}
       <header className="navbar max-w-6xl mx-auto px-4 sm:px-6 relative z-20">
         <div className="flex-1">
           <span className="px-2">
@@ -44,7 +57,7 @@ export default function LandingPage() {
         </div>
       </header>
 
-      {/* Hero */}
+      {/* Hero section — headline, subtitle, and primary CTAs */}
       <section className="relative z-10 max-w-4xl mx-auto px-4 text-center pt-16 pb-12">
         <div className="badge badge-secondary badge-lg gap-1 mb-6">
           <SparkleIcon /> For University students only
@@ -67,13 +80,13 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Feature cards */}
+      {/* Feature cards — three value-prop cards rendered from an array */}
       <section className="relative z-10 max-w-5xl mx-auto px-4 pb-8 grid gap-5 sm:grid-cols-3">
         {[
           {
             icon: <UsersIcon />,
             title: 'Course communities',
-            body: 'Upload your schedule and we auto-unlock private rooms for every class section you’re in.',
+            body: 'Upload your schedule and we auto-unlock private rooms for every class section you're in.',
           },
           {
             icon: <ChatIcon />,
@@ -99,21 +112,25 @@ export default function LandingPage() {
         ))}
       </section>
 
+      {/* Footer — tagline and legal links that open Terms/Privacy modals */}
       <div className="relative z-10 mt-auto">
         <footer className="text-center pt-10 text-sm text-base-content/50">
           <p>Built for University students · Anonymous by design</p>
           <br mt-1></br>
         </footer>
         <div className="text-center pb-[3px] flex items-center justify-center gap-8">
+          {/* Opens the Terms and Conditions modal */}
           <button type="button" className={legalLinkClass} onClick={() => setTermsOpen(true)}>
             Terms and Conditions
           </button>
+          {/* Opens the Privacy Policy modal */}
           <button type="button" className={legalLinkClass} onClick={() => setPrivacyOpen(true)}>
             Privacy Policy
           </button>
         </div>
       </div>
 
+      {/* Legal modals — rendered at the bottom, visibility controlled by state */}
       <TermsModal open={termsOpen} onClose={() => setTermsOpen(false)} />
       <PrivacyModal open={privacyOpen} onClose={() => setPrivacyOpen(false)} />
     </div>

@@ -1,29 +1,40 @@
+/**
+ * ScheduleUploadForm — drag-and-drop file upload form for Workday .xlsx
+ * course schedules. Validates the file type, dispatches the uploadSchedule
+ * thunk, and shows privacy assurance messaging.
+ *
+ * Used inside ScheduleUploadCard and the /schedule page.
+ *
+ * Props:
+ * @param {() => void}             onSkip    — "Skip for now" handler
+ * @param {(payload: object) => void} [onSuccess] — called after a successful upload
+ */
 import { useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { uploadSchedule } from '../features/auth/authSlice';
 import { CalendarIcon, ShieldIcon } from './icons';
 
-/**
- * Drag-and-drop Workday schedule upload with optional skip.
- * @param {object} props
- * @param {() => void} props.onSkip
- * @param {(payload: object) => void} [props.onSuccess]
- */
 export default function ScheduleUploadForm({ onSkip, onSuccess }) {
   const dispatch = useDispatch();
   const { status } = useSelector((s) => s.auth);
   const loading = status === 'loading';
+  // Hidden file input ref
   const inputRef = useRef(null);
 
+  // The currently selected .xlsx file
   const [file, setFile] = useState(null);
+  // Validation or upload error message
   const [error, setError] = useState('');
+  // Whether a file is being dragged over the drop zone
   const [dragOver, setDragOver] = useState(false);
 
+  // Clear the selected file and reset the input
   const clearFile = () => {
     setFile(null);
     if (inputRef.current) inputRef.current.value = '';
   };
 
+  // Validate and set the selected file (must be .xlsx)
   const pick = (f) => {
     setError('');
     if (!f) return;
@@ -34,12 +45,14 @@ export default function ScheduleUploadForm({ onSkip, onSuccess }) {
     setFile(f);
   };
 
+  // Handle file drop on the drop zone
   const onDrop = (e) => {
     e.preventDefault();
     setDragOver(false);
     pick(e.dataTransfer.files?.[0]);
   };
 
+  // Upload the selected file and handle success/failure
   const onSubmit = async () => {
     if (!file) return setError('Please choose your schedule file first.');
     const res = await dispatch(uploadSchedule(file));

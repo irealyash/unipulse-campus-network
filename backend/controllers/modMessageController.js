@@ -5,8 +5,24 @@ import ModMessage from '../models/ModMessage.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import ApiError from '../utils/ApiError.js';
 
+/**
+ * MOD MESSAGE CONTROLLER
+ * ----------------------------------------------------------------------------
+ * Private 1-on-1 messaging between a moderator and a user. Each user can have
+ * at most one active conversation, which is owned by a single moderator.
+ * Moderators can start conversations, look up users, and see their full inbox.
+ * Regular users see only their own conversation (if one exists).
+ *
+ * Data model:
+ *   ModConversation — a thread between one user and one moderator.
+ *   ModMessage      — an individual message within a conversation.
+ */
+
+/** Safely converts an ObjectId (or null) to a plain string for JSON output. */
 const idStr = (value) => (value ? String(value) : null);
 
+/** Shapes a ModMessage document for safe API output, converting ObjectIds to
+ *  strings and normalizing the optional media attachment. */
 const serializeMessage = (msg) => ({
   _id: idStr(msg._id),
   conversationId: idStr(msg.conversationId),
@@ -22,6 +38,8 @@ const serializeMessage = (msg) => ({
   createdAt: msg.createdAt,
 });
 
+/** Shapes a ModConversation document for safe API output, converting ObjectIds
+ *  to strings and exposing timestamps + the last message preview. */
 const serializeConversation = (conv) => ({
   _id: idStr(conv._id),
   userId: idStr(conv.userId),
@@ -34,6 +52,8 @@ const serializeConversation = (conv) => ({
   updatedAt: conv.updatedAt,
 });
 
+/** Finds a user by ObjectId (if the identifier looks like one) or by username.
+ *  Returns the User document or null if not found. */
 const findUserByIdentifier = async (identifier) => {
   if (!identifier?.trim()) return null;
   const raw = identifier.trim();
@@ -44,6 +64,9 @@ const findUserByIdentifier = async (identifier) => {
   return User.findOne({ username: raw });
 };
 
+/** Generates a short preview string for the conversation list. Shows the first
+ *  120 characters of text content, or a media-type label ("GIF", "Video", etc.)
+ *  if the message is media-only. */
 const previewText = (content, media) => {
   if (content?.trim()) return content.trim().slice(0, 120);
   if (media?.mediaType === 'gif') return 'GIF';
@@ -52,6 +75,9 @@ const previewText = (content, media) => {
   return '';
 };
 
+/** Throws 404/403 if the given user is not a participant in the conversation.
+ *  A moderator must be the assigned moderator; a regular user must be the
+ *  conversation's userId. */
 const assertConversationAccess = async (user, conversation) => {
   if (!conversation) throw new ApiError(404, 'Conversation not found.');
   const uid = user._id.toString();
@@ -60,6 +86,9 @@ const assertConversationAccess = async (user, conversation) => {
   throw new ApiError(403, 'You do not have access to this conversation.');
 };
 
+/** Validates and normalizes an optional media attachment from the request body.
+ *  Returns { url, mediaType } if valid, or null if missing/invalid. Only
+ *  "image", "video", and "gif" are accepted media types. */
 const normalizeMedia = (raw) => {
   if (!raw?.url || !raw?.mediaType) return null;
   if (!['image', 'video', 'gif'].includes(raw.mediaType)) return null;
@@ -68,7 +97,10 @@ const normalizeMedia = (raw) => {
 
 /**
  * GET /api/mod-messages/my-conversation
- * Returns the user's single moderator thread, if any.
+ * Returns the authenticated (non-moderator) user's single conversation with a
+ * moderator, if one exists. If no conversation has been started yet, returns
+ * conversation: null so the frontend can show an empty state.
+ * Returns: { conversation } or { conversation: null }.
  */
 export const getMyConversation = asyncHandler(async (req, res) => {
   const conv = await ModConversation.findOne({ userId: req.user._id }).lean();
@@ -80,7 +112,9 @@ export const getMyConversation = asyncHandler(async (req, res) => {
 
 /**
  * GET /api/mod-messages/conversations
- * Moderator inbox — all user threads, newest first.
+ * Moderator-only. Returns all conversations assigned to the calling moderator,
+ * sorted by most recently active. This is the moderator's "inbox" view.
+ * Returns: { conversations[] } each with user info and last message preview.
  */
 export const listConversations = asyncHandler(async (req, res) => {
   if (!req.user.moderator) {
@@ -100,6 +134,10 @@ export const listConversations = asyncHandler(async (req, res) => {
 
 /**
  * GET /api/mod-messages/conversations/:conversationId/messages
+ * Returns all messages in a conversation (up to 500), sorted oldest-first.
+ * Both the assigned moderator and the conversation's user may call this.
+ * Params: :conversationId — the conversation's ObjectId.
+ * Returns: { conversation, messages[] }.
  */
 export const listMessages = asyncHandler(async (req, res) => {
   const conversation = await ModConversation.findById(req.params.conversationId);
@@ -119,7 +157,12 @@ export const listMessages = asyncHandler(async (req, res) => {
 
 /**
  * POST /api/mod-messages/conversations/:conversationId/messages
- * Body: { content?, media? }
+ * Body: { content?: string, media?: { url, mediaType } }
+ * Sends a new message within an existing conversation. Either text content or
+ * a media attachment (or both) must be provided. Both the assigned moderator
+ * and the user participant may send messages. Updates the conversation's
+ * lastMessageAt timestamp and preview.
+ * Returns: { message, conversation } with updated previews.
  */
 export const sendMessage = asyncHandler(async (req, res) => {
   const conversation = await ModConversation.findById(req.params.conversationId);
@@ -163,8 +206,12 @@ export const sendMessage = asyncHandler(async (req, res) => {
 
 /**
  * POST /api/mod-messages/start
- * Moderator starts (or continues) a conversation with a user.
- * Body: { userId | username | identifier, content?, media? }
+ * Moderator-only. Starts a new conversation with a user (or re-uses an existing
+ * one if the moderator is already assigned to that user's thread).
+ * Body: { userId | username | identifier, content?: string, media?: { url, mediaType } }
+ * Prevents messaging yourself or another moderator. If the user already has a
+ * conversation with a *different* moderator, returns 409 to avoid conflicts.
+ * Returns: { conversation, message } with the newly created first message.
  */
 export const startConversation = asyncHandler(async (req, res) => {
   if (!req.user.moderator) {
@@ -228,7 +275,12 @@ export const startConversation = asyncHandler(async (req, res) => {
 
 /**
  * GET /api/mod-messages/lookup-user?q=
- * Moderator search by username or user id.
+ * Moderator-only. Searches for a user by username or ObjectId so the moderator
+ * can start a conversation. Returns the user's basic info plus whether they
+ * already have an active conversation (and with which moderator).
+ * Query: q — the username or user ObjectId to look up.
+ * Returns: { user } with id, username, ban status, and existing conversation info,
+ *          or { user: null } if no match.
  */
 export const lookupUserForMessage = asyncHandler(async (req, res) => {
   if (!req.user.moderator) {

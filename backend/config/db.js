@@ -1,3 +1,20 @@
+/**
+ * @file db.js — Database Configuration
+ *
+ * Responsible for establishing and managing the MongoDB connection used by
+ * the entire UniPulse backend. This module exports a single async function
+ * that is invoked once at server startup (in server.js).
+ *
+ * Environment variables required:
+ *   MONGO_URI  – Full MongoDB connection string (e.g. mongodb+srv://...)
+ *               Typically defined in .env at the project root.
+ *
+ * Behaviour:
+ *   - On success: logs the connected host and returns control to the caller.
+ *   - On failure: logs the error and terminates the process (exit code 1),
+ *     since the API cannot operate without a database.
+ */
+
 import mongoose from 'mongoose';
 
 /**

@@ -1,3 +1,13 @@
+/**
+ * ChatTab — real-time group chat for a single community, rendered as the
+ * "Group Chat" channel tab inside CommunityShell.
+ *
+ * Connects to the Socket.IO room for the community, listens for new
+ * messages / replies / reactions / typing / delete events, and dispatches
+ * Redux actions for both server-confirmed and optimistic updates.
+ *
+ * Layout: status bar (typing / connection) → scrollable timeline → ChatInput composer.
+ */
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
@@ -19,32 +29,43 @@ import MessageBubble from '../chat/MessageBubble';
 import ChatInput from '../chat/ChatInput';
 import ReportModal from '../chat/ReportModal';
 
-/** Group chat — bottom-aligned timeline, Discord-style replies. */
 export default function ChatTab() {
   const { communityId } = useParams();
   const dispatch = useDispatch();
   const user = useSelector((s) => s.auth.user);
+  // Chat data bucket for this community from Redux
   const bucket = useSelector((s) => s.chat.byCommunity[communityId]);
+  // Map of messageId → 'like'|'dislike' for optimistic vote state
   const myReactions = useSelector((s) => s.chat.myReactions);
 
   const timeline = bucket?.timeline || [];
   const loading = !bucket || bucket.status === 'loading';
 
+  // Socket connection state — drives the "Live" / "Connecting…" indicator
   const [connected, setConnected] = useState(() => getSocket().connected);
+  // Transient error message shown as a warning alert
   const [chatError, setChatError] = useState('');
+  // Username of the person currently typing (cleared after 2.5 s)
   const [typingUser, setTypingUser] = useState('');
+  // Report modal target { contentType, contentId }
   const [reportTarget, setReportTarget] = useState(null);
+  // Reply-to target { id, author, preview } shown in the ChatInput
   const [replyTo, setReplyTo] = useState(null);
 
+  // Ref for the scrollable messages container (auto-scroll to bottom)
   const scrollRef = useRef(null);
+  // Map of message id → DOM element for scroll-to-parent
   const msgRefs = useRef({});
+  // Timeout id for clearing the typing indicator
   const typingTimeout = useRef(null);
 
+  // Fetch community details and chat history on mount / community change
   useEffect(() => {
     dispatch(fetchCommunity(communityId));
     dispatch(fetchTimeline(communityId));
   }, [dispatch, communityId]);
 
+  // Set up Socket.IO listeners and join the chat room
   useEffect(() => {
     const socket = getSocket();
     const onConnect = () => setConnected(true);
@@ -91,11 +112,13 @@ export default function ChatTab() {
     };
   }, [dispatch, communityId, user?.id]);
 
+  // Auto-scroll to the bottom whenever new messages arrive
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [timeline.length]);
 
+  // Smooth-scroll to the parent message and briefly highlight it
   const scrollToParent = useCallback((parentId) => {
     const el = document.getElementById(`msg-${parentId}`);
     el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -103,6 +126,7 @@ export default function ChatTab() {
     setTimeout(() => el?.classList.remove('ring-2', 'ring-primary', 'rounded-lg'), 1500);
   }, []);
 
+  // Send a message or reply — creates an optimistic entry then emits via socket
   const handleSend = useCallback(
     ({ content, media, parentId }) => {
       const socket = getSocket();
@@ -137,6 +161,7 @@ export default function ChatTab() {
     [communityId, dispatch, replyTo, user?.username, user?.id]
   );
 
+  // Like / dislike — optimistic update + socket emit
   const handleReact = useCallback(
     (targetType, targetId, action) => {
       dispatch(optimisticChatReaction({ targetId, action, userId: user?.id }));
@@ -145,6 +170,7 @@ export default function ChatTab() {
     [dispatch, user?.id]
   );
 
+  // Emoji reaction toggle — optimistic update + socket emit
   const handleEmoji = useCallback(
     (targetType, targetId, emoji) => {
       dispatch(optimisticChatEmoji({ targetId, emoji, userId: user?.id }));
@@ -153,6 +179,7 @@ export default function ChatTab() {
     [dispatch, user?.id]
   );
 
+  // Delete a message (own only) — removes it and all its child replies optimistically
   const handleDelete = useCallback(
     (targetType, targetId) => {
       if (String(targetId).startsWith('temp-')) {
@@ -190,12 +217,14 @@ export default function ChatTab() {
     [communityId, dispatch, timeline]
   );
 
+  // Emit a typing indicator when the user is composing
   const handleTyping = useCallback(() => {
     getSocket().emit('chat:typing', { communityId });
   }, [communityId]);
 
   return (
     <div className="flex flex-col h-full min-h-0 overflow-hidden">
+      {/* ── Status bar: typing indicator or connection status ── */}
       <div className="h-10 shrink-0 px-4 flex items-center border-b border-base-200 text-xs text-base-content/60">
         {typingUser ? (
           <span className="text-primary">{typingUser} is typing…</span>

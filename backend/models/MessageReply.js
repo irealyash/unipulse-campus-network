@@ -36,19 +36,23 @@ const messageReplySchema = new mongoose.Schema({
     default: 'message'
   },
 
+  // The user who wrote this reply (references the User collection).
   senderId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
   },
+  // Frozen snapshot of the sender's anonymous username at reply time.
   anonymousUsername: {
     type: String,
     required: true
   },
+  // Text content of the reply (can be empty if media-only).
   content: {
     type: String,
     default: ''
   },
+  // Optional single media attachment (image, video, or gif).
   media: {
     url: { type: String, default: null },
     mediaType: { type: String, enum: ['image', 'video', 'gif', null], default: null },
@@ -70,15 +74,18 @@ const messageReplySchema = new mongoose.Schema({
     default: []
   },
 
+  // Timestamp when this reply was created.
   createdAt: {
     type: Date,
     default: Date.now
   }
 });
 
+// Computed net score virtual for the frontend (likes minus dislikes).
 messageReplySchema.virtual('score').get(function () {
   return this.likes.length - this.dislikes.length;
 });
+// Include virtuals in serialized output so the frontend can read "score".
 messageReplySchema.set('toJSON', { virtuals: true });
 messageReplySchema.set('toObject', { virtuals: true });
 
@@ -87,4 +94,5 @@ messageReplySchema.index({ parentMessageId: 1, createdAt: 1 });
 // Also useful for moderation/listing all replies in a room.
 messageReplySchema.index({ communityId: 1, createdAt: -1 });
 
+// Export the MessageReply model bound to the "messagereplies" collection.
 export default mongoose.model('MessageReply', messageReplySchema);

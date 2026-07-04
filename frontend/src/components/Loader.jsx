@@ -1,5 +1,12 @@
 /**
- * Centered loading spinner used for route-level / full-page loading states.
+ * Loader — centered loading spinner with an optional label and brand logo.
+ *
+ * Used as a route-level / full-page loading indicator and inside components
+ * while data is being fetched (posts, events, messages, etc.).
+ *
+ * Props:
+ * @param {string}  label    — text shown below the spinner (default: "Loading…")
+ * @param {boolean} showLogo — if true, renders the UniPulse brand above the spinner
  */
 import { BrandText } from './Logo';
 

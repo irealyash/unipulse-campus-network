@@ -1,11 +1,22 @@
 import mongoose from 'mongoose';
 import { emojiReactionSchema } from './reactionSchema.js';
 
+/**
+ * POST MODEL
+ * ----------------------------------------------------------------------------
+ * A user-submitted post within a community. Posts go through moderator review
+ * (pending -> approved/rejected) before appearing in public feeds.
+ *
+ * Supports text content, media attachments, community tags, Reddit-style
+ * like/dislike voting, and free-form emoji reactions.
+ */
 const postSchema = new mongoose.Schema({
+    // The community this post belongs to (references Community._id string slug).
     communityId: {
         type: String,
         required: true
     }, // e.g., "CPSC-110-L1A" or "General"
+    // References the User who authored this post.
     authorId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
@@ -18,11 +29,14 @@ const postSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    // The headline/subject of the post (displayed prominently in feeds).
     title: {
         type: String,
         required: true,
         trim: true
     },
+    // Array of attached media items (images, videos, gifs). Each entry stores
+    // a URL and its media type for the frontend to render appropriately.
     media: {
         type: [{
             url: { type: String, required: true },
@@ -34,11 +48,13 @@ const postSchema = new mongoose.Schema({
         }],
         default: []
     },
+    // Optional community-specific tag for categorizing the post (e.g., "exam", "meme").
     tag: {
         type: String,
         default: null,
         trim: true
     },
+    // The main body text of the post.
     content: {
         type: String,
         required: true
@@ -73,15 +89,18 @@ const postSchema = new mongoose.Schema({
         enum: ['pending', 'approved', 'rejected'],
         default: 'pending'
     },
+    // The moderator (User) who approved or rejected this post.
     reviewedBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         default: null
     },
+    // Timestamp when the moderator reviewed this post.
     reviewedAt: {
         type: Date,
         default: null
     },
+    // Timestamp when the post was originally created/submitted.
     createdAt: {
         type: Date,
         default: Date.now
@@ -101,4 +120,5 @@ postSchema.set('toObject', { virtuals: true });
 postSchema.index({ communityId: 1, status: 1, createdAt: -1 });
 postSchema.index({ status: 1, createdAt: -1 });
 
+// Export the Post model bound to the "posts" collection.
 export default mongoose.model('Post', postSchema);

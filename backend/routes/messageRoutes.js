@@ -17,11 +17,14 @@ const router = Router();
 
 router.use(protect);
 
+// POST /api/messages/:id/react — toggle a like/dislike/none reaction on a chat message
 router.post('/:id/react', reactToMessage);
+// POST /api/messages/:id/emoji — toggle a specific emoji reaction on a chat message
 router.post('/:id/emoji', reactWithEmoji);
 
-// Separate definitions keep each handler's expected param name (messageId vs parentId).
+// GET  /api/messages/:messageId/replies — fetch the nested reply thread for a message
 router.get('/:messageId/replies', listThread);
+// POST /api/messages/:parentId/replies — reply to a message or reply (requireNotBanned blocks banned users)
 router.post('/:parentId/replies', requireNotBanned, createReply);
 
 export default router;

@@ -1,3 +1,16 @@
+/**
+ * @file auth.js — Authentication & authorization middleware.
+ *
+ * Provides three guards that are composed on route definitions:
+ *   1. protect          – verifies the JWT and attaches `req.user`
+ *   2. requireNotBanned – blocks banned users from write operations
+ *   3. requireModerator – restricts access to moderator-only routes
+ *
+ * Typical usage in a route file:
+ *   router.post('/posts', protect, requireNotBanned, createPost);
+ *   router.delete('/posts/:id', protect, requireModerator, deletePost);
+ */
+
 import User from '../models/User.js';
 import { verifyToken } from '../utils/token.js';
 import ApiError from '../utils/ApiError.js';
@@ -37,6 +50,8 @@ export const protect = asyncHandler(async (req, res, next) => {
     throw new ApiError(401, 'Not authorized: user no longer exists');
   }
 
+  // Attach the full Mongoose user document so downstream handlers can
+  // access fields like enrolledSections, username, isBanned, etc.
   req.user = user;
   next();
 });
@@ -45,6 +60,10 @@ export const protect = asyncHandler(async (req, res, next) => {
  * `requireNotBanned` blocks write actions (posting, commenting, chatting) for
  * banned users while still letting them read. Use it after `protect` on routes
  * that create content.
+ *
+ * @param {Object} req  – must already have `req.user` set by `protect`
+ * @param {Object} res  – not modified; error is thrown before reaching res
+ * @param {Function} next – called only if the user is not banned
  */
 export const requireNotBanned = (req, res, next) => {
   if (req.user?.isBanned) {
@@ -56,6 +75,10 @@ export const requireNotBanned = (req, res, next) => {
 /**
  * `requireModerator` gates the entire moderator tab. Use it after `protect` on
  * every /api/moderator route so only users with moderator === true get in.
+ *
+ * @param {Object} req  – must already have `req.user` set by `protect`
+ * @param {Object} res  – not modified; error is thrown before reaching res
+ * @param {Function} next – called only if req.user.moderator is truthy
  */
 export const requireModerator = (req, res, next) => {
   if (!req.user?.moderator) {

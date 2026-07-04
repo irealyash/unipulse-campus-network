@@ -1,14 +1,41 @@
+/**
+ * API CLIENT (Axios)
+ * ----------------------------------------------------------------------------
+ * Creates and exports a shared Axios instance used by all Redux thunks and
+ * utility functions to communicate with the UniPulse backend.
+ *
+ * Key behaviors:
+ *   - baseURL is "/api", proxied to the backend by Vite in dev (see vite.config.js)
+ *   - Automatically attaches the JWT bearer token to every outgoing request
+ *   - Normalizes error responses so callers can read `err.message` consistently
+ *   - Auto-clears the stored token on 401 (expired/invalid) to trigger re-login
+ *
+ * Also exports helpers for reading/writing/clearing the JWT in localStorage.
+ */
+
 import axios from 'axios';
 
-// Where we keep the JWT. Centralized so auth + socket read the same key.
+/** localStorage key where the JWT is stored. Used by auth slice and socket. */
 export const TOKEN_KEY = 'unipulse_token';
 
+/**
+ * Read the JWT from localStorage.
+ * @returns {string|null} The stored token, or null if absent.
+ */
 export const getToken = () => localStorage.getItem(TOKEN_KEY);
+
+/**
+ * Persist a JWT to localStorage.
+ * @param {string} token - The JWT to store.
+ */
 export const setToken = (token) => localStorage.setItem(TOKEN_KEY, token);
+
+/**
+ * Remove the JWT from localStorage (e.g. on logout or 401). */
 export const clearToken = () => localStorage.removeItem(TOKEN_KEY);
 
 /**
- * Shared axios instance. baseURL is "/api" which Vite proxies to the backend in
+ * Shared Axios instance. baseURL is "/api" which Vite proxies to the backend in
  * dev (see vite.config.js). Every request automatically carries the JWT.
  */
 const api = axios.create({

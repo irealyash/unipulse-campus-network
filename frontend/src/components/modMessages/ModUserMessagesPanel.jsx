@@ -1,3 +1,12 @@
+/**
+ * ModUserMessagesPanel — moderator inbox with a two-column layout:
+ *   Left: list of user conversation threads (sorted by most recent)
+ *   Right: the selected conversation's messages + a ChatInput composer
+ *
+ * Polls the active conversation every 4 seconds for new messages.
+ *
+ * Used inside the ModeratorPage "User threads" tab.
+ */
 import { useEffect, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -12,30 +21,38 @@ import ChatInput from '../chat/ChatInput';
 import Loader from '../Loader';
 import { timeAgo } from '../../lib/timeAgo';
 
+// Polling interval for new messages in the active conversation
 const POLL_MS = 4000;
 
-/** Moderator inbox — chat with users who have been messaged or replied. */
 export default function ModUserMessagesPanel() {
   const dispatch = useDispatch();
   const user = useSelector((s) => s.auth.user);
+  // All conversation threads for this moderator
   const conversations = useSelector((s) => s.modMessages.conversations);
+  // The currently selected conversation id
   const activeId = useSelector((s) => s.modMessages.activeConversationId);
+  // Messages for the active conversation
   const messages = useSelector((s) => s.modMessages.messages);
   const messagesStatus = useSelector((s) => s.modMessages.messagesStatus);
+  // Error from a failed send attempt
   const sendError = useSelector((s) => s.modMessages.error);
 
+  // The full conversation object for the active thread
   const active = conversations.find((c) => c._id === activeId) || null;
 
+  // Fetch all conversations on mount
   useEffect(() => {
     dispatch(fetchModConversations());
   }, [dispatch]);
 
+  // Auto-select the first conversation if none is active
   useEffect(() => {
     if (!activeId && conversations.length > 0) {
       dispatch(setActiveModConversation(conversations[0]._id));
     }
   }, [dispatch, activeId, conversations]);
 
+  // Fetch messages for the active conversation and poll for updates
   useEffect(() => {
     if (!activeId) return undefined;
     dispatch(fetchModMessages(activeId));
@@ -43,6 +60,7 @@ export default function ModUserMessagesPanel() {
     return () => clearInterval(id);
   }, [dispatch, activeId]);
 
+  // Send a message in the active conversation
   const handleSend = useCallback(
     async ({ content, media }) => {
       if (!activeId) return;

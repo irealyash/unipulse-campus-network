@@ -1,3 +1,13 @@
+/**
+ * VerifyPage.jsx
+ *
+ * Email verification form (step 2 of signup).
+ * Route: "/verify"
+ * Role: The user enters the 6-digit code emailed to their UBC address.
+ * On successful verification the account is fully created, a JWT is stored,
+ * and the user is sent to the onboarding page to pick communities/schedule.
+ */
+
 import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -13,13 +23,23 @@ export default function VerifyPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Reads auth.status from Redux — shows a spinner while the verify request is in flight
   const { status } = useSelector((s) => s.auth);
   const loading = status === 'loading';
 
+  // Pre-fill email from navigation state passed by SignupPage
   const [email, setEmail] = useState(location.state?.email || '');
+  // 6-digit verification code entered by the user
   const [code, setCode] = useState('');
+  // Feedback message for the "resend code" action
   const [resendMsg, setResendMsg] = useState('');
 
+  /**
+   * Handler: form submission.
+   * Triggered when the user clicks "Verify & create account".
+   * Dispatches the verify thunk with email + code; navigates to /onboarding on success.
+   */
   const onSubmit = async (e) => {
     e.preventDefault();
     const res = await dispatch(verify({ email: email.toLowerCase(), code }));
@@ -29,6 +49,11 @@ export default function VerifyPage() {
     }
   };
 
+  /**
+   * Handler: resend verification code.
+   * Triggered when the user clicks "Resend code".
+   * Calls the /auth/resend endpoint directly and shows a success/error message.
+   */
   const onResend = async () => {
     setResendMsg('');
     try {
@@ -49,7 +74,9 @@ export default function VerifyPage() {
         </Link>
       }
     >
+      {/* Verification form — email field (prefilled) and code input */}
       <form onSubmit={onSubmit} className="flex flex-col gap-3">
+        {/* Email input — pre-filled from signup but editable */}
         <label className="form-control">
           <span className="label-text mb-1 font-medium">UBC email</span>
           <input
@@ -61,6 +88,7 @@ export default function VerifyPage() {
           />
         </label>
 
+        {/* 6-digit code input — numeric only, strips non-digits */}
         <label className="form-control">
           <span className="label-text mb-1 font-medium">Verification code</span>
           <input
@@ -74,13 +102,15 @@ export default function VerifyPage() {
           />
         </label>
 
+        {/* Submit button — shows spinner while verifying */}
         <button type="submit" className="btn btn-primary rounded-2xl mt-2" disabled={loading}>
           {loading && <span className="loading loading-spinner loading-sm" />}
           Verify & create account
         </button>
 
+        {/* Resend code link and status message */}
         <div className="text-center text-sm text-base-content/60">
-          Didn’t get it?{' '}
+          Didn't get it?{' '}
           <button type="button" onClick={onResend} className="link link-primary">
             Resend code
           </button>

@@ -1,4 +1,18 @@
-/** Pick the first community in the user's navbar (joined + course sections only). */
+/**
+ * COMMUNITY NAVIGATION HELPERS
+ * ----------------------------------------------------------------------------
+ * Utility functions for determining default community selections and building
+ * community chat URLs. Used by the sidebar and routing logic to decide which
+ * community to show when the user first lands on the community hub.
+ */
+
+/**
+ * Pick the default community to navigate to from the user's list.
+ * Prefers the first joined community, then falls back to the first course community.
+ * @param {Array<Object>} list - The user's community list.
+ * @param {Object}        user - The current user (with joinedCommunities array).
+ * @returns {string|null} The default community's _id, or null if none found.
+ */
 export function pickDefaultCommunityId(list, user) {
   if (!Array.isArray(list) || list.length === 0) return null;
 
@@ -14,6 +28,11 @@ export function pickDefaultCommunityId(list, user) {
   return null;
 }
 
+/**
+ * Build the URL path for a community's chat tab.
+ * @param {string} communityId - The community ID.
+ * @returns {string} URL path like "/c/CPSC%20320-921/chat".
+ */
 export function communityChatPath(communityId) {
   return `/c/${encodeURIComponent(communityId)}/chat`;
 }

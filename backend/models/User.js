@@ -1,6 +1,17 @@
 import mongoose from 'mongoose';
 
+/**
+ * USER MODEL
+ * ----------------------------------------------------------------------------
+ * Represents a registered student on UniPulse. Each user has a unique email
+ * (verified via OTP during signup) and a mutable anonymous username.
+ *
+ * Users can join communities, upload course schedules, and participate in
+ * posts/comments/chat. Moderator privileges are granted offline via CLI.
+ */
 const userSchema = new mongoose.Schema({
+    // University email address — used for login and OTP verification.
+    // Lowercased and trimmed to prevent duplicates from casing differences.
     email: {
         type: String,
         required: true,
@@ -63,6 +74,7 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    // Timestamp when the user account was created (defaults to registration time).
     createdAt: {
         type: Date,
         default: Date.now
@@ -72,4 +84,5 @@ const userSchema = new mongoose.Schema({
 // Index to instantly authorize users entering course channels or posting
 userSchema.index({ enrolledSections: 1 });
 
+// Export the User model bound to the "users" collection in MongoDB.
 export default mongoose.model('User', userSchema);

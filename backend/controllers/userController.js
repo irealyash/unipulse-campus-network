@@ -92,6 +92,10 @@ export const uploadScheduleFile = asyncHandler(async (req, res) => {
 /**
  * POST /api/users/me/joined-communities
  * Body: { communityId }
+ * Adds a public catalog community to the user's navbar. Only public, non-course
+ * communities from allowed categories can be joined this way; course sections
+ * are enrolled via schedule upload. Idempotent — silently skips if already joined.
+ * Returns: { user, community } with the updated joined list.
  */
 export const joinCommunity = asyncHandler(async (req, res) => {
   const { communityId } = req.body;
@@ -122,6 +126,10 @@ export const joinCommunity = asyncHandler(async (req, res) => {
 
 /**
  * DELETE /api/users/me/joined-communities/:communityId
+ * Removes a catalog community from the user's navbar. Does not delete the
+ * community itself — only the user's personal membership link.
+ * Params: :communityId — the community's string _id.
+ * Returns: { user } with the updated joined list.
  */
 export const leaveCommunity = asyncHandler(async (req, res) => {
   const { communityId } = req.params;
@@ -139,6 +147,9 @@ export const leaveCommunity = asyncHandler(async (req, res) => {
 
 /**
  * POST /api/users/me/community-onboarding
+ * Marks the authenticated user's community onboarding as complete. Called once
+ * after the user finishes browsing/joining communities during first-time setup.
+ * No body required. Returns: { user } with communityOnboardingComplete = true.
  */
 export const completeCommunityOnboarding = asyncHandler(async (req, res) => {
   req.user.communityOnboardingComplete = true;

@@ -1,5 +1,16 @@
 /**
+ * FAVICON UTILITY
+ * ----------------------------------------------------------------------------
+ * Dynamically regenerates the browser tab favicon to match the active DaisyUI
+ * theme. Reads CSS custom properties (--color-primary, --color-primary-content)
+ * from the document root and renders a simple SVG "U" badge as the favicon.
+ * Called on app boot and whenever the user switches themes.
+ */
+
+/**
  * Regenerate the tab favicon using the active theme's primary colors.
+ * Creates an SVG with a rounded rectangle background and a centered "U" letter,
+ * then sets it as both the standard icon and apple-touch-icon.
  */
 export function updateThemeFavicon() {
   const styles = getComputedStyle(document.documentElement);
@@ -13,6 +24,7 @@ export function updateThemeFavicon() {
 
   const href = `data:image/svg+xml,${encodeURIComponent(svg)}`;
 
+  /** Find or create a <link> element for the given rel attribute and set its href. */
   const ensureLink = (rel) => {
     let link = document.querySelector(`link[rel="${rel}"]`);
     if (!link) {

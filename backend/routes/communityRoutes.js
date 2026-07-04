@@ -31,27 +31,31 @@ const router = Router();
 
 router.use(protect);
 
-// Community collection + creation (creation is moderator-only).
+// GET /api/communities — list communities the authenticated user can see
 router.route('/').get(listCommunities);
+// GET /api/communities/catalog — browse the full public community catalog
 router.get('/catalog', listCatalog);
 
-// Nested post feed (declared before "/:id" is fine since paths are distinct).
+// GET  /api/communities/:communityId/posts — paginated post feed for a community
+// POST /api/communities/:communityId/posts — create a post (requireNotBanned middleware blocks banned users)
 router
   .route('/:communityId/posts')
   .get(listPosts)
   .post(requireNotBanned, createPost);
 
-// Nested events — any member can submit; moderator approves before listing.
+// GET  /api/communities/:communityId/events — list approved events for a community
+// POST /api/communities/:communityId/events — submit a new event (pending moderator approval; requireNotBanned)
 router
   .route('/:communityId/events')
   .get(listEvents)
   .post(requireNotBanned, createEvent);
 
-// Nested chat history (sending happens over Socket.io).
+// GET /api/communities/:communityId/timeline — chat timeline with cursor-based pagination
 router.get('/:communityId/timeline', getChatTimeline);
+// GET /api/communities/:communityId/messages — full chat history for a community
 router.get('/:communityId/messages', getMessages);
 
-// Single community lookup.
+// GET /api/communities/:id — fetch a single community by ID (access-gated)
 router.get('/:id', getCommunity);
 
 export default router;

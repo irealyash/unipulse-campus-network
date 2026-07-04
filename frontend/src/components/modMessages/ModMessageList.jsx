@@ -1,7 +1,16 @@
+/**
+ * ModMessageList — read-only scrollable message list for moderator ↔ user
+ * direct messages. Shows an optional header with the contact's name, and
+ * auto-scrolls to the bottom when new messages arrive.
+ *
+ * Used inside ModUserMessagesPanel (moderator inbox) and UserMessagesPage
+ * (user-side DM view).
+ */
 import { useEffect, useRef } from 'react';
 import UserAvatar from '../UserAvatar';
 import { ShieldIcon } from '../icons';
 
+/** Renders media (image/video) or plain text content inside a DM bubble. */
 function MediaBlock({ media, content }) {
   if (media?.url) {
     if (media.mediaType === 'video') {
@@ -15,6 +24,11 @@ function MediaBlock({ media, content }) {
   return <p className="text-sm whitespace-pre-wrap break-words">{content}</p>;
 }
 
+/**
+ * ModMessageBubble — single DM bubble showing the sender's avatar
+ * (shield icon for moderators, user avatar otherwise), message content,
+ * and timestamp. Right-aligned when the message is from the current user.
+ */
 function ModMessageBubble({ message, myId }) {
   const mine = String(message.senderId) === String(myId);
   const isMod = message.senderRole === 'moderator';
@@ -49,11 +63,16 @@ function ModMessageBubble({ message, myId }) {
 }
 
 /**
- * Read-only message list + optional header for mod/user DMs.
+ * Props:
+ * @param {Array}  messages — array of message objects
+ * @param {string} myId     — current user's id (to determine own vs other)
+ * @param {string} [title]  — contact name shown in the header
+ * @param {string} [subtitle] — secondary text below the title
  */
 export default function ModMessageList({ messages, myId, title, subtitle }) {
   const scrollRef = useRef(null);
 
+  // Auto-scroll to the newest message whenever the list grows
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;

@@ -10,8 +10,10 @@ import { createReport } from '../controllers/reportController.js';
  */
 const router = Router();
 
+// All report routes require authentication
 router.use(protect);
 
+// POST / — file a new report; requires user not be banned (protect, requireNotBanned)
 router.post('/', requireNotBanned, createReport);
 
 export default router;

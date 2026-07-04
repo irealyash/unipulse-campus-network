@@ -1,3 +1,13 @@
+/**
+ * PrivacyModal — read-only modal displaying the Privacy Policy.
+ *
+ * Contains the full privacy policy text in scrollable sections. Opened
+ * from the signup/login footer links.
+ *
+ * Props:
+ * @param {boolean}    open    — controls modal visibility
+ * @param {() => void} onClose — close callback
+ */
 import { CloseIcon } from './icons';
 
 export default function PrivacyModal({ open, onClose }) {

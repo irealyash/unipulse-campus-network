@@ -1,3 +1,12 @@
+/**
+ * PostCommentSection — threaded comments UI for a single post.
+ *
+ * Renders a recursive comment tree with voting, replies, GIF support,
+ * and report buttons. Also exports VoteColumn, PostMedia, and POST_TAGS
+ * for use by PostsTab and other post-related components.
+ *
+ * Used inside the full-post thread view page.
+ */
 import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { createComment, reactToComment } from '../../features/posts/postsSlice';
@@ -6,6 +15,7 @@ import GifPicker from '../chat/GifPicker';
 import ReportFlagButton from '../ReportFlagButton';
 import { EventMediaCarousel } from './EventParts';
 
+// Available tags when creating a post
 export const POST_TAGS = [
   'General',
   'Discussion',
@@ -16,6 +26,7 @@ export const POST_TAGS = [
   'Confession',
 ];
 
+/** Renders an image or video attached to a comment. */
 function CommentMedia({ media }) {
   if (!media?.url) return null;
   if (media.mediaType === 'video') {
@@ -24,6 +35,14 @@ function CommentMedia({ media }) {
   return <img src={media.url} alt="" className="rounded-xl max-h-48 mt-2 object-contain" />;
 }
 
+/**
+ * VoteColumn — reusable up/down vote widget used in posts and comments.
+ * @param {number}  score     — net vote score
+ * @param {string}  myVote    — 'like' | 'dislike' | null
+ * @param {Function} onLike   — handler for upvote click
+ * @param {Function} onDislike— handler for downvote click
+ * @param {boolean} horizontal— if true, render horizontally instead of vertically
+ */
 export function VoteColumn({ score, myVote, onLike, onDislike, horizontal = false }) {
   const btnClass = horizontal ? 'btn-sm' : 'btn-xs btn-square';
 
@@ -56,16 +75,20 @@ export function VoteColumn({ score, myVote, onLike, onDislike, horizontal = fals
   );
 }
 
+// Local alias avoids Fast Refresh issues with re-exported components
 function VoteColumnLocal(props) {
   return <VoteColumn {...props} />;
 }
 
+// Recursively count all nested replies under a comment
 function countReplies(replies) {
   if (!replies?.length) return 0;
   return replies.reduce((n, r) => n + 1 + countReplies(r.replies), 0);
 }
 
+/** Single comment with vote controls, reply button, and collapsible child thread. */
 function CommentItem({ comment, onReply, onReact, onReport, depth = 0 }) {
+  // Whether the nested replies are expanded
   const [showReplies, setShowReplies] = useState(false);
   const directReplies = comment.replies?.length || 0;
   const totalReplies = countReplies(comment.replies);
@@ -122,6 +145,7 @@ function CommentItem({ comment, onReply, onReact, onReport, depth = 0 }) {
   );
 }
 
+/** Recursive list of CommentItems — renders an arbitrarily deep thread. */
 function CommentTree({ comments, onReply, onReact, onReport, depth = 0 }) {
   if (!comments?.length) return null;
   return (
@@ -140,7 +164,18 @@ function CommentTree({ comments, onReply, onReact, onReport, depth = 0 }) {
   );
 }
 
-/** Threaded comments + composer with GIF support and cancelable replies. */
+/**
+ * PostCommentSection — threaded comments + composer with GIF support.
+ *
+ * Props:
+ * @param {string}   postId       — the parent post id
+ * @param {Array}    comments     — top-level comment objects with nested .replies
+ * @param {string}   commentSort  — 'new' | 'top'
+ * @param {Function} onSortChange — switch comment sort order
+ * @param {Function} onRefresh    — re-fetch comments
+ * @param {boolean}  disabled     — disable the comment composer
+ * @param {Function} onReport     — open the report modal
+ */
 export default function PostCommentSection({
   postId,
   comments,
@@ -152,12 +187,16 @@ export default function PostCommentSection({
 }) {
   const dispatch = useDispatch();
   const user = useSelector((s) => s.auth.user);
+  // The comment being replied to (null = top-level comment)
   const [replyParent, setReplyParent] = useState(null);
+  // Text in the comment composer input
   const [commentText, setCommentText] = useState('');
+  // Whether the GIF picker popover is open
   const [gifOpen, setGifOpen] = useState(false);
 
   const cancelReply = () => setReplyParent(null);
 
+  // Submit a text comment (optimistic + dispatches createComment thunk)
   const submitComment = async (e) => {
     e.preventDefault();
     if (!commentText.trim()) return;
@@ -177,6 +216,7 @@ export default function PostCommentSection({
     );
   };
 
+  // Submit a GIF comment (no text, just media)
   const sendGif = async (url) => {
     const parentId = replyParent?._id || replyParent || null;
     const optimisticId = `temp-${Date.now()}`;
@@ -278,6 +318,10 @@ export default function PostCommentSection({
   );
 }
 
+/**
+ * PostMedia — renders a post's media attachments using EventMediaCarousel.
+ * Normalizes both array and single-object media formats.
+ */
 export function PostMedia({ media, compact = false, feed = false }) {
   let items = [];
   if (Array.isArray(media)) {

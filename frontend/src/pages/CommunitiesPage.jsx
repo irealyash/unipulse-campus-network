@@ -1,3 +1,14 @@
+/**
+ * CommunitiesPage.jsx
+ *
+ * Community listing page (card grid view).
+ * Route: "/communities"
+ * Role: Displays all communities the user can access, split into General and
+ * Course sections. Each community links to its group chat. Also includes a
+ * schedule-upload nudge if the user hasn't uploaded yet, and a button to
+ * suggest a new community (opens RequestModeratorModal).
+ */
+
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
@@ -15,6 +26,7 @@ function CommunityCard({ c }) {
       className="card bg-base-100 border border-base-content/5 shadow-md hover:shadow-xl hover:-translate-y-1 transition group"
     >
       <div className="card-body p-5">
+        {/* Top row — avatar icon and type badge */}
         <div className="flex items-start justify-between gap-2">
           <div
             className={`avatar avatar-placeholder ${
@@ -34,11 +46,13 @@ function CommunityCard({ c }) {
           </span>
         </div>
 
+        {/* Community name and optional description */}
         <h3 className="card-title text-base mt-2">{c.name}</h3>
         {c.description && (
           <p className="text-sm text-base-content/60 line-clamp-2">{c.description}</p>
         )}
 
+        {/* "Open chat" CTA */}
         <div className="card-actions mt-2">
           <span className="btn btn-sm btn-primary btn-soft rounded-full gap-1 group-hover:btn-primary">
             <ChatIcon /> Open chat
@@ -55,20 +69,29 @@ function CommunityCard({ c }) {
  */
 export default function CommunitiesPage() {
   const dispatch = useDispatch();
+
+  // Reads the community list and its loading status from Redux
   const { list, status } = useSelector((s) => s.communities);
+  // Reads the user object to check schedule upload status
   const user = useSelector((s) => s.auth.user);
+  // Controls visibility of the "suggest a community" modal
   const [requestOpen, setRequestOpen] = useState(false);
 
+  /**
+   * useEffect: Fetches the full community list on mount.
+   * Runs once when the component mounts.
+   */
   useEffect(() => {
     dispatch(fetchCommunities());
   }, [dispatch]);
 
+  // Split communities into General and Course categories for display
   const general = list.filter((c) => c.type !== 'course');
   const courses = list.filter((c) => c.type === 'course');
 
   return (
     <div>
-      {/* Header */}
+      {/* Page header — title, subtitle, and "Suggest a community" button */}
       <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
         <div>
           <h1 className="text-3xl font-extrabold">Communities</h1>
@@ -79,7 +102,7 @@ export default function CommunitiesPage() {
         </button>
       </div>
 
-      {/* Schedule nudge */}
+      {/* Schedule upload nudge — shown if user hasn't uploaded their schedule yet */}
       {user && !user.scheduleUploaded && (
         <div className="alert bg-secondary/10 border border-secondary/20 rounded-3xl mb-6">
           <CalendarIcon className="text-secondary text-xl" />
@@ -95,11 +118,12 @@ export default function CommunitiesPage() {
         </div>
       )}
 
+      {/* Loading state */}
       {status === 'loading' && <Loader label="Loading communities…" />}
 
       {status !== 'loading' && (
         <>
-          {/* General */}
+          {/* General communities section */}
           <section className="mb-8">
             <h2 className="text-lg font-bold mb-3 flex items-center gap-2">
               <UsersIcon className="text-primary" /> General
@@ -115,7 +139,7 @@ export default function CommunitiesPage() {
             )}
           </section>
 
-          {/* Course */}
+          {/* Course communities section */}
           <section>
             <h2 className="text-lg font-bold mb-3 flex items-center gap-2">
               <CalendarIcon className="text-secondary" /> Your courses
@@ -141,6 +165,7 @@ export default function CommunitiesPage() {
         </>
       )}
 
+      {/* Modal for suggesting/requesting a new community */}
       <RequestModeratorModal open={requestOpen} onClose={() => setRequestOpen(false)} />
     </div>
   );

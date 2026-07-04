@@ -1,18 +1,29 @@
+/**
+ * RequestModeratorModal — modal for sending a free-text suggestion or request
+ * to the moderators (e.g. "please create a community for CPSC 320").
+ *
+ * Posts to /requests endpoint. Controlled via `open`/`onClose`.
+ *
+ * Props:
+ * @param {boolean}    open        — controls modal visibility
+ * @param {() => void} onClose     — close callback
+ * @param {string}     [communityId] — optional community context for the request
+ */
 import { useState } from 'react';
 import api from '../lib/api';
 import { CloseIcon, InboxIcon } from './icons';
 
-/**
- * Modal letting any user send a free-text message to the moderators (e.g.
- * "please create a community for CPSC 320"). Controlled via `open`/`onClose`.
- */
 export default function RequestModeratorModal({ open, onClose, communityId = null }) {
+  // The user's request/suggestion message text
   const [message, setMessage] = useState('');
+  // Whether the submission is in progress
   const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState(null); // { ok, text }
+  // Result of the submission: { ok: boolean, text: string } or null
+  const [result, setResult] = useState(null);
 
   if (!open) return null;
 
+  // Submit the request to POST /requests
   const submit = async (e) => {
     e.preventDefault();
     if (!message.trim()) return;

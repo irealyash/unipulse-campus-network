@@ -1,7 +1,30 @@
+/**
+ * @file chatSocket.js — Real-time Chat via Socket.io
+ *
+ * This module powers UniPulse's anonymous live chat feature. Each community
+ * has its own Socket.io room where members can send messages, reply to
+ * messages, react with likes/dislikes/emojis, and delete their own content
+ * — all in real time.
+ *
+ * Architecture overview:
+ *   1. Authentication: JWT-based middleware runs on every socket handshake.
+ *   2. Room management: Users join/leave community rooms via chat:join/leave.
+ *   3. Messaging: Messages are persisted to MongoDB then broadcast to the room.
+ *   4. Reactions: Like/dislike/emoji mutations are applied, saved, and broadcast.
+ *   5. Deletion: Cascade-deletes (message + its replies) are broadcast as a
+ *      list of removed IDs so clients can purge them from the UI.
+ *
+ * Exported:
+ *   initChat(io) — call once from server.js to wire up all handlers.
+ */
+
+// --- Model imports (Mongoose schemas for persistence) ---
 import User from '../models/User.js';
 import Community from '../models/Community.js';
 import Message from '../models/Message.js';
 import MessageReply from '../models/MessageReply.js';
+
+// --- Utility imports ---
 import { verifyToken } from '../utils/token.js';
 import { canAccessCommunity } from '../utils/membership.js';
 import { applyLikeDislike } from '../utils/likeDislike.js';
@@ -57,6 +80,8 @@ const socketAuth = async (socket, next) => {
   }
 };
 
+// Helper: extracts the owner's user ID string from a message/reply document,
+// handling both populated and unpopulated senderId fields.
 const ownerUserId = (doc) => {
   const sid = doc.senderId;
   if (!sid) return null;
@@ -64,7 +89,8 @@ const ownerUserId = (doc) => {
 };
 
 /**
- * target message/reply, enforces room access, applies the supplied mutation,
+ * Generic reaction handler (shared by chat:react and chat:emoji).
+ * Loads the target message/reply, enforces room access, applies the supplied mutation,
  * persists, and broadcasts the updated reaction state to the room.
  *
  * @param socket            - the acting socket
@@ -373,6 +399,7 @@ export const initChat = (io) => {
       }
     });
 
+    // Clean up: log when a user's socket disconnects (e.g. tab close, network loss).
     socket.on('disconnect', () => {
       console.log(`[socket] disconnected: ${socket.user.username} (${socket.id})`);
     });

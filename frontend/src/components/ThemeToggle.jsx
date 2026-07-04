@@ -1,8 +1,19 @@
+/**
+ * ThemeToggle — DaisyUI theme switcher button with a portal dropdown menu.
+ *
+ * Persists the selected theme to localStorage and applies it via the
+ * `data-theme` attribute on <html>. Also updates the browser favicon
+ * to match the chosen theme's colours.
+ *
+ * The dropdown menu is portaled to <body> so it stacks above all content.
+ *
+ * Used in Navbar, CommunityShell header, and AuthShell.
+ */
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { updateThemeFavicon } from '../lib/favicon';
 
-// The themes we registered in index.css (@plugin "daisyui").
+// Available DaisyUI themes registered in index.css
 const THEMES = [
   { id: 'cupcake', label: 'Cupcake' },
   { id: 'bumblebee', label: 'Bumblebee' },
@@ -13,36 +24,37 @@ const THEMES = [
   { id: 'night', label: 'Night' },
   { id: 'true-dark', label: 'True Dark' },
 ];
+// localStorage key for persisting the selected theme
 const STORAGE_KEY = 'unipulse_theme';
 
+// Look up the user-friendly label for a theme id
 const themeLabel = (id) => THEMES.find((t) => t.id === id)?.label || id;
 
-/**
- * Theme switcher. Persists the chosen DaisyUI theme to localStorage and applies
- * it via the `data-theme` attribute on <html>, which DaisyUI reads.
- *
- * The menu is portaled to <body> so it always stacks above page content
- * (e.g. landing hero sections that share the same z-index as the navbar).
- */
 export default function ThemeToggle() {
+  // Active theme id, defaulting to 'dracula' on first visit
   const [theme, setTheme] = useState(() => localStorage.getItem(STORAGE_KEY) || 'dracula');
+  // Whether the theme menu dropdown is open
   const [open, setOpen] = useState(false);
+  // Absolute position for the portal menu
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
   const btnRef = useRef(null);
   const menuRef = useRef(null);
 
+  // Apply theme to the document and persist it whenever it changes
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem(STORAGE_KEY, theme);
     updateThemeFavicon();
   }, [theme]);
 
+  // Recalculate menu position based on the toggle button's bounding rect
   const updatePosition = () => {
     if (!btnRef.current) return;
     const rect = btnRef.current.getBoundingClientRect();
     setMenuPos({ top: rect.bottom + 8, left: rect.right });
   };
 
+  // Close on outside click; keep position in sync on resize/scroll
   useEffect(() => {
     if (!open) return;
 
@@ -65,6 +77,7 @@ export default function ThemeToggle() {
     };
   }, [open]);
 
+  // Select a theme and close the dropdown
   const pick = (id) => {
     setTheme(id);
     setOpen(false);

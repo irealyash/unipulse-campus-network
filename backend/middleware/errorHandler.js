@@ -1,8 +1,27 @@
+/**
+ * @file errorHandler.js — Centralized error-handling middleware.
+ *
+ * Exports two middlewares registered at the bottom of the Express stack
+ * (in server.js) so they run after all route handlers:
+ *
+ *   1. notFound     – catches requests that matched no route and returns 404.
+ *   2. errorHandler – catches every error thrown or passed via next(err) and
+ *                     normalises it into a { success, message } JSON response.
+ *
+ * Library-specific errors (Mongoose CastError / ValidationError, Mongo
+ * duplicate-key 11000, Multer file errors) are translated into user-friendly
+ * messages with appropriate HTTP status codes.
+ */
+
 import multer from 'multer';
 
 /**
  * 404 handler for any route that didn't match. Placed just before the error
  * handler in server.js so unknown paths get a consistent JSON shape.
+ *
+ * @param {Object} req  – the incoming request (used for `req.originalUrl`)
+ * @param {Object} res  – sends a 404 JSON response
+ * @param {Function} next – not called; response is sent directly
  */
 export const notFound = (req, res, next) => {
   res.status(404).json({ success: false, message: `Route not found: ${req.originalUrl}` });
@@ -14,6 +33,11 @@ export const notFound = (req, res, next) => {
  *
  * Must keep all four args (err, req, res, next) so Express recognizes it as an
  * error-handling middleware.
+ *
+ * @param {Error}    err  – the error object (may be ApiError, Mongoose error, etc.)
+ * @param {Object}   req  – the incoming request (used only for context)
+ * @param {Object}   res  – sends the final JSON error response
+ * @param {Function} next – required by Express signature but never called
  */
 // eslint-disable-next-line no-unused-vars
 export const errorHandler = (err, req, res, next) => {

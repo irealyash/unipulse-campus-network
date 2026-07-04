@@ -1,3 +1,19 @@
+/**
+ * APPLICATION ENTRY POINT
+ * ----------------------------------------------------------------------------
+ * This is the Vite entry file that bootstraps the UniPulse React application.
+ *
+ * Bootstrap sequence:
+ *   1. Apply the user's saved DaisyUI theme from localStorage (or default to 'dracula')
+ *      immediately, before React renders, to prevent a flash of unstyled content.
+ *   2. Regenerate the favicon to match the active theme colors.
+ *   3. Mount the React tree into the #root DOM element with:
+ *      - StrictMode   — enables extra development checks and warnings
+ *      - Provider      — makes the Redux store available to all components
+ *      - BrowserRouter — enables client-side routing via React Router
+ *      - App           — the root application component with all routes
+ */
+
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Provider } from 'react-redux';

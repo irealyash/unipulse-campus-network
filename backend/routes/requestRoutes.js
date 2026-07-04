@@ -10,8 +10,10 @@ import { createModeratorRequest } from '../controllers/moderatorRequestControlle
  */
 const router = Router();
 
+// All request routes require authentication
 router.use(protect);
 
+// POST / — submit a new moderator request; requires user not be banned (protect, requireNotBanned)
 router.post('/', requireNotBanned, createModeratorRequest);
 
 export default router;

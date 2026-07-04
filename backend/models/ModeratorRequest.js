@@ -66,4 +66,5 @@ const moderatorRequestSchema = new mongoose.Schema({
 // Moderator queue: newest pending first.
 moderatorRequestSchema.index({ status: 1, createdAt: -1 });
 
+// Export the ModeratorRequest model bound to the "moderatorrequests" collection.
 export default mongoose.model('ModeratorRequest', moderatorRequestSchema);

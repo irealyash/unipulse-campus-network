@@ -1,3 +1,11 @@
+/**
+ * Navbar — top navigation bar shown on non-community pages (e.g. settings,
+ * schedule upload, landing). Renders the UniPulse brand, primary links
+ * (Communities, Moderator for mod users), the theme switcher, and a
+ * dropdown user menu with settings, schedule, and logout actions.
+ *
+ * Not used inside CommunityShell (which has its own header).
+ */
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { logout } from '../features/auth/authSlice';
@@ -6,20 +14,18 @@ import UserAvatar from './UserAvatar';
 import { BrandLink } from './Logo';
 import { ShieldIcon, LogoutIcon } from './icons';
 
-/**
- * Top navigation bar. Shows the brand, primary links (Communities, and the
- * Moderator tab for moderators only), the theme switcher, and a user menu.
- */
 export default function Navbar() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const user = useSelector((s) => s.auth.user);
 
+  // Dispatch logout action and redirect to login page
   const onLogout = () => {
     dispatch(logout());
     navigate('/login');
   };
 
+  // Dynamic className for NavLinks — highlights the active route
   const linkClass = ({ isActive }) =>
     `btn btn-ghost btn-sm rounded-full ${isActive ? 'btn-active text-primary' : ''}`;
 

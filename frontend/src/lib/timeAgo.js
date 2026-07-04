@@ -1,4 +1,16 @@
-/** Relative upload time, e.g. "5 min ago", "23 hours ago", "6 months ago". */
+/**
+ * TIME AGO UTILITY
+ * ----------------------------------------------------------------------------
+ * Converts an ISO date string or Date object into a human-readable relative
+ * time string like "5 min ago", "23 hours ago", or "6 months ago".
+ * Used throughout the app for post timestamps, chat messages, event dates, etc.
+ */
+
+/**
+ * Format a date as a relative time string.
+ * @param {string|Date} isoOrDate - An ISO 8601 string or Date object.
+ * @returns {string} Human-readable relative time (e.g. "5 min ago"), or '' if invalid.
+ */
 export function timeAgo(isoOrDate) {
   const then = new Date(isoOrDate).getTime();
   if (Number.isNaN(then)) return '';

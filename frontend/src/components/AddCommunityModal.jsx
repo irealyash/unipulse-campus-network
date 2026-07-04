@@ -1,3 +1,17 @@
+/**
+ * AddCommunityModal — two-step modal for discovering and joining public
+ * communities from the catalog:
+ *   Step 1 ("category"): user picks a category (e.g. International, Academic)
+ *   Step 2 ("pick"):     filtered, searchable list of communities in that category
+ *
+ * Adding a community dispatches joinCommunity, which adds it to the user's
+ * navbar. Already-joined communities are shown as "Added".
+ *
+ * Props:
+ * @param {boolean}   open             — controls modal visibility
+ * @param {() => void} onClose         — close callback
+ * @param {string}    [initialCategory]— skip step 1 and go straight to this category
+ */
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchCatalog, joinCommunity } from '../features/communities/communitiesSlice';
@@ -7,25 +21,25 @@ import Loader from './Loader';
 import { SearchIcon } from './icons';
 import useDebouncedValue from '../hooks/useDebouncedValue';
 
-/**
- * Pick a category then add a public catalog community to the navbar.
- * @param {object} props
- * @param {boolean} props.open
- * @param {() => void} props.onClose
- * @param {string} [props.initialCategory]
- */
 export default function AddCommunityModal({ open, onClose, initialCategory = null }) {
   const dispatch = useDispatch();
   const user = useSelector((s) => s.auth.user);
+  // List of communities in the selected category from Redux
   const catalog = useSelector((s) => s.communities.catalog);
   const catalogStatus = useSelector((s) => s.communities.catalogStatus);
+  // Community ids the user has already joined
   const joined = user?.joinedCommunities || [];
 
+  // Current modal step: "category" or "pick"
   const [step, setStep] = useState(initialCategory ? 'pick' : 'category');
+  // Selected category id
   const [category, setCategory] = useState(initialCategory);
+  // Search query text
   const [search, setSearch] = useState('');
+  // Debounced search value to avoid excessive API calls
   const debouncedSearch = useDebouncedValue(search, 250);
 
+  // Reset modal state when it opens/closes
   useEffect(() => {
     if (!open) {
       setStep(initialCategory ? 'pick' : 'category');
@@ -34,6 +48,7 @@ export default function AddCommunityModal({ open, onClose, initialCategory = nul
     }
   }, [open, initialCategory]);
 
+  // Fetch catalog whenever category or search changes
   useEffect(() => {
     if (open && step === 'pick' && category) {
       dispatch(fetchCatalog({ category, search: debouncedSearch.trim() }));
@@ -42,12 +57,14 @@ export default function AddCommunityModal({ open, onClose, initialCategory = nul
 
   if (!open) return null;
 
+  // User selects a category — advance to the pick step
   const pickCategory = (cat) => {
     setCategory(cat);
     setStep('pick');
     setSearch('');
   };
 
+  // Join a community (adds it to the user's navbar)
   const addCommunity = (c) => {
     if (!joined.includes(c._id)) {
       dispatch(joinCommunity(c));

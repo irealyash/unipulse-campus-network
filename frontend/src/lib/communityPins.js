@@ -1,9 +1,29 @@
-/** Sort navbar communities: joined order first, then course sections, then by name. */
+/**
+ * COMMUNITY SORTING / PINNING
+ * ----------------------------------------------------------------------------
+ * Sorts the navbar community list for display. Pinned communities (the user's
+ * explicitly joined catalog communities) appear first in their pinned order,
+ * followed by course communities, then other communities alphabetically.
+ * Used by the sidebar to present a consistent, user-customizable ordering.
+ */
+
+/**
+ * Assign a sort group to a community: courses first (0), then others (1).
+ * @param {Object} c - Community object.
+ * @returns {number} Sort group index.
+ */
 function sortGroup(c) {
   if (c.type === 'course') return 0;
   return 1;
 }
 
+/**
+ * Sort a list of communities for navbar display.
+ * Sort priority: pinned communities (in pin order) → course communities → alphabetical.
+ * @param {Array<Object>}  list      - Array of community objects.
+ * @param {Array<string>}  pinnedIds - Ordered array of pinned community IDs.
+ * @returns {Array<Object>} A new sorted array (does not mutate the input).
+ */
 export function sortCommunities(list, pinnedIds = []) {
   const pinIndex = new Map(pinnedIds.map((id, i) => [id, i]));
 

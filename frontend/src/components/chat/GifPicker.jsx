@@ -1,7 +1,20 @@
+/**
+ * GifPicker — Giphy-powered GIF search popover. Appears as a floating panel
+ * anchored to the GIF button in ChatInput.
+ *
+ * Loads trending GIFs on open; user can search for specific keywords.
+ * Selecting a GIF calls onSelect(url) and closes the picker.
+ *
+ * Props (outer wrapper):
+ * @param {boolean}   open     — whether the picker is visible
+ * @param {() => void} onClose — close the picker
+ * @param {(url: string) => void} onSelect — called with the selected GIF URL
+ */
 import { useEffect, useState } from 'react';
 import { CloseIcon, SearchIcon } from '../icons';
 import { searchGifs, trendingGifs } from '../../lib/media';
 
+// Pick the smallest usable preview URL from Giphy's images object
 function gifPreviewUrl(g) {
   return (
     g.images?.fixed_height_small?.url ||
@@ -11,16 +24,21 @@ function gifPreviewUrl(g) {
   );
 }
 
+// Pick the best quality URL to send as the actual message
 function gifSelectUrl(g) {
   return g.images?.fixed_height?.url || g.images?.original?.url;
 }
 
-/** Inner picker — remounts when opened so trending GIFs load automatically. */
+/** Inner picker panel — remounts when opened so trending GIFs load automatically. */
 function GifPickerPanel({ onClose, onSelect }) {
+  // Search query text
   const [query, setQuery] = useState('');
+  // Array of Giphy GIF objects
   const [gifs, setGifs] = useState([]);
+  // Loading state for both trending fetch and search
   const [loading, setLoading] = useState(true);
 
+  // Fetch trending GIFs on mount
   useEffect(() => {
     let cancelled = false;
     trendingGifs()
@@ -38,6 +56,7 @@ function GifPickerPanel({ onClose, onSelect }) {
     };
   }, []);
 
+  // Execute a keyword search against the Giphy API
   const runSearch = async () => {
     setLoading(true);
     try {
@@ -49,6 +68,7 @@ function GifPickerPanel({ onClose, onSelect }) {
     }
   };
 
+  // Trigger search on Enter key press
   const onKeyDown = (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -121,6 +141,7 @@ function GifPickerPanel({ onClose, onSelect }) {
   );
 }
 
+/** Outer wrapper — renders nothing when closed; remounts the panel on each open. */
 export default function GifPicker({ open, onClose, onSelect }) {
   if (!open) return null;
   return <GifPickerPanel onClose={onClose} onSelect={onSelect} />;

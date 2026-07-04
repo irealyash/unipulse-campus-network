@@ -1,3 +1,14 @@
+/**
+ * ModSendMessagePanel — moderator-only panel for starting a new DM
+ * conversation with a user. The moderator searches by username or user
+ * id, sees the user card (including whether they're assigned to another
+ * moderator), then composes and sends the first message.
+ *
+ * Used inside the ModeratorPage "Send message" tab.
+ *
+ * Props:
+ * @param {(conversationId: string) => void} [onSent] — called after the first message is sent
+ */
 import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -8,20 +19,26 @@ import {
 import { SearchIcon } from '../icons';
 import ChatInput from '../chat/ChatInput';
 
-/** Moderator — search a user and send the first message. */
 export default function ModSendMessagePanel({ onSent }) {
   const dispatch = useDispatch();
   const me = useSelector((s) => s.auth.user);
+  // The user object returned by the lookup search
   const lookupUser = useSelector((s) => s.modMessages.lookupUser);
+  // Success notice from Redux (e.g. "Message sent")
   const notice = useSelector((s) => s.modMessages.notice);
+  // Username or user id search query
   const [query, setQuery] = useState('');
+  // Whether a search is in flight
   const [searching, setSearching] = useState(false);
+  // Error message shown below the search
   const [error, setError] = useState('');
 
+  // If the user is already assigned to a different moderator, block messaging
   const blockedByOtherMod =
     lookupUser?.assignedModeratorUsername &&
     lookupUser.assignedModeratorUsername !== me?.username;
 
+  // Search for a user by username or id
   const runSearch = async (e) => {
     e.preventDefault();
     const q = query.trim();
@@ -37,6 +54,7 @@ export default function ModSendMessagePanel({ onSent }) {
     }
   };
 
+  // Send the first message and create a new conversation
   const handleSend = async ({ content, media }) => {
     if (!lookupUser?.id) {
       setError('Search for a user first.');

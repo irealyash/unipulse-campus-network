@@ -1,10 +1,18 @@
+/**
+ * ScheduleUploadCard — presentational card wrapping ScheduleUploadForm with
+ * a heading, instructions, and the user's username. Provides the visual
+ * "almost there" onboarding step.
+ *
+ * Used on the /schedule page and during onboarding after signup.
+ *
+ * Props:
+ * @param {() => void}             onSkip    — "Skip for now" handler
+ * @param {(payload: object) => void} [onSuccess] — called after a successful upload
+ */
 import { useSelector } from 'react-redux';
 import ScheduleUploadForm from './ScheduleUploadForm';
 import { SparkleIcon } from './icons';
 
-/**
- * Shared schedule upload UI — used on /schedule and onboarding.
- */
 export default function ScheduleUploadCard({ onSkip, onSuccess }) {
   const user = useSelector((s) => s.auth.user);
 

@@ -1,11 +1,36 @@
+/**
+ * scheduleParser.js
+ *
+ * Parses uploaded UBC Workday schedule files (.xlsx or CSV) to extract
+ * enrolled course sections. This is the core mechanism for automatically
+ * enrolling students into their course communities after they upload
+ * their class schedule.
+ *
+ * Design approach:
+ *   - Uses structural text-scraping via regex rather than relying on column
+ *     headers, making it immune to header reordering or middleware corruptions
+ *   - Handles multiple input formats: binary Excel (PK/zip), UTF-8 CSV,
+ *     UTF-16LE CSV, plain text strings, and various middleware buffer wrappers
+ *   - Extracts standardized UBC course codes like "CPSC 320-D2D" using a
+ *     regex that accounts for Vancouver/Okanagan suffixes (_V, _O)
+ *   - Returns deduplicated results to prevent duplicate enrollments
+ */
+
 import * as XLSX from 'xlsx';
 
 /**
  * Parses a UBC Workday schedule file by performing a structural text-scrape.
  * Bypasses column headers completely to remain immune to middleware corruptions.
  *
- * @param {any} bufferInput - The raw file buffer or wrapped object from your upload middleware
- * @returns {string[]} Array of unique, cleaned sections, e.g., ["STAT 302-921", "CPSC 320-D2D"]
+ * Processing pipeline:
+ *   1. Unpack polymorphic middleware buffer wrappers into a raw Buffer
+ *   2. Detect file format (binary Excel vs CSV/text) via magic bytes
+ *   3. Extract text content from all cells (Excel) or decode the buffer (CSV)
+ *   4. Apply regex to find UBC course section patterns (e.g. "CPSC_V 320-921")
+ *   5. Normalize and deduplicate extracted sections
+ *
+ * @param {Buffer|Object|string} bufferInput - The raw file buffer, middleware wrapper, or string
+ * @returns {string[]} Array of unique, standardized sections, e.g. ["STAT 302-921", "CPSC 320-D2D"]
  */
 export const parseScheduleFile = (bufferInput) => {
   if (!bufferInput) return [];

@@ -1,11 +1,27 @@
+/**
+ * emojiReaction.js
+ *
+ * Emoji reaction toggle logic for posts and chat messages.
+ * Provides two variants:
+ *   - toggleEmojiReaction: allows multiple different emojis per user (used by Posts)
+ *   - toggleSingleEmojiReaction: limits each user to one emoji at a time (used by Comments/Chat)
+ *
+ * Both functions mutate the document's `reactions` subdocument array in place
+ * and return "added" or "removed" to indicate the outcome.
+ */
+
 import ApiError from './ApiError.js';
 
 /**
- * Emoji reactions for chat. Works on any document with a `reactions` array of
- * subdocuments shaped like { emoji: String, userId: ObjectId }.
+ * Toggles an emoji reaction for a user on a document (multi-emoji mode).
+ * A user may react with multiple different emojis, but the same emoji
+ * from the same user is toggled off if it already exists.
  *
- * Chat uses toggleSingleEmojiReaction (one emoji per user). Posts still use
- * toggleEmojiReaction (multiple different emojis per user).
+ * @param {Object} doc              - Mongoose document with a `reactions` array
+ * @param {ObjectId|string} userId  - The reacting user's ID
+ * @param {string} emoji            - The emoji character(s) to toggle
+ * @returns {string} "added" if the reaction was created, "removed" if it was toggled off
+ * @throws {ApiError} 400 if emoji is empty or exceeds 16 characters
  */
 export const toggleEmojiReaction = (doc, userId, emoji) => {
   const clean = (emoji || '').trim();
@@ -34,7 +50,15 @@ export const toggleEmojiReaction = (doc, userId, emoji) => {
 };
 
 /**
- * Comments allow only ONE emoji reaction per user (replaces any prior emoji).
+ * Toggles an emoji reaction for a user on a document (single-emoji mode).
+ * Each user is limited to one emoji at a time: setting a new emoji replaces
+ * the previous one, and toggling the same emoji removes it entirely.
+ *
+ * @param {Object} doc              - Mongoose document with a `reactions` array
+ * @param {ObjectId|string} userId  - The reacting user's ID
+ * @param {string} emoji            - The emoji character(s) to toggle
+ * @returns {string} "added" if the reaction was set/replaced, "removed" if toggled off
+ * @throws {ApiError} 400 if emoji is empty or exceeds 16 characters
  */
 export const toggleSingleEmojiReaction = (doc, userId, emoji) => {
   const clean = (emoji || '').trim();

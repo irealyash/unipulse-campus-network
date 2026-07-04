@@ -1,3 +1,12 @@
+/**
+ * EventsFeed — shared events list view used in two modes:
+ * - "community" — events for a single community (used by EventsTab)
+ * - "all"       — aggregated public events across all communities (used by AllEventsPage)
+ *
+ * Features: tag filtering, date/popularity sorting, event creation modal
+ * with date/time picker and capacity controls, RSVP buttons, media carousel,
+ * and report functionality.
+ */
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useDispatch, useSelector } from 'react-redux';
@@ -26,13 +35,20 @@ import {
   todayDateInputValue,
 } from './EventParts';
 
+// Shared Tailwind classes for segmented control buttons
 const SEGMENT_BTN =
   'px-3 py-1.5 text-sm font-medium rounded-md transition-colors whitespace-nowrap cursor-pointer';
 const SEGMENT_ACTIVE = 'bg-base-100 text-base-content shadow-sm';
 const SEGMENT_IDLE = 'text-base-content/60 hover:text-base-content';
 
+/**
+ * EventTagFilter — dropdown filter button for event tags (e.g. "Academic",
+ * "Social"). Renders as a portal menu so it stacks above all content.
+ */
 function EventTagFilter({ value, onChange }) {
+  // Whether the dropdown is open
   const [open, setOpen] = useState(false);
+  // Absolute position for the portal menu
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
   const btnRef = useRef(null);
   const menuRef = useRef(null);
@@ -46,6 +62,7 @@ function EventTagFilter({ value, onChange }) {
     setMenuPos({ top: rect.bottom + 4, left: rect.left });
   };
 
+  // Close on outside click / scroll; keep position in sync on resize
   useEffect(() => {
     if (!open) return;
     updatePosition();
@@ -133,6 +150,13 @@ function EventTagFilter({ value, onChange }) {
  * @param {boolean} [props.showCreate]
  * @param {boolean} [props.showCommunityName]
  */
+/**
+ * @param {'community'|'all'} mode — single community vs all public events
+ * @param {string} [communityId]   — required when mode is 'community'
+ * @param {string} [subtitle]      — shown below the heading
+ * @param {boolean} [showCreate]   — whether to show the "New event" button
+ * @param {boolean} [showCommunityName] — badge each event with its community name
+ */
 export default function EventsFeed({
   mode = 'community',
   communityId,
@@ -141,12 +165,17 @@ export default function EventsFeed({
   showCommunityName = false,
 }) {
   const dispatch = useDispatch();
+  // Use a special key for the all-events bucket in Redux
   const bucketKey = mode === 'all' ? ALL_PUBLIC_EVENTS_KEY : communityId;
   const bucket = useSelector((s) => s.events.byCommunity[bucketKey]);
 
+  // Sort mode: "date" (upcoming first) or "rsvp" (most popular)
   const [sort, setSort] = useState('date');
+  // Active tag filter value ("all" = show everything)
   const [tagFilter, setTagFilter] = useState('all');
+  // Whether the event creation modal is open
   const [createOpen, setCreateOpen] = useState(false);
+  // Form state for the "Create event" modal
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -158,10 +187,14 @@ export default function EventsFeed({
     noCapacityLimit: true,
     capacity: '',
   });
+  // Selected media files for the new event
   const [mediaFiles, setMediaFiles] = useState([]);
+  // Validation error shown in the create modal
   const [formError, setFormError] = useState('');
+  // Report modal target { contentType, contentId }
   const [reportTarget, setReportTarget] = useState(null);
 
+  // Fetch events whenever mode/community/sort/tag changes
   useEffect(() => {
     if (mode === 'all') {
       dispatch(fetchAllPublicEvents({ sort, tag: tagFilter }));
@@ -173,11 +206,13 @@ export default function EventsFeed({
   const events = bucket?.events || [];
   const loading = bucket?.status === 'loading';
 
+  // Build the link path for an event detail page
   const eventPath = (ev) =>
     mode === 'all'
       ? `/c/events/${ev._id}`
       : `/c/${encodeURIComponent(ev.communityId)}/events/${ev._id}`;
 
+  // Reset the create-event form to defaults
   const resetForm = () => {
     setForm({
       title: '',
@@ -194,6 +229,7 @@ export default function EventsFeed({
     setFormError('');
   };
 
+  // Validate and submit a new event for moderator review
   const submitEvent = async (e) => {
     e.preventDefault();
     setFormError('');
@@ -254,6 +290,7 @@ export default function EventsFeed({
     }
   };
 
+  // Dispatch RSVP action (attend / busy / cancel)
   const handleRsvp = (eventId, status, previousRsvp) => {
     dispatch(rsvpEvent({ eventId, status, previousRsvp }));
   };

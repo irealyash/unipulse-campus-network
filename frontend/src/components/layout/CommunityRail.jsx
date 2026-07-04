@@ -1,3 +1,15 @@
+/**
+ * CommunityRail — narrow left icon strip (72 px) showing joined community
+ * avatars, a sidebar toggle chevron, a profile/menu button, and pin/unpin
+ * context menus.
+ *
+ * Props:
+ * @param {boolean} sidebarOpen   — whether the ChannelSidebar is currently visible
+ * @param {() => void} onToggleSidebar — toggle the ChannelSidebar open/closed
+ * @param {() => void} onOpenSidebar   — force-open the ChannelSidebar (e.g. on avatar click)
+ *
+ * Used inside CommunityShell as the leftmost column.
+ */
 import { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useDispatch, useSelector } from 'react-redux';
@@ -13,20 +25,27 @@ import { ShieldIcon, ChevronIcon, PinIcon } from '../icons';
 export default function CommunityRail({ sidebarOpen, onToggleSidebar, onOpenSidebar }) {
   const dispatch = useDispatch();
   const { communityId, tab } = useParams();
+  // Default to "chat" tab if none is specified in the URL
   const currentTab = tab || 'chat';
+
   const list = useSelector((s) => s.communities.list);
   const user = useSelector((s) => s.auth.user);
   const { pinnedIds, togglePin, isPinned } = usePinnedCommunities();
+
+  // Profile popover state
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuPos, setMenuPos] = useState({ left: 0, bottom: 0 });
+  // Right-click pin/unpin context menu state
   const [pinMenu, setPinMenu] = useState(null);
   const btnRef = useRef(null);
   const pinMenuRef = useRef(null);
 
+  // Fetch the full communities list on mount
   useEffect(() => {
     dispatch(fetchCommunities());
   }, [dispatch]);
 
+  // Close the profile menu on outside click
   useEffect(() => {
     if (!menuOpen) return;
     const close = (e) => {
@@ -39,6 +58,7 @@ export default function CommunityRail({ sidebarOpen, onToggleSidebar, onOpenSide
     return () => document.removeEventListener('mousedown', close);
   }, [menuOpen]);
 
+  // Close the pin context menu on outside click or scroll
   useEffect(() => {
     if (!pinMenu) return;
     const close = (e) => {
@@ -53,6 +73,7 @@ export default function CommunityRail({ sidebarOpen, onToggleSidebar, onOpenSide
     };
   }, [pinMenu]);
 
+  // Toggle the profile popover menu; compute its position from the button rect
   const toggleMenu = () => {
     if (!menuOpen && btnRef.current) {
       const r = btnRef.current.getBoundingClientRect();
@@ -61,8 +82,10 @@ export default function CommunityRail({ sidebarOpen, onToggleSidebar, onOpenSide
     setMenuOpen((o) => !o);
   };
 
+  // Filter communities to only those in the user's navbar, then sort by pin order
   const railCommunities = sortCommunities(filterNavbarCommunities(list, user), pinnedIds);
 
+  // Right-click handler: opens the pin/unpin context menu for a community
   const openPinMenu = (c, e) => {
     if (c.type === 'course') return;
     e.preventDefault();
@@ -76,18 +99,26 @@ export default function CommunityRail({ sidebarOpen, onToggleSidebar, onOpenSide
     });
   };
 
+  /**
+   * RailCommunityItem — single community avatar in the rail.
+   * Shows a portal tooltip with the community name on hover, highlights
+   * the active community, and supports right-click pin/unpin.
+   */
   const RailCommunityItem = ({ c }) => {
     const itemRef = useRef(null);
+    // Hover state drives the portal tooltip
     const [hovered, setHovered] = useState(false);
     const [tipPos, setTipPos] = useState({ top: 0, left: 0 });
     const selected = c._id === communityId;
 
+    // Recalculate tooltip position relative to the item
     const updateTipPos = () => {
       if (!itemRef.current) return;
       const rect = itemRef.current.getBoundingClientRect();
       setTipPos({ top: rect.top + rect.height / 2, left: rect.right + 3 });
     };
 
+    // Keep tooltip position in sync while hovered (scroll/resize)
     useEffect(() => {
       if (!hovered) return;
       updateTipPos();
@@ -100,6 +131,7 @@ export default function CommunityRail({ sidebarOpen, onToggleSidebar, onOpenSide
       };
     }, [hovered]);
 
+    // Tooltip portal — rendered at body level so it floats above everything
     const tooltip =
       hovered &&
       createPortal(
@@ -170,6 +202,7 @@ export default function CommunityRail({ sidebarOpen, onToggleSidebar, onOpenSide
     );
   };
 
+  // Profile popup menu portal — Settings, Moderator, Add schedule links
   const profileMenu =
     menuOpen &&
     createPortal(
@@ -202,7 +235,9 @@ export default function CommunityRail({ sidebarOpen, onToggleSidebar, onOpenSide
     );
 
   return (
+    /* 72 px wide aside column — chevron toggle at top, scrollable avatars, profile at bottom */
     <aside className="w-[72px] bg-base-200 flex flex-col border-r border-base-content/10 shrink-0">
+      {/* Sidebar toggle chevron button */}
       <div className="shrink-0 py-2 flex justify-center">
         <button
           type="button"
@@ -220,6 +255,7 @@ export default function CommunityRail({ sidebarOpen, onToggleSidebar, onOpenSide
         </button>
       </div>
 
+      {/* Scrollable list of community avatar icons */}
       <div
         className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col items-center py-1 gap-2 [overflow-anchor:none]"
         style={{ overscrollBehavior: 'contain' }}
@@ -229,6 +265,7 @@ export default function CommunityRail({ sidebarOpen, onToggleSidebar, onOpenSide
         ))}
       </div>
 
+      {/* Bottom profile avatar — opens popover menu on click */}
       <div className="shrink-0 py-3 flex justify-center">
         <button
           ref={btnRef}
@@ -245,6 +282,7 @@ export default function CommunityRail({ sidebarOpen, onToggleSidebar, onOpenSide
 
       {profileMenu}
 
+      {/* Pin/unpin context menu portal — appears on right-click of a community */}
       {pinMenu &&
         createPortal(
           <div

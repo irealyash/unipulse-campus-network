@@ -61,9 +61,10 @@ const otpSchema = new mongoose.Schema({
     type: Date,
     required: true
   }
-}, { timestamps: true });
+}, { timestamps: true }); // timestamps adds automatic createdAt/updatedAt fields
 
 // TTL index: MongoDB removes the document once `expiresAt` passes (expireAfterSeconds: 0).
 otpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
+// Export the Otp model bound to the "otps" collection.
 export default mongoose.model('Otp', otpSchema);

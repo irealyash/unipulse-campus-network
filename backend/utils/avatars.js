@@ -1,7 +1,16 @@
 /**
- * Default avatar URLs when a community/event has no custom imageUrl.
+ * avatars.js — Default and generated avatar/image utilities.
+ *
+ * Provides fallback images for communities and events that don't have a
+ * user-uploaded picture. Course communities get a dynamically generated SVG
+ * with the course code; other entities use DiceBear placeholder avatars.
  */
 
+/**
+ * Escapes special XML characters to prevent SVG injection.
+ * @param {string} value - Raw text to embed in SVG markup.
+ * @returns {string} XML-safe string.
+ */
 const escapeXml = (value) =>
   String(value)
     .replace(/&/g, '&amp;')
@@ -9,8 +18,15 @@ const escapeXml = (value) =>
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 
+// Font stack used in generated SVG avatars for consistent cross-platform rendering.
 const FONT_STACK = "'Roboto', 'Helvetica Neue', Helvetica, Arial, sans-serif";
 
+/**
+ * Parses a course section ID (e.g. "CPSC 210-101") into display lines.
+ * Handles multiple legacy formats: spaced, compact, and hyphen-separated.
+ * @param {string} sectionId - The raw course section identifier.
+ * @returns {string[]} Array of 1-2 lines for rendering in the SVG avatar.
+ */
 const splitCourseSection = (sectionId) => {
   const raw = String(sectionId).trim();
 
@@ -37,9 +53,17 @@ const splitCourseSection = (sectionId) => {
   return [raw];
 };
 
+// Padding ratio and estimated character width used to auto-size SVG text.
 const COURSE_AVATAR_PAD_RATIO = 0.06;
 const CHAR_WIDTH_EM = 0.52;
 
+/**
+ * Computes the layout (lines, font size, padding) for a course avatar SVG.
+ * Dynamically sizes text to fit within the square bounding box.
+ * @param {string} sectionId - Course section identifier to render.
+ * @param {number} [boxPx=256] - Width/height of the SVG in pixels.
+ * @returns {{lines: string[], fontSize: number, pad: number}} Layout params.
+ */
 const courseAvatarLayout = (sectionId, boxPx = 256) => {
   const lines = splitCourseSection(sectionId);
   const pad = Math.max(2, Math.round(boxPx * COURSE_AVATAR_PAD_RATIO));
@@ -78,15 +102,36 @@ export const courseCommunityImage = (sectionId) => {
   return `data:image/svg+xml,${encodeURIComponent(svg)}`;
 };
 
+/**
+ * Checks whether a URL is one of our generated SVG data URIs (not user-uploaded).
+ * @param {string} url - The imageUrl to test.
+ * @returns {boolean}
+ */
 const isGeneratedCourseAvatar = (url) =>
   typeof url === 'string' && url.startsWith('data:image/svg+xml');
 
+/**
+ * Returns a DiceBear "shapes" avatar URL seeded by the community ID.
+ * @param {string} id - Community identifier used as the random seed.
+ * @returns {string} Public URL for the generated avatar.
+ */
 export const defaultCommunityImage = (id) =>
   `https://api.dicebear.com/9.x/shapes/svg?seed=${encodeURIComponent(id)}`;
 
+/**
+ * Returns a DiceBear "identicon" avatar URL seeded by the event ID.
+ * @param {string} id - Event identifier used as the random seed.
+ * @returns {string} Public URL for the generated avatar.
+ */
 export const defaultEventImage = (id) =>
   `https://api.dicebear.com/9.x/identicon/svg?seed=${encodeURIComponent(id)}`;
 
+/**
+ * Attaches the correct imageUrl to a community object for API responses.
+ * Course communities get a generated SVG; others fall back to DiceBear.
+ * @param {Object} community - Mongoose document or plain community object.
+ * @returns {Object} Plain object with resolved imageUrl.
+ */
 export const withCommunityImage = (community) => {
   const obj = community.toObject?.() ?? community;
   const courseAvatar =
@@ -104,6 +149,12 @@ export const withCommunityImage = (community) => {
   };
 };
 
+/**
+ * Attaches the correct imageUrl to an event object for API responses.
+ * Falls back to the first media item's URL or a DiceBear identicon.
+ * @param {Object} event - Mongoose document or plain event object.
+ * @returns {Object} Plain object with resolved imageUrl.
+ */
 export const withEventImage = (event) => {
   const obj = event.toObject?.() ?? event;
   const cover =

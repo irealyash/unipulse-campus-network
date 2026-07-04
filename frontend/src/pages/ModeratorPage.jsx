@@ -1,3 +1,19 @@
+/**
+ * ModeratorPage.jsx
+ *
+ * Full moderator dashboard — admin-only.
+ * Route: "/c/moderator" (rendered inside the community shell, guarded by mod role)
+ * Role: Provides a tabbed interface for moderators to manage the platform:
+ *   - Reports: View and resolve reported content
+ *   - Posts: Approve/reject/search/delete user posts
+ *   - Events: Approve/reject/search/delete user events (with tag assignment)
+ *   - Requests: View and manage user-submitted requests/suggestions
+ *   - Send message: Send a direct message to any user
+ *   - User messages: View all moderator-user conversations
+ *   - Users: Look up, ban/unban users, view/delete their content
+ *   - Communities: CRUD operations on communities (create, edit, delete, add members)
+ */
+
 import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -45,6 +61,7 @@ import {
   ChatIcon,
 } from '../components/icons';
 
+// Tab configuration — defines the moderator dashboard navigation tabs
 const TABS = [
   { id: 'reports', label: 'Reports', icon: <FlagIcon /> },
   { id: 'posts', label: 'Posts', icon: <ChatIcon /> },
@@ -57,17 +74,28 @@ const TABS = [
 ];
 
 /* ----------------------------- Reports tab ----------------------------- */
+/**
+ * ReportsTab — displays reported content with status filter.
+ * Moderators can dismiss reports or delete the reported content.
+ */
 function ReportsTab() {
   const dispatch = useDispatch();
+  // Reads the list of reports from the moderator Redux slice
   const reports = useSelector((s) => s.moderator.reports);
+  // Local filter state for report status
   const [status, setStatus] = useState('pending');
 
+  /**
+   * useEffect: Fetches reports filtered by current status.
+   * Re-runs whenever the status filter changes.
+   */
   useEffect(() => {
     dispatch(modFetchReports(status));
   }, [dispatch, status]);
 
   return (
     <div>
+      {/* Header with status filter dropdown */}
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-lg font-bold">Reported content</h2>
         <select
@@ -89,6 +117,7 @@ function ReportsTab() {
           {reports.map((r) => (
             <div key={r._id} className="card bg-base-100 border border-base-200 shadow-sm">
               <div className="card-body p-4">
+                {/* Report metadata — content type, community, status, date */}
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="badge badge-error badge-sm uppercase">{r.contentType}</span>
                   {r.communityId && <span className="badge badge-ghost badge-sm">{r.communityId}</span>}
@@ -98,15 +127,17 @@ function ReportsTab() {
                   </span>
                 </div>
 
+                {/* Author and reporter info */}
                 <p className="text-sm mt-1">
                   Author: <span className="font-medium">{r.contentAuthorUsername}</span> · Reported by{' '}
                   <span className="font-medium">{r.reporterUsername}</span>
                 </p>
                 {r.reason && (
-                  <p className="text-sm italic text-base-content/70">“{r.reason}”</p>
+                  <p className="text-sm italic text-base-content/70">"{r.reason}"</p>
                 )}
                 <p className="text-xs font-mono text-base-content/40 break-all">id: {r.contentId}</p>
 
+                {/* Action buttons — only shown for pending reports */}
                 {r.status === 'pending' && (
                   <div className="card-actions justify-end mt-1">
                     <button
@@ -133,17 +164,28 @@ function ReportsTab() {
 }
 
 /* ----------------------------- Posts tab ------------------------------- */
+/**
+ * PostsTab — moderator view of all posts with approval workflow.
+ * Supports filtering by status and searching by title/content/author/tag.
+ */
 function PostsTab() {
   const dispatch = useDispatch();
+  // Reads the list of posts from the moderator Redux slice
   const pendingPosts = useSelector((s) => s.moderator.pendingPosts);
+  // Local state for status filter and search
   const [status, setStatus] = useState('pending');
   const [search, setSearch] = useState('');
   const [query, setQuery] = useState('');
 
+  /**
+   * useEffect: Fetches posts filtered by status and search query.
+   * Re-runs when status or committed query changes.
+   */
   useEffect(() => {
     dispatch(modFetchPendingPosts({ status, search: query }));
   }, [dispatch, status, query]);
 
+  /** Handler: commits the search input on form submit. */
   const runSearch = (e) => {
     e.preventDefault();
     setQuery(search.trim());
@@ -151,6 +193,7 @@ function PostsTab() {
 
   return (
     <div>
+      {/* Header — title and status filter */}
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <h2 className="text-lg font-bold">Posts</h2>
         <select
@@ -165,6 +208,7 @@ function PostsTab() {
         </select>
       </div>
 
+      {/* Search form */}
       <form onSubmit={runSearch} className="flex gap-2 mb-4">
         <input
           className="input input-bordered rounded-full flex-1 input-sm"
@@ -184,6 +228,7 @@ function PostsTab() {
           {pendingPosts.map((p) => (
             <div key={p._id} className="card bg-base-100 border border-base-200 shadow-sm overflow-hidden">
               <div className="card-body p-4 min-w-0 overflow-hidden">
+                {/* Post metadata badges */}
                 <div className="flex flex-wrap items-center gap-2">
                   {p.tag && <span className="badge badge-outline badge-sm">{p.tag}</span>}
                   <span className="badge badge-ghost badge-sm">{p.communityId}</span>
@@ -192,6 +237,7 @@ function PostsTab() {
                     {timeAgo(p.createdAt)}
                   </span>
                 </div>
+                {/* Post title and content preview */}
                 <h3 className="font-bold mt-1 break-words [overflow-wrap:anywhere]">{p.title}</h3>
                 <p className="text-sm text-base-content/80 whitespace-pre-wrap line-clamp-4 break-words [overflow-wrap:anywhere]">
                   {p.content}
@@ -201,6 +247,7 @@ function PostsTab() {
                   by <span className="font-medium">{p.anonymousUsername}</span>
                 </p>
 
+                {/* Action buttons — view, reject, approve, delete */}
                 <div className="card-actions justify-end mt-2 gap-2 flex-wrap">
                   <Link
                     to={`/c/${encodeURIComponent(p.communityId)}/posts/${p._id}`}
@@ -241,25 +288,41 @@ function PostsTab() {
 }
 
 /* ----------------------------- Events tab ------------------------------ */
+/**
+ * ModEventsTab — moderator view of all events with approval workflow.
+ * Supports filtering by status, searching, and requires a tag selection
+ * before approving an event.
+ */
 function ModEventsTab() {
   const dispatch = useDispatch();
+  // Reads pending events and any error from the moderator Redux slice
   const pendingEvents = useSelector((s) => s.moderator.pendingEvents);
   const modError = useSelector((s) => s.moderator.error);
+  // Local state for filters, search, tag assignment, and validation
   const [status, setStatus] = useState('pending');
   const [search, setSearch] = useState('');
   const [query, setQuery] = useState('');
   const [tagsById, setTagsById] = useState({});
   const [tagError, setTagError] = useState('');
 
+  /**
+   * useEffect: Fetches events filtered by status and search query.
+   * Re-runs when status or committed query changes.
+   */
   useEffect(() => {
     dispatch(modFetchPendingEvents({ status, search: query }));
   }, [dispatch, status, query]);
 
+  /** Handler: commits the search input on form submit. */
   const runSearch = (e) => {
     e.preventDefault();
     setQuery(search.trim());
   };
 
+  /**
+   * Handler: approves an event after validating a tag has been selected.
+   * The tag is required before approval to categorize the event.
+   */
   const approveEvent = async (evId) => {
     const tag = tagsById[evId];
     if (!tag) {
@@ -272,6 +335,7 @@ function ModEventsTab() {
 
   return (
     <div>
+      {/* Header — title and status filter */}
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <h2 className="text-lg font-bold">Events</h2>
         <select
@@ -286,6 +350,7 @@ function ModEventsTab() {
         </select>
       </div>
 
+      {/* Search form */}
       <form onSubmit={runSearch} className="flex gap-2 mb-4">
         <input
           className="input input-bordered rounded-full flex-1 input-sm"
@@ -298,6 +363,7 @@ function ModEventsTab() {
         </button>
       </form>
 
+      {/* Validation/error banners */}
       {tagError && (
         <div className="alert alert-warning py-2 text-sm mb-3">
           <span>{tagError}</span>
@@ -316,6 +382,7 @@ function ModEventsTab() {
           {pendingEvents.map((ev) => (
             <div key={ev._id} className="card bg-base-100 border border-base-200 shadow-sm overflow-hidden">
               <div className="card-body p-4 min-w-0 overflow-hidden">
+                {/* Event metadata badges */}
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="badge badge-ghost badge-sm">{ev.communityId}</span>
                   <span className="badge badge-outline badge-sm">{ev.status || 'pending'}</span>
@@ -324,6 +391,7 @@ function ModEventsTab() {
                     {timeAgo(ev.createdAt)}
                   </span>
                 </div>
+                {/* Event title, creator, date, capacity */}
                 <h3 className="font-bold mt-1 break-words [overflow-wrap:anywhere]">{ev.title}</h3>
                 <p className="text-xs text-base-content/50 mt-1">
                   by <span className="font-medium">{ev.creatorUsername || 'unknown'}</span>
@@ -340,6 +408,7 @@ function ModEventsTab() {
                     {ev.description}
                   </p>
                 )}
+                {/* Moderator note from the event creator — highlighted box */}
                 {ev.moderatorNote?.trim() && (
                   <div className="rounded-xl border border-warning/30 bg-warning/10 p-3 mt-2">
                     <p className="text-[10px] uppercase font-bold text-warning tracking-wider mb-1">
@@ -350,8 +419,10 @@ function ModEventsTab() {
                     </p>
                   </div>
                 )}
+                {/* Event media carousel preview */}
                 {hasEventUserMedia(ev) && <EventMediaCarousel event={ev} compact />}
 
+                {/* Tag selection dropdown — required before approving */}
                 {ev.status === 'pending' && (
                   <label className="form-control mt-2">
                     <span className="label-text text-xs font-medium">Event tag (required to approve)</span>
@@ -373,6 +444,7 @@ function ModEventsTab() {
                   </label>
                 )}
 
+                {/* Action buttons — view details, reject, approve, delete */}
                 <div className="card-actions justify-end mt-2 gap-2 flex-wrap">
                   <Link
                     to={`/c/${encodeURIComponent(ev.communityId)}/events/${ev._id}`}
@@ -413,17 +485,28 @@ function ModEventsTab() {
 }
 
 /* ----------------------------- Requests tab ---------------------------- */
+/**
+ * RequestsTab — displays user-submitted requests/suggestions.
+ * Moderators can dismiss or mark requests as reviewed.
+ */
 function RequestsTab() {
   const dispatch = useDispatch();
+  // Reads the list of user requests from the moderator Redux slice
   const requests = useSelector((s) => s.moderator.requests);
+  // Local filter state for request status
   const [status, setStatus] = useState('pending');
 
+  /**
+   * useEffect: Fetches requests filtered by current status.
+   * Re-runs whenever the status filter changes.
+   */
   useEffect(() => {
     dispatch(modFetchRequests(status));
   }, [dispatch, status]);
 
   return (
     <div>
+      {/* Header with status filter dropdown */}
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-lg font-bold">User requests</h2>
         <select
@@ -445,6 +528,7 @@ function RequestsTab() {
           {requests.map((r) => (
             <div key={r._id} className="card bg-base-100 border border-base-200 shadow-sm">
               <div className="card-body p-4">
+                {/* Request metadata — sender, community, status, date */}
                 <div className="flex items-center gap-2">
                   <span className="font-medium">{r.senderUsername}</span>
                   {r.communityId && <span className="badge badge-ghost badge-sm">{r.communityId}</span>}
@@ -453,8 +537,10 @@ function RequestsTab() {
                     {new Date(r.createdAt).toLocaleString()}
                   </span>
                 </div>
+                {/* Request message body */}
                 <p className="text-sm mt-1">{r.message}</p>
 
+                {/* Action buttons — only shown for pending requests */}
                 {r.status === 'pending' && (
                   <div className="card-actions justify-end mt-1">
                     <button
@@ -481,12 +567,24 @@ function RequestsTab() {
 }
 
 /* ------------------------------ Users tab ------------------------------ */
+/**
+ * UsersTab — user lookup and management.
+ * Moderators can search by username or ID, view user details,
+ * ban/unban users, and view/delete their posts, comments, and messages.
+ */
 function UsersTab() {
   const dispatch = useDispatch();
+  // Reads the user lookup result from the moderator Redux slice
   const lookup = useSelector((s) => s.moderator.userLookup);
+  // Local state for search input and content expansion toggle
   const [identifier, setIdentifier] = useState('');
   const [expanded, setExpanded] = useState(false);
 
+  /**
+   * Handler: user search form submission.
+   * Triggered when the moderator clicks Search.
+   * Dispatches the modLookupUser thunk with the entered identifier.
+   */
   const search = (e) => {
     e.preventDefault();
     if (identifier.trim()) {
@@ -500,6 +598,7 @@ function UsersTab() {
   return (
     <div>
       <h2 className="text-lg font-bold mb-3">Look up a user</h2>
+      {/* Search form — accepts user ID or username */}
       <form onSubmit={search} className="flex gap-2 mb-4">
         <input
           className="input input-bordered rounded-full flex-1"
@@ -512,6 +611,7 @@ function UsersTab() {
         </button>
       </form>
 
+      {/* User result card — shown when a user is found */}
       {u && (
         <div className="card bg-base-100 border border-base-200 shadow-sm mb-4">
           <button
@@ -530,6 +630,7 @@ function UsersTab() {
                 <p className="text-sm text-base-content/60">{u.email}</p>
                 <p className="text-xs font-mono text-base-content/40 break-all">id: {u.id}</p>
               </div>
+              {/* Ban/Unban toggle button */}
               <button
                 type="button"
                 className={`btn btn-sm rounded-full shrink-0 ${u.isBanned ? 'btn-success' : 'btn-error'}`}
@@ -541,6 +642,7 @@ function UsersTab() {
                 {u.isBanned ? 'Unban' : 'Ban'}
               </button>
             </div>
+            {/* Toggle to expand/collapse user content */}
             <p className="text-xs text-base-content/40 mt-2">
               {expanded ? '▲ Hide content' : '▼ Show posts, comments & chat messages'}
             </p>
@@ -548,6 +650,7 @@ function UsersTab() {
         </div>
       )}
 
+      {/* Expanded user content — posts, comments, and chat messages with delete buttons */}
       {u && expanded && (
         <div className="grid gap-4 lg:grid-cols-2">
           <ContentList
@@ -575,6 +678,10 @@ function UsersTab() {
   );
 }
 
+/**
+ * ContentList — reusable component for displaying a user's content
+ * (posts, comments, or messages) with individual delete buttons.
+ */
 function ContentList({ title, items, render, kind, className = '' }) {
   const dispatch = useDispatch();
   return (
@@ -594,6 +701,7 @@ function ContentList({ title, items, render, kind, className = '' }) {
                   <p className="line-clamp-2">{render(it)}</p>
                   <p className="text-[10px] font-mono text-base-content/40 break-all">{it._id}</p>
                 </div>
+                {/* Delete button for individual content items */}
                 <button
                   className="btn btn-ghost btn-xs text-error"
                   title="Delete"
@@ -611,9 +719,16 @@ function ContentList({ title, items, render, kind, className = '' }) {
 }
 
 /* --------------------------- Communities tab --------------------------- */
+/**
+ * CommunitiesTab — full CRUD management for communities.
+ * Moderators can search/filter, create, edit, delete communities,
+ * add users to private communities, and delete all course communities.
+ */
 function CommunitiesTab() {
   const dispatch = useDispatch();
+  // Reads all communities from the moderator Redux slice
   const allCommunities = useSelector((s) => s.moderator.communities);
+  // Local state for search, filters, editing, creation, and member management
   const [search, setSearch] = useState('');
   const [query, setQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
@@ -635,12 +750,17 @@ function CommunitiesTab() {
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 40;
 
+  /** Refreshes the full community list from the server. */
   const refreshList = () => dispatch(modFetchCommunities({}));
 
+  /**
+   * useEffect: Fetches the full community list on mount.
+   */
   useEffect(() => {
     refreshList();
   }, [dispatch]);
 
+  // Client-side filtering and searching of communities
   const communities = useMemo(() => {
     let list = allCommunities;
     if (typeFilter !== 'all') {
@@ -658,18 +778,22 @@ function CommunitiesTab() {
     return list;
   }, [allCommunities, typeFilter, categoryFilter, query]);
 
+  // Reset pagination when filters change
   useEffect(() => {
     setPage(1);
   }, [typeFilter, categoryFilter, query]);
 
+  // Pagination calculations
   const pageCount = Math.max(1, Math.ceil(communities.length / PAGE_SIZE));
   const pagedCommunities = communities.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
+  /** Handler: commits the search input on form submit. */
   const doSearch = (e) => {
     e.preventDefault();
     setQuery(search.trim());
   };
 
+  /** Handler: opens the edit modal for a community and pre-fills the form. */
   const openEdit = (c) => {
     setEditId(c._id);
     setEditForm({
@@ -681,6 +805,10 @@ function CommunitiesTab() {
     setIconFile(null);
   };
 
+  /**
+   * Handler: saves community edits.
+   * Uploads new icon if provided, then dispatches the update thunk.
+   */
   const saveEdit = async (e) => {
     e.preventDefault();
     let imageUrl = editForm.imageUrl;
@@ -700,6 +828,10 @@ function CommunitiesTab() {
     dispatch(fetchCommunities());
   };
 
+  /**
+   * Handler: creates a new community.
+   * Uploads icon if provided, then dispatches the create thunk.
+   */
   const submitCreate = async (e) => {
     e.preventDefault();
     let imageUrl;
@@ -724,6 +856,10 @@ function CommunitiesTab() {
     dispatch(fetchCommunities());
   };
 
+  /**
+   * Handler: deletes ALL course communities (destructive action).
+   * Requires confirmation. Also clears all users' enrolled sections.
+   */
   const handleDeleteAllCourse = async () => {
     if (
       !window.confirm(
@@ -738,6 +874,9 @@ function CommunitiesTab() {
     dispatch(fetchMe());
   };
 
+  /**
+   * Handler: deletes a single community (requires confirmation).
+   */
   const handleDelete = async (c) => {
     if (!window.confirm(`Delete community "${c.name}" and all of its content? This cannot be undone.`)) return;
     await dispatch(modDeleteCommunity(c._id));
@@ -745,6 +884,9 @@ function CommunitiesTab() {
     dispatch(fetchCommunities());
   };
 
+  /**
+   * Handler: adds a user to a private community by their MongoDB ID.
+   */
   const submitAddMember = async (e) => {
     e.preventDefault();
     if (!memberUserId.trim()) return;
@@ -755,6 +897,7 @@ function CommunitiesTab() {
 
   return (
     <div>
+      {/* Header — title, "Delete all course communities" button, "New community" button */}
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <h2 className="text-lg font-bold">Communities</h2>
         <div className="flex flex-wrap gap-2">
@@ -770,6 +913,8 @@ function CommunitiesTab() {
           </button>
         </div>
       </div>
+
+      {/* Search and filter controls */}
       <form onSubmit={doSearch} className="flex flex-wrap gap-2 mb-4">
         <input
           className="input input-bordered rounded-full flex-1 min-w-[12rem]"
@@ -808,14 +953,18 @@ function CommunitiesTab() {
         <EmptyState text="No communities match your filters." />
       ) : (
       <>
+      {/* Pagination info */}
       <p className="text-sm text-base-content/60 mb-3">
         Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, communities.length)} of{' '}
         {communities.length}
       </p>
+
+      {/* Community cards grid */}
       <div className="grid gap-3 sm:grid-cols-2">
         {pagedCommunities.map((c) => (
           <div key={c._id} className="card bg-base-100 border border-base-200 shadow-sm">
             <div className="card-body p-4">
+              {/* Community info — avatar, name, ID, type/category/privacy badges */}
               <div className="flex items-center gap-3">
                 <div className="avatar">
                   <div className="w-12 rounded-xl overflow-hidden">
@@ -843,6 +992,7 @@ function CommunitiesTab() {
                   {c.private ? 'Private' : 'Public'}
                 </span>
               </div>
+              {/* Action buttons — add users, edit, delete, open */}
               <div className="card-actions justify-end mt-2 flex-wrap">
                 {c.private && (
                   <button
@@ -874,6 +1024,8 @@ function CommunitiesTab() {
           </div>
         ))}
       </div>
+
+      {/* Pagination controls */}
       {pageCount > 1 && (
         <div className="flex justify-center gap-2 mt-4">
           <button
@@ -900,6 +1052,7 @@ function CommunitiesTab() {
       </>
       )}
 
+      {/* Create community modal */}
       {createOpen && (
         <div className="modal modal-open">
           <div className="modal-box rounded-3xl">
@@ -967,6 +1120,7 @@ function CommunitiesTab() {
         </div>
       )}
 
+      {/* Add user to community modal */}
       {addUsersId && (
         <div className="modal modal-open">
           <div className="modal-box rounded-3xl">
@@ -996,6 +1150,7 @@ function CommunitiesTab() {
         </div>
       )}
 
+      {/* Edit community modal */}
       {editId && (
         <div className="modal modal-open">
           <div className="modal-box rounded-3xl">
@@ -1007,6 +1162,7 @@ function CommunitiesTab() {
                 onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                 required
               />
+              {/* Category and privacy controls — hidden for course communities */}
               {allCommunities.find((c) => c._id === editId)?.type !== 'course' && (
                 <>
                   <label className="text-sm font-medium text-base-content/70">Category</label>
@@ -1055,6 +1211,7 @@ function CommunitiesTab() {
   );
 }
 
+/** Reusable empty-state card shown when a tab has no items. */
 function EmptyState({ text }) {
   return (
     <div className="card bg-base-100 border border-dashed border-base-300 rounded-3xl">
@@ -1066,11 +1223,18 @@ function EmptyState({ text }) {
 }
 
 /* ------------------------------- Page ---------------------------------- */
+/**
+ * ModeratorPage — the main exported component.
+ * Renders the page header (shield icon + title) and the tab navigation,
+ * then conditionally renders the selected tab's content component.
+ */
 export default function ModeratorPage() {
+  // Local state tracking which tab is currently active
   const [tab, setTab] = useState('reports');
 
   return (
     <div className="h-full overflow-y-auto p-4">
+      {/* Page header */}
       <div className="flex items-center gap-2 mb-5">
         <span className="text-2xl text-secondary">
           <ShieldIcon />
@@ -1079,6 +1243,7 @@ export default function ModeratorPage() {
         <span className="badge badge-secondary">full control</span>
       </div>
 
+      {/* Tab navigation — horizontal tab bar */}
       <div role="tablist" className="tabs tabs-box bg-base-100 rounded-2xl mb-5 p-1 w-fit flex-wrap">
         {TABS.map((t) => (
           <button
@@ -1093,6 +1258,7 @@ export default function ModeratorPage() {
         ))}
       </div>
 
+      {/* Tab content — renders the component for the active tab */}
       {tab === 'reports' && <ReportsTab />}
       {tab === 'posts' && <PostsTab />}
       {tab === 'events' && <ModEventsTab />}

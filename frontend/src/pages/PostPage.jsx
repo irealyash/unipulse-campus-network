@@ -1,3 +1,14 @@
+/**
+ * PostPage.jsx
+ *
+ * Full-page view for a single post and its comment thread.
+ * Route: "/c/:communityId/posts/:postId"
+ * Role: Fetches and displays a specific post with its metadata (author,
+ * time, tag), media attachments, like/dislike voting, and a full comment
+ * section with sorting. Also provides a report button and moderation
+ * status banners (pending/rejected).
+ */
+
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
@@ -15,29 +26,44 @@ import ReportFlagButton from '../components/ReportFlagButton';
 
 /** Full-page view for a single post and its comment thread. */
 export default function PostPage() {
+  // Extract communityId and postId from URL params
   const { communityId, postId } = useParams();
   const dispatch = useDispatch();
+
+  // Redux selectors — read the current post, its comments, and the logged-in user
   const post = useSelector((s) => s.posts.currentPost);
   const comments = useSelector((s) => s.posts.commentsByPost[postId]);
   const user = useSelector((s) => s.auth.user);
+
+  // Local state for comment sort order and report modal target
   const [commentSort, setCommentSort] = useState('new');
   const [reportTarget, setReportTarget] = useState(null);
 
+  /**
+   * useEffect: Fetches the post data when the component mounts or postId changes.
+   * Also clears the current post from Redux state on unmount to avoid stale data.
+   */
   useEffect(() => {
     dispatch(fetchPost(postId));
     return () => dispatch(clearCurrentPost());
   }, [dispatch, postId]);
 
+  /**
+   * useEffect: Fetches comments for the post whenever the post loads or sort changes.
+   * Depends on post._id to ensure the post has been fetched before loading comments.
+   */
   useEffect(() => {
     if (post?._id) {
       dispatch(fetchComments({ postId: post._id, sort: commentSort }));
     }
   }, [dispatch, post?._id, commentSort]);
 
+  /** Refreshes the comment list — called after posting a new comment. */
   const refreshComments = () => {
     if (post?._id) dispatch(fetchComments({ postId: post._id, sort: commentSort }));
   };
 
+  // Loading state — show spinner until the correct post is loaded
   if (!post || post._id !== postId) {
     return (
       <div className="flex-1 flex items-center justify-center p-8">
@@ -46,10 +72,12 @@ export default function PostPage() {
     );
   }
 
+  // Whether comments are enabled (only for approved posts)
   const approved = post.status === 'approved' || !post.status;
 
   return (
     <div className="flex flex-col h-full min-h-0">
+      {/* Top bar — back navigation link */}
       <div className="shrink-0 border-b border-base-200 bg-base-100 px-4 py-3">
         <Link
           to={`/c/${encodeURIComponent(communityId)}/posts`}
@@ -59,9 +87,11 @@ export default function PostPage() {
         </Link>
       </div>
 
+      {/* Scrollable content area */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 bg-base-200/30 min-h-0">
         <article className="card bg-base-100 border border-base-200 shadow-sm max-w-3xl mx-auto w-full min-w-0 overflow-hidden">
           <div className="card-body min-w-0 overflow-hidden">
+            {/* Moderation status banners — shown for pending or rejected posts */}
             {post.status === 'pending' && (
               <div className="alert alert-warning text-sm py-2">
                 This post is awaiting moderator approval. Comments will open once it is approved.
@@ -73,6 +103,7 @@ export default function PostPage() {
               </div>
             )}
 
+            {/* Post metadata — author, timestamp, tag, and report button */}
             <p className="text-xs text-base-content/50 flex flex-wrap items-center gap-1">
               Posted by <span className="font-medium text-primary">{post.anonymousUsername}</span> ·{' '}
               {timeAgo(post.createdAt)}
@@ -81,10 +112,15 @@ export default function PostPage() {
                 onClick={() => setReportTarget({ contentType: 'post', contentId: post._id })}
               />
             </p>
+
+            {/* Post title and body content */}
             <h1 className="font-bold text-2xl mt-2 break-words [overflow-wrap:anywhere]">{post.title}</h1>
             <p className="text-sm whitespace-pre-wrap mt-3 break-words [overflow-wrap:anywhere]">{post.content}</p>
+
+            {/* Media attachments (images/files) */}
             <PostMedia media={post.media} />
 
+            {/* Vote controls — like/dislike with score display */}
             <div className="flex items-center gap-2 mt-4">
               <VoteColumn
                 horizontal
@@ -111,6 +147,7 @@ export default function PostPage() {
               />
             </div>
 
+            {/* Comment section — includes comment input, sorting, and threaded replies */}
             <PostCommentSection
               postId={post._id}
               comments={comments}
@@ -123,6 +160,8 @@ export default function PostPage() {
           </div>
         </article>
       </div>
+
+      {/* Report modal — opened when the user flags the post or a comment */}
       <ReportModal open={!!reportTarget} onClose={() => setReportTarget(null)} target={reportTarget} />
     </div>
   );

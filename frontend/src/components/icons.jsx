@@ -1,7 +1,15 @@
 /**
- * Lightweight inline SVG icons (stroke = currentColor) so we don't pull in an
- * icon library. Each accepts a className for sizing/colour.
+ * icons.jsx — lightweight inline SVG icon library for UniPulse.
+ *
+ * Each exported component renders a single SVG icon using stroke-based paths
+ * (stroke = currentColor) so icon colour inherits from the parent's text
+ * colour. All icons accept standard SVG/React props (className, style, etc.)
+ * for sizing and colour overrides.
+ *
+ * Used throughout the entire frontend wherever icons are needed.
  */
+
+// Shared default SVG attributes applied to every icon
 const base = (props) => ({
   width: '1em',
   height: '1em',

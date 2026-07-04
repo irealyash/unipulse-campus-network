@@ -1,24 +1,36 @@
+/**
+ * ReportModal — modal dialog that lets users report any piece of content
+ * (post, comment, reply, chat message, or event) to the moderators.
+ *
+ * Used throughout the app wherever a report flag button appears.
+ *
+ * Props:
+ * @param {boolean} open     — controls modal visibility
+ * @param {() => void} onClose — close callback
+ * @param {{ contentType: string, contentId: string }} target — the item being reported
+ */
 import { useState } from 'react';
 import api from '../../lib/api';
 import { CloseIcon, FlagIcon } from '../icons';
 
-/**
- * Report modal for posts, comments, replies, messages, or events.
- * `target` is { contentType, contentId }.
- */
 export default function ReportModal({ open, onClose, target }) {
+  // User-provided reason text (optional)
   const [reason, setReason] = useState('');
+  // Whether the report submission is in progress
   const [busy, setBusy] = useState(false);
+  // Result of the submission: { ok: boolean, text: string } or null
   const [result, setResult] = useState(null);
 
   if (!open || !target) return null;
 
+  // Reset state and close the modal
   const handleClose = () => {
     setReason('');
     setResult(null);
     onClose();
   };
 
+  // Submit the report to POST /reports
   const submit = async (e) => {
     e.preventDefault();
     setBusy(true);

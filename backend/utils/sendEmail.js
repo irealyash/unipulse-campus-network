@@ -1,7 +1,16 @@
+/**
+ * sendEmail.js — Transactional email delivery via the Resend API.
+ *
+ * Provides a generic sendEmail helper and a purpose-built sendOtpEmail wrapper
+ * for the verification code flow. In development (no RESEND_API_KEY), OTP codes
+ * are logged to the console instead of emailed.
+ */
 import { Resend } from 'resend';
 
+// Initialize the Resend client (null if API key is missing — emails disabled in dev).
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
+// Default "From" address shown in recipients' inboxes.
 const defaultFrom = process.env.MAIL_FROM || 'UniPulse <no-reply@unipulse.live>';
 
 /**

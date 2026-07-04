@@ -1,11 +1,17 @@
+/**
+ * ProtectedRoute — route guard that redirects unauthenticated users to /login
+ * and optionally restricts access to moderators only.
+ *
+ * While the app is still resolving the stored JWT token (booting phase),
+ * renders nothing to prevent a flash of the login page.
+ *
+ * Props:
+ * @param {ReactNode} children      — the protected page content
+ * @param {boolean}   moderatorOnly — if true, non-moderators are redirected to /c
+ */
 import { useSelector } from 'react-redux';
 import { Navigate, useLocation } from 'react-router-dom';
 
-/**
- * Guards routes that require a logged-in user. While the app is still resolving
- * a stored token (booting) we render nothing to avoid a flash. `moderatorOnly`
- * additionally restricts a route to moderators.
- */
 export default function ProtectedRoute({ children, moderatorOnly = false }) {
   const { token, user, booting } = useSelector((s) => s.auth);
   const location = useLocation();

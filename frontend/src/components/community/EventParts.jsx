@@ -1,5 +1,18 @@
+/**
+ * EventParts — shared utility components and helpers for event-related UI.
+ *
+ * Exports:
+ * - hasEventUserMedia / getEventMediaItems — media helpers
+ * - formatEventDate — human-readable date string
+ * - EventRsvpButtons — Attend / Busy RSVP controls with attendee count
+ * - EventMediaCarousel / EventMediaGallery — image/video carousel with arrows
+ * - buildEventDateTime / todayDateInputValue — form helpers
+ *
+ * Used by EventsFeed, EventsTab, PostCommentSection (PostMedia), and detail pages.
+ */
 import { useEffect, useState } from 'react';
 
+// Left-arrow chevron SVG for the media carousel
 function ChevronLeftIcon() {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5">
@@ -8,6 +21,7 @@ function ChevronLeftIcon() {
   );
 }
 
+// Right-arrow chevron SVG for the media carousel
 function ChevronRightIcon() {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5">
@@ -16,15 +30,18 @@ function ChevronRightIcon() {
   );
 }
 
+/** Returns true if the event has at least one user-uploaded media item. */
 export function hasEventUserMedia(event) {
   return Array.isArray(event?.media) && event.media.length > 0;
 }
 
+/** Extracts media items array from an event (empty if none). */
 export function getEventMediaItems(event) {
   if (hasEventUserMedia(event)) return event.media;
   return [];
 }
 
+/** Formats an ISO date string into a short human-readable form (e.g. "Mon, Jul 3, 6:00 PM"). */
 export function formatEventDate(iso) {
   return new Date(iso).toLocaleString(undefined, {
     weekday: 'short',
@@ -36,6 +53,7 @@ export function formatEventDate(iso) {
   });
 }
 
+// Checkmark icon for the "Attend" RSVP button
 function CheckIcon({ className = 'w-3.5 h-3.5' }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -44,6 +62,7 @@ function CheckIcon({ className = 'w-3.5 h-3.5' }) {
   );
 }
 
+// X icon for the "Busy" RSVP button
 function XIcon({ className = 'w-3.5 h-3.5' }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -53,10 +72,16 @@ function XIcon({ className = 'w-3.5 h-3.5' }) {
   );
 }
 
+/**
+ * EventRsvpButtons — Attend / Busy toggle buttons with attendee count.
+ * @param {object}   ev    — event object with myRsvp, comingCount, capacity
+ * @param {Function} onRsvp — (eventId, status, previousRsvp) callback
+ */
 export function EventRsvpButtons({ ev, onRsvp }) {
   const comingSelected = ev.myRsvp === 'coming';
   const busySelected = ev.myRsvp === 'busy';
   const count = ev.comingCount ?? 0;
+  // Disable "Attend" if at capacity and user hasn't already RSVP'd
   const atCapacity =
     ev.capacity != null && count >= ev.capacity && !comingSelected;
 
@@ -97,6 +122,11 @@ export function EventRsvpButtons({ ev, onRsvp }) {
   );
 }
 
+/**
+ * EventMediaCarousel — left/right arrow carousel for event or post media.
+ * Supports images and videos, compact and feed display modes,
+ * and an optional fallback image when no media is available.
+ */
 export function EventMediaCarousel({
   event,
   items: itemsProp,
@@ -105,17 +135,21 @@ export function EventMediaCarousel({
   feed = false,
 }) {
   const items = itemsProp ?? getEventMediaItems(event);
+  // Current slide index in the carousel
   const [index, setIndex] = useState(0);
 
+  // Reset to the first slide when the event or item count changes
   useEffect(() => {
     setIndex(0);
   }, [event?._id, items.length]);
 
+  // Navigate to the previous slide (wraps around)
   const goPrev = (e) => {
     e?.preventDefault?.();
     e?.stopPropagation?.();
     setIndex((i) => (i - 1 + items.length) % items.length);
   };
+  // Navigate to the next slide (wraps around)
   const goNext = (e) => {
     e?.preventDefault?.();
     e?.stopPropagation?.();
@@ -126,6 +160,7 @@ export function EventMediaCarousel({
   const hasMultiple = items.length > 1;
   const current = items[index];
 
+  // Render a single slide — either an image or video element
   const renderSlide = (m) => {
     if (feed) {
       const fitClass = 'max-h-52 max-w-full object-contain rounded-xl';
@@ -192,6 +227,7 @@ export function EventMediaCarousel({
   );
 }
 
+/** Alias for EventMediaCarousel — kept for backward compatibility. */
 export function EventMediaGallery(props) {
   return <EventMediaCarousel {...props} />;
 }
@@ -210,6 +246,7 @@ export function buildEventDateTime(dateStr, hour12, minute, ampm) {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+/** Returns today's date formatted as YYYY-MM-DD for HTML date inputs. */
 export function todayDateInputValue() {
   const now = new Date();
   const y = now.getFullYear();

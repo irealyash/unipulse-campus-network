@@ -1,3 +1,12 @@
+/**
+ * likeDislike.js
+ *
+ * Shared like/dislike voting logic used across all votable content types
+ * (Posts, Comments, Messages, and MessageReplies). Provides a single
+ * mutation function that enforces mutual exclusivity between likes and
+ * dislikes, ensuring a user can only have one active vote at a time.
+ */
+
 import ApiError from './ApiError.js';
 
 /**

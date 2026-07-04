@@ -1,3 +1,13 @@
+/**
+ * Toasts — global toast notification layer rendered at the app root.
+ *
+ * Watches multiple Redux slices (auth, moderator, posts, events) for
+ * transient `notice` (success/info) and `error` messages, then renders
+ * them as DaisyUI toast alerts in the top-right corner.
+ *
+ * Each toast auto-dismisses after 4 seconds by dispatching the
+ * corresponding clear action.
+ */
 import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { clearAuthMessages } from '../features/auth/authSlice';
@@ -5,18 +15,16 @@ import { clearModMessages } from '../features/moderator/moderatorSlice';
 import { clearPostNotice } from '../features/posts/postsSlice';
 import { clearEventNotice } from '../features/events/eventsSlice';
 
-/**
- * Global toast layer. Watches the auth + moderator slices for transient
- * `notice` (success) and `error` messages and shows them as DaisyUI alerts in
- * a corner toast, auto-dismissing after a few seconds.
- */
 export default function Toasts() {
   const dispatch = useDispatch();
+
+  // Pull transient messages from each Redux slice
   const { notice: authNotice, error: authError } = useSelector((s) => s.auth);
   const { notice: modNotice, error: modError } = useSelector((s) => s.moderator);
   const { notice: postNotice } = useSelector((s) => s.posts);
   const { notice: eventNotice } = useSelector((s) => s.events);
 
+  // Auto-clear auth messages after 4 seconds
   useEffect(() => {
     if (authNotice || authError) {
       const t = setTimeout(() => dispatch(clearAuthMessages()), 4000);
@@ -24,6 +32,7 @@ export default function Toasts() {
     }
   }, [authNotice, authError, dispatch]);
 
+  // Auto-clear moderator messages after 4 seconds
   useEffect(() => {
     if (modNotice || modError) {
       const t = setTimeout(() => dispatch(clearModMessages()), 4000);
@@ -31,6 +40,7 @@ export default function Toasts() {
     }
   }, [modNotice, modError, dispatch]);
 
+  // Auto-clear post notices after 4 seconds
   useEffect(() => {
     if (postNotice) {
       const t = setTimeout(() => dispatch(clearPostNotice()), 4000);
@@ -38,6 +48,7 @@ export default function Toasts() {
     }
   }, [postNotice, dispatch]);
 
+  // Auto-clear event notices after 4 seconds
   useEffect(() => {
     if (eventNotice) {
       const t = setTimeout(() => dispatch(clearEventNotice()), 4000);
@@ -45,6 +56,7 @@ export default function Toasts() {
     }
   }, [eventNotice, dispatch]);
 
+  // Collect all active toasts into a single array for rendering
   const items = [
     authError && { type: 'error', msg: authError },
     authNotice && { type: 'success', msg: authNotice },

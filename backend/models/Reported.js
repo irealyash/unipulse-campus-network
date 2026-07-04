@@ -107,4 +107,5 @@ reportedSchema.index({ reporterId: 1, contentId: 1 }, { unique: true });
 // Moderator queues are almost always "show me pending reports, newest first".
 reportedSchema.index({ status: 1, createdAt: -1 });
 
+// Export the Reported model bound to the "reporteds" collection.
 export default mongoose.model('Reported', reportedSchema);

@@ -1,3 +1,13 @@
+/**
+ * CommunityOnboardingPage.jsx
+ *
+ * Post-signup onboarding wizard.
+ * Route: "/onboarding"
+ * Role: Guides newly verified users through picking communities from each
+ * category (international, academic, faculty, etc.) and optionally uploading
+ * their UBC schedule. Once complete, marks onboarding done and redirects to /c.
+ */
+
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Navigate, useNavigate } from 'react-router-dom';
@@ -17,41 +27,63 @@ import useDebouncedValue from '../hooks/useDebouncedValue';
 export default function CommunityOnboardingPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+
+  // Reads the current user object to check onboarding status and joined communities
   const user = useSelector((s) => s.auth.user);
+  // Reads the community catalog list and its loading status from Redux
   const catalog = useSelector((s) => s.communities.catalog);
   const catalogStatus = useSelector((s) => s.communities.catalogStatus);
+  // List of community IDs the user has already joined
   const joined = user?.joinedCommunities || [];
 
+  // Wizard state: "communities" phase (picking from categories) or "schedule" phase
   const [phase, setPhase] = useState('communities');
+  // Current step index within the ONBOARDING_STEPS array
   const [stepIndex, setStepIndex] = useState(0);
+  // Search input for filtering communities within the current category
   const [search, setSearch] = useState('');
+  // Debounced search value to avoid excessive API calls on every keystroke
   const debouncedSearch = useDebouncedValue(search, 250);
 
+  // Current step configuration (label, category id) from the onboarding steps array
   const step = ONBOARDING_STEPS[stepIndex];
   const category = step?.id;
+  // Total steps = category steps + 1 for the schedule upload step
   const totalSteps = ONBOARDING_STEPS.length + 1;
 
+  /**
+   * useEffect: Fetches the community catalog for the current category.
+   * Runs whenever the phase is "communities" and category or search changes.
+   * Uses the debounced search value to reduce API requests.
+   */
   useEffect(() => {
     if (phase === 'communities' && category) {
       dispatch(fetchCatalog({ category, search: debouncedSearch.trim() }));
     }
   }, [dispatch, phase, category, debouncedSearch]);
 
+  // If user already completed onboarding, redirect to the community hub
   if (user?.communityOnboardingComplete) {
     return <Navigate to="/c" replace />;
   }
 
+  /**
+   * Handler: finishes the onboarding flow.
+   * Marks onboarding complete on the server, refreshes communities, and navigates to /c.
+   */
   const finish = async () => {
     await dispatch(completeCommunityOnboarding());
     await dispatch(fetchCommunities());
     navigate('/c', { replace: true });
   };
 
+  /** Handler: transitions from community-picking phase to the schedule upload phase. */
   const goToSchedule = () => {
     setPhase('schedule');
     setSearch('');
   };
 
+  /** Handler: advances to the next onboarding step, or moves to schedule if all done. */
   const nextStep = () => {
     if (stepIndex >= ONBOARDING_STEPS.length - 1) goToSchedule();
     else {
@@ -60,19 +92,29 @@ export default function CommunityOnboardingPage() {
     }
   };
 
+  /** Handler: skips the current category step (same as nextStep). */
   const skipStep = () => nextStep();
 
+  /**
+   * Handler: adds a community to the user's joined list.
+   * Triggered when the user clicks "Add" on a community tile.
+   */
   const addCommunity = (c) => {
     if (!joined.includes(c._id)) {
       dispatch(joinCommunity(c));
     }
   };
 
+  /**
+   * Handler: called when the schedule upload succeeds.
+   * Refreshes communities (to include newly unlocked course rooms) then finishes onboarding.
+   */
   const onScheduleSuccess = async () => {
     await dispatch(fetchCommunities());
     await finish();
   };
 
+  // Render the schedule upload phase
   if (phase === 'schedule') {
     return (
       <AuthShell
@@ -86,6 +128,7 @@ export default function CommunityOnboardingPage() {
 
   if (!step) return null;
 
+  // Render the community-picking phase
   return (
     <AuthShell
       title="Pick your communities"
@@ -96,6 +139,7 @@ export default function CommunityOnboardingPage() {
         the home page.
       </p>
 
+      {/* Search bar — filters communities within the current category */}
       <div className="flex gap-2 mb-3">
         <input
           className="input input-bordered rounded-full flex-1 input-sm"
@@ -109,6 +153,7 @@ export default function CommunityOnboardingPage() {
         </span>
       </div>
 
+      {/* Scrollable community list for the current category */}
       <div className="max-h-64 overflow-y-auto space-y-1 border border-base-content/10 rounded-2xl p-2">
         {catalogStatus === 'loading' && <Loader label="Loading communities…" />}
         {catalogStatus !== 'loading' &&
@@ -123,6 +168,7 @@ export default function CommunityOnboardingPage() {
                   <CommunityAvatar community={c} className="w-full h-full" boxPx={36} />
                 </div>
                 <span className="text-sm font-medium truncate flex-1 min-w-0">{c.name}</span>
+                {/* Add/Added toggle button */}
                 <button
                   type="button"
                   className={`btn btn-xs rounded-full ${already ? 'btn-success btn-outline' : 'btn-primary'}`}
@@ -135,6 +181,7 @@ export default function CommunityOnboardingPage() {
           })}
       </div>
 
+      {/* Navigation buttons — Skip and Continue */}
       <div className="flex flex-wrap gap-2 mt-5">
         <button type="button" className="btn btn-ghost rounded-2xl flex-1" onClick={skipStep}>
           Skip
@@ -144,6 +191,7 @@ export default function CommunityOnboardingPage() {
         </button>
       </div>
 
+      {/* Link to skip all remaining category steps at once */}
       <button
         type="button"
         className="btn btn-link btn-xs w-full mt-2 text-base-content/50"

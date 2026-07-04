@@ -1,12 +1,23 @@
+/**
+ * MessageBubble — a single chat message rendered as a left-aligned (other
+ * user) or right-aligned (own user) bubble, with reply threading, media
+ * display, like/dislike voting, emoji reactions, and action buttons
+ * (delete, react, reply, report).
+ *
+ * Used inside ChatTab's timeline to render each message.
+ */
 import { useEffect, useRef, useState } from 'react';
 import { EmojiIcon, ReplyIcon, FlagIcon, ThumbUpIcon, ThumbDownIcon, TrashIcon } from '../icons';
 import UserAvatar from '../UserAvatar';
 
+// Quick emoji set shown in the reaction picker popup
 const QUICK_EMOJIS = ['👍', '❤️', '😂', '🔥', '🎉', '😮', '😢'];
 
+// Formats an ISO timestamp to "HH:MM AM/PM"
 const formatTime = (iso) =>
   new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
+// Aggregate reactions array into { emoji → { count, mine } } map
 const groupReactions = (reactions, myId) => {
   const map = {};
   (reactions || []).forEach((r) => {
@@ -17,6 +28,7 @@ const groupReactions = (reactions, myId) => {
   return map;
 };
 
+/** Renders media (image or video) or plain text content inside a bubble. */
 function MediaContent({ media, content }) {
   if (media?.url) {
     if (media.mediaType === 'video') {
@@ -30,10 +42,16 @@ function MediaContent({ media, content }) {
   return <p className="text-sm whitespace-pre-wrap break-words px-3 py-2">{content}</p>;
 }
 
+/**
+ * EmojiReactionPicker — floating row of quick-emoji buttons that appears
+ * on click. Aligns left or right depending on whether it's the user's own message.
+ */
 function EmojiReactionPicker({ targetType, messageId, onEmoji, align = 'left' }) {
+  // Whether the picker popup is visible
   const [open, setOpen] = useState(false);
   const rootRef = useRef(null);
 
+  // Close the picker on outside click
   useEffect(() => {
     if (!open) return;
     const onOutside = (e) => {
@@ -85,6 +103,10 @@ function EmojiReactionPicker({ targetType, messageId, onEmoji, align = 'left' })
   );
 }
 
+/**
+ * MessageActions — vertical action bar shown beside a message bubble.
+ * Contains: delete (own only), emoji react, reply, and report buttons.
+ */
 function MessageActions({ targetType, message, isOwn, onEmoji, onReply, onReport, onDelete }) {
   return (
     <div className="msg-actions flex flex-col items-center gap-0 bg-base-100 rounded-full shadow border border-base-200 px-0.5 py-0.5 shrink-0 self-start">
@@ -130,6 +152,20 @@ function MessageActions({ targetType, message, isOwn, onEmoji, onReply, onReport
   );
 }
 
+/**
+ * Props:
+ * @param {object}   message         — the message/reply object from the chat timeline
+ * @param {string}   myUsername       — current user's anonymous username
+ * @param {string}   myId            — current user's id
+ * @param {object}   myReactions     — map of messageId → 'like'|'dislike' for local optimistic state
+ * @param {Function} onReact         — (targetType, id, action) → vote like/dislike
+ * @param {Function} onEmoji         — (targetType, id, emoji) → toggle emoji reaction
+ * @param {Function} onReport        — ({ contentType, contentId }) → open report modal
+ * @param {Function} onReply         — ({ id, author, preview }) → set reply target
+ * @param {Function} onDelete        — (targetType, id) → delete own message
+ * @param {Function} onScrollToParent— (parentId) → scroll to & highlight the parent message
+ * @param {Function} messageRef      — ref callback for scroll-to-parent
+ */
 export default function MessageBubble({
   message,
   myUsername,
@@ -143,17 +179,22 @@ export default function MessageBubble({
   onScrollToParent,
   messageRef,
 }) {
+  // Determine if this message was sent by the current user
   const isOwn =
     message.isMine ||
     (myId && message.senderId && String(message.senderId) === String(myId)) ||
     (message.pending && message.anonymousUsername === myUsername);
+  // "reply" items are threaded replies; "message" items are top-level messages
   const targetType = message.itemType === 'reply' ? 'reply' : 'message';
+  // Aggregate emoji reactions for badge rendering
   const grouped = groupReactions(message.reactions, myId);
+  // The current user's like/dislike state for this message
   const myReaction = myReactions[message._id] ?? message.myVote ?? null;
   const hasMedia = Boolean(message.media?.url);
   const hasText = Boolean(message.content?.trim());
   const hasReply = Boolean(message.parentMessageId);
 
+  // Primary vs neutral bubble colour depending on ownership
   const bubbleClass = isOwn
     ? 'bg-primary text-primary-content'
     : 'bg-base-200 text-base-content';

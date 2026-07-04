@@ -1,3 +1,13 @@
+/**
+ * PostsTab — Reddit-style posts feed for a community.
+ *
+ * Displays a list of posts sorted by "new" or "top", each showing title,
+ * preview text or media, vote controls, and a link to the full thread view.
+ * Includes a "Create Post" button that opens a modal with title, body, tag,
+ * and optional media upload fields.
+ *
+ * Used as the "Posts" channel tab inside CommunityShell.
+ */
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, useParams } from 'react-router-dom';
@@ -10,26 +20,33 @@ import { showPostNotice } from '../../features/posts/postsSlice';
 import ReportModal from '../chat/ReportModal';
 import ReportFlagButton from '../ReportFlagButton';
 
-/** Reddit-style posts feed. Post titles link to a full-page thread view. */
 export default function PostsTab() {
   const { communityId } = useParams();
   const dispatch = useDispatch();
   const community = useSelector((s) =>
     s.communities.list.find((c) => c._id === communityId) || s.communities.current
   );
+  // Posts bucket for this community from Redux
   const bucket = useSelector((s) => s.posts.byCommunity[communityId]);
   const user = useSelector((s) => s.auth.user);
 
+  // Sort mode: "new" (chronological) or "top" (by score)
   const [sort, setSort] = useState('new');
+  // Whether the "Create Post" modal is open
   const [createOpen, setCreateOpen] = useState(false);
+  // Create-post form fields
   const [form, setForm] = useState({ title: '', content: '', tag: 'General' });
+  // Selected media files for the new post
   const [mediaFiles, setMediaFiles] = useState([]);
+  // Report modal target { contentType, contentId }
   const [reportTarget, setReportTarget] = useState(null);
 
+  // Fetch posts whenever community or sort changes
   useEffect(() => {
     dispatch(fetchPosts({ communityId, sort }));
   }, [dispatch, communityId, sort]);
 
+  // Submit a new post for moderator review; uploads media first
   const submitPost = async (e) => {
     e.preventDefault();
     const payload = { ...form };

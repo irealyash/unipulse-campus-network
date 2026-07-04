@@ -1,3 +1,14 @@
+/**
+ * CommunityPage.jsx
+ *
+ * Real-time group chat page for a single community.
+ * Route: "/communities/:id"
+ * Role: Loads the community details and message history via REST, then
+ * establishes a Socket.io connection for live messaging, replies, reactions,
+ * and typing indicators. This is the primary chat interface users interact
+ * with after joining a community.
+ */
+
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, useParams } from 'react-router-dom';
@@ -26,20 +37,22 @@ import { ChatIcon, CalendarIcon, UsersIcon } from '../components/icons';
  * the socket; reporting uses REST.
  */
 export default function CommunityPage() {
+  // Extract the community ID from the URL params
   const { id } = useParams();
   const dispatch = useDispatch();
 
+  // Redux selectors — read current user, community info, messages, replies, and reactions
   const user = useSelector((s) => s.auth.user);
   const community = useSelector((s) => s.communities.current);
   const bucket = useSelector((s) => s.chat.byCommunity[id]);
   const repliesByMessage = useSelector((s) => s.chat.repliesByMessage);
   const myReactions = useSelector((s) => s.chat.myReactions);
 
+  // Derived state from the Redux chat bucket for this community
   const messages = bucket?.messages || [];
   const loading = !bucket || bucket.status === 'loading';
 
-  // Initialize from the (singleton) socket's current state so we don't have to
-  // synchronously setState inside the effect.
+  // Local state for socket connection status, errors, typing indicator, threads, and reports
   const [connected, setConnected] = useState(() => getSocket().connected);
   const [chatError, setChatError] = useState('');
   const [typingUser, setTypingUser] = useState('');
@@ -47,16 +60,26 @@ export default function CommunityPage() {
   const [loadingReplies, setLoadingReplies] = useState({});
   const [reportTarget, setReportTarget] = useState(null);
 
+  // Ref for auto-scrolling to newest message
   const bottomRef = useRef(null);
+  // Ref to clear the typing indicator timeout
   const typingTimeout = useRef(null);
 
-  // Load community details + message history.
+  /**
+   * useEffect: Loads community details and message history via REST.
+   * Runs when the component mounts or the community ID changes.
+   */
   useEffect(() => {
     dispatch(fetchCommunity(id));
     dispatch(fetchMessages(id));
   }, [dispatch, id]);
 
-  // Wire up the live socket for this room.
+  /**
+   * useEffect: Establishes live Socket.io connection for this community room.
+   * Joins the room, listens for incoming messages/replies/reactions/typing/errors,
+   * and dispatches Redux actions to update the store in real-time.
+   * Cleans up by leaving the room and removing all listeners on unmount.
+   */
   useEffect(() => {
     const socket = getSocket();
 
@@ -97,26 +120,32 @@ export default function CommunityPage() {
     };
   }, [dispatch, id]);
 
-  // Auto-scroll to the newest message.
+  /**
+   * useEffect: Auto-scrolls to the newest message whenever a new message
+   * arrives or a reply thread is opened/closed.
+   */
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages.length, openReplies]);
 
   // --- Action handlers ----------------------------------------------------
+
+  /** Sends a new chat message to the current community room via Socket.io. */
   const handleSend = useCallback(
     (content) => getSocket().emit('chat:message', { communityId: id, content }),
     [id]
   );
 
+  /** Sends a reply to a specific message via Socket.io and opens that thread. */
   const handleSendReply = useCallback(
     (messageId, content) => {
       getSocket().emit('chat:reply', { parentId: messageId, content });
-      // Make sure the thread is visible after replying.
       setOpenReplies((prev) => ({ ...prev, [messageId]: true }));
     },
     []
   );
 
+  /** Sends a like/dislike/none reaction on a message or reply via Socket.io. */
   const handleReact = useCallback(
     (targetType, targetId, action) => {
       getSocket().emit('chat:react', { targetType, targetId, action });
@@ -125,19 +154,24 @@ export default function CommunityPage() {
     [dispatch]
   );
 
+  /** Sends an emoji reaction on a message or reply via Socket.io. */
   const handleEmoji = useCallback((targetType, targetId, emoji) => {
     getSocket().emit('chat:emoji', { targetType, targetId, emoji });
   }, []);
 
+  /** Emits a typing indicator to the community room via Socket.io. */
   const handleTyping = useCallback(() => {
     getSocket().emit('chat:typing', { communityId: id });
   }, [id]);
 
+  /**
+   * Toggles the visibility of a message's reply thread.
+   * Fetches replies from the server the first time a thread is expanded.
+   */
   const handleToggleReplies = useCallback(
     (messageId) => {
       setOpenReplies((prev) => {
         const next = { ...prev, [messageId]: !prev[messageId] };
-        // Fetch the thread the first time it's opened.
         if (next[messageId] && !repliesByMessage[messageId]) {
           setLoadingReplies((l) => ({ ...l, [messageId]: true }));
           dispatch(fetchReplies(messageId)).finally(() =>
@@ -154,7 +188,7 @@ export default function CommunityPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-7rem)]">
-      {/* Header */}
+      {/* Chat header — back button, community avatar/name, connection status */}
       <div className="card bg-base-100 shadow-sm border border-base-200 rounded-t-3xl">
         <div className="card-body p-4 flex-row items-center gap-3">
           <Link to="/communities" className="btn btn-ghost btn-sm btn-circle">
@@ -176,6 +210,7 @@ export default function CommunityPage() {
                 {isCourse ? 'Course' : 'General'}
               </span>
             </h1>
+            {/* Connection/typing status indicator */}
             <p className="text-xs text-base-content/50 truncate">
               {typingUser ? (
                 <span className="text-primary">{typingUser} is typing…</span>
@@ -195,14 +230,16 @@ export default function CommunityPage() {
         </div>
       </div>
 
-      {/* Messages */}
+      {/* Messages area — scrollable list of message bubbles */}
       <div className="flex-1 overflow-y-auto bg-base-200/30 px-3 sm:px-5 py-4 space-y-3 border-x border-base-200">
+        {/* Chat error banner */}
         {chatError && (
           <div className="alert alert-warning py-2 text-sm">
             <span>{chatError}</span>
           </div>
         )}
 
+        {/* Conditional rendering: loading, empty state, or message list */}
         {loading ? (
           <Loader label="Loading messages…" />
         ) : messages.length === 0 ? (
@@ -232,14 +269,16 @@ export default function CommunityPage() {
             />
           ))
         )}
+        {/* Invisible anchor for auto-scroll */}
         <div ref={bottomRef} />
       </div>
 
-      {/* Composer */}
+      {/* Chat composer — input bar at the bottom */}
       <div className="rounded-b-3xl overflow-hidden border-x border-b border-base-200">
         <ChatInput onSend={handleSend} onTyping={handleTyping} disabled={!connected} />
       </div>
 
+      {/* Report modal — triggered by clicking the report button on a message */}
       <ReportModal
         open={!!reportTarget}
         onClose={() => setReportTarget(null)}

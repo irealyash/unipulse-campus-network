@@ -16,10 +16,14 @@ import {
  */
 const router = Router();
 
+// All message-reply routes require authentication
 router.use(protect);
 
+// POST /:id/react — toggle like/dislike/none reaction on a reply (protect)
 router.post('/:id/react', reactToReply);
+// POST /:id/emoji — toggle an emoji reaction on a reply (protect)
 router.post('/:id/emoji', reactToReplyWithEmoji);
+// DELETE /:id — delete the authenticated user's own reply and its nested replies (protect)
 router.delete('/:id', deleteReply);
 
 export default router;

@@ -1,4 +1,11 @@
-/** ISO 3166-1 English short country names (UN members + common territories). */
+/**
+ * Country list used to generate international student communities.
+ *
+ * Contains ISO 3166-1 English short country names (UN members + common
+ * territories). Imported by communityCatalog.js, where each country name
+ * becomes an "international" community entry so students can find and
+ * connect with others from their home country.
+ */
 export const COUNTRIES = [
   'Afghanistan', 'Albania', 'Algeria', 'Andorra', 'Angola', 'Antigua and Barbuda',
   'Argentina', 'Armenia', 'Australia', 'Austria', 'Azerbaijan', 'Bahamas', 'Bahrain',

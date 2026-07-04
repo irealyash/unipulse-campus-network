@@ -16,6 +16,8 @@ export { EVENT_TAGS };
  * approval before they appear in the community list.
  */
 
+/** Sanitizes the raw media array from the request body, keeping only items that
+ *  have both a url and a mediaType. Returns an empty array if input is invalid. */
 const normalizeMedia = (raw) => {
   if (!Array.isArray(raw)) return [];
   return raw
@@ -26,7 +28,11 @@ const normalizeMedia = (raw) => {
     }));
 };
 
-/** Shape an event for the API: image default, RSVP counts, caller's RSVP. */
+/**
+ * Serializes an Event document for API output. Attaches a default image if none
+ * is set, computes RSVP counts (coming/busy), determines the calling user's
+ * personal RSVP status, and strips the internal moderatorNote field.
+ */
 const serializeEvent = (event, userId) => {
   const e = withEventImage(event.toObject ? event.toObject() : event);
   const uid = userId?.toString();
@@ -46,6 +52,11 @@ const serializeEvent = (event, userId) => {
   };
 };
 
+/**
+ * Fetches events matching `filter`, sorted by either RSVP count (descending,
+ * via aggregation) or event date (ascending, via simple query). Used by both
+ * the per-community and the public event list endpoints.
+ */
 const fetchSortedEvents = async (filter, sortBy) => {
   if (sortBy === 'rsvp') {
     return Event.aggregate([
@@ -57,6 +68,11 @@ const fetchSortedEvents = async (filter, sortBy) => {
   return Event.find(filter).sort({ eventDate: 1 }).lean();
 };
 
+/**
+ * Batch-resolves community display names for a list of events by querying the
+ * Community collection once for all unique communityId values. Attaches a
+ * `communityName` field to each event (falls back to the raw id if not found).
+ */
 const attachCommunityNames = async (events) => {
   const ids = [...new Set(events.map((ev) => ev.communityId))];
   if (!ids.length) return events;
@@ -65,8 +81,11 @@ const attachCommunityNames = async (events) => {
   return events.map((ev) => ({ ...ev, communityName: names[ev.communityId] || ev.communityId }));
 };
 
+/** The subset of event tags that the public feed allows filtering by. */
 const FEED_TAG_FILTERS = ['Official', 'Student-Led'];
 
+/** Mutates `filter` in-place to add a tag constraint if `tagQuery` matches one
+ *  of the allowed feed-level tag filters. "all" or falsy values are ignored. */
 const applyTagFilter = (filter, tagQuery) => {
   if (!tagQuery || tagQuery === 'all') return filter;
   if (FEED_TAG_FILTERS.includes(tagQuery)) {
@@ -76,7 +95,11 @@ const applyTagFilter = (filter, tagQuery) => {
 };
 
 /**
- * GET /api/communities/:communityId/events?past=false&sort=date|rsvp
+ * GET /api/communities/:communityId/events?past=false&sort=date|rsvp&tag=
+ * Returns the event list for a community the user can access. By default only
+ * upcoming events are returned; set `past=true` to include past ones.
+ * Params: :communityId. Query: past (bool), sort ("date"|"rsvp"), tag (optional).
+ * Returns: { events[] } each with RSVP counts and the caller's RSVP status.
  */
 export const listEvents = asyncHandler(async (req, res) => {
   const { communityId } = req.params;
@@ -126,6 +149,10 @@ export const listAllPublicEvents = asyncHandler(async (req, res) => {
 
 /**
  * GET /api/events/:id
+ * Returns a single event by id, after verifying community access. Non-approved
+ * events are only visible to the event creator and moderators.
+ * Params: :id — the event's ObjectId.
+ * Returns: { event } serialized with RSVP counts and the caller's RSVP status.
  */
 export const getEvent = asyncHandler(async (req, res) => {
   const event = await Event.findById(req.params.id);
@@ -239,6 +266,9 @@ export const rsvpEvent = asyncHandler(async (req, res) => {
 
 /**
  * DELETE /api/events/:id
+ * Deletes an event. Only the original creator or a moderator may delete.
+ * Params: :id — the event's ObjectId.
+ * Returns: { message: "Event deleted." }
  */
 export const deleteEvent = asyncHandler(async (req, res) => {
   const event = await Event.findById(req.params.id);

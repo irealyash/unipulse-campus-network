@@ -1,10 +1,33 @@
+/**
+ * EVENTS SLICE
+ * ----------------------------------------------------------------------------
+ * Manages community events and the global public events feed. Supports:
+ *   - Fetching events per community (upcoming or past)
+ *   - Fetching the cross-community public events feed
+ *   - Fetching a single event detail
+ *   - Creating events (may require moderator approval)
+ *   - RSVP with optimistic updates (coming / busy / none)
+ *
+ * Events are bucketed by community ID (or the special ALL_PUBLIC_EVENTS_KEY
+ * for the global feed). RSVP uses optimistic count adjustments so the UI
+ * updates instantly, with rollback on failure.
+ */
+
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import api from '../../lib/api';
 
+/** Sentinel key used as a community bucket ID for the global public events feed. */
 export const ALL_PUBLIC_EVENTS_KEY = '__all_public__';
 
+/** Coerce an event ID to string for safe comparison. */
 const eventIdStr = (id) => String(id);
 
+/**
+ * Normalize a raw event from the API into a consistent shape.
+ * Converts coming/busy arrays into counts and strips the arrays.
+ * @param {Object} raw - Raw event object from server.
+ * @returns {Object} Normalized event with comingCount, busyCount, myRsvp.
+ */
 const normalizeEvent = (raw) => {
   if (!raw) return raw;
   const comingCount =
@@ -19,6 +42,13 @@ const normalizeEvent = (raw) => {
   };
 };
 
+/**
+ * Apply an optimistic RSVP status change to an event.
+ * Adjusts comingCount/busyCount based on previous and new status.
+ * @param {Object} event  - Current event state.
+ * @param {string} status - New RSVP status: 'coming' | 'busy' | 'none'.
+ * @returns {Object} Updated event with adjusted counts and rsvpPending flag.
+ */
 const applyOptimisticRsvp = (event, status) => {
   const prev = event.myRsvp;
   let comingCount =
@@ -40,6 +70,13 @@ const applyOptimisticRsvp = (event, status) => {
   };
 };
 
+/**
+ * If an event has a pending optimistic RSVP, preserve those counts
+ * instead of overwriting with (possibly stale) server data.
+ * @param {Object} incoming - Freshly fetched event.
+ * @param {Object} prev     - Previous state of the same event.
+ * @returns {Object} Merged event.
+ */
 const preservePendingRsvp = (incoming, prev) => {
   if (!prev?.rsvpPending) return incoming;
   return {
@@ -51,6 +88,12 @@ const preservePendingRsvp = (incoming, prev) => {
   };
 };
 
+/**
+ * Patch an event everywhere it appears in state (currentEvent + all buckets).
+ * @param {Object}   state   - The events slice state.
+ * @param {string}   eventId - ID of the event to patch.
+ * @param {Function} patch   - Transformer fn: (event) => updatedEvent.
+ */
 const patchEventInState = (state, eventId, patch) => {
   const id = eventIdStr(eventId);
   if (state.currentEvent && eventIdStr(state.currentEvent._id) === id) {
@@ -62,6 +105,13 @@ const patchEventInState = (state, eventId, patch) => {
   });
 };
 
+// --- Thunks ---------------------------------------------------------------
+
+/**
+ * Fetch cross-community public events: GET /events/public
+ * @param {{ sort?: string, tag?: string }} params
+ * @returns {{ events: Array, sort: string }}
+ */
 export const fetchAllPublicEvents = createAsyncThunk(
   'events/fetchAllPublic',
   async ({ sort = 'date', tag = 'all' }, { rejectWithValue }) => {
@@ -76,6 +126,11 @@ export const fetchAllPublicEvents = createAsyncThunk(
   }
 );
 
+/**
+ * Fetch events for a specific community: GET /communities/:id/events
+ * @param {{ communityId: string, past?: boolean, sort?: string, tag?: string }} params
+ * @returns {{ communityId, events: Array }}
+ */
 export const fetchEvents = createAsyncThunk(
   'events/fetch',
   async ({ communityId, past = false, sort = 'date', tag = 'all' }, { rejectWithValue }) => {
@@ -94,6 +149,11 @@ export const fetchEvents = createAsyncThunk(
   }
 );
 
+/**
+ * Fetch a single event: GET /events/:eventId
+ * @param {string} eventId
+ * @returns {Object} The full event object.
+ */
 export const fetchEvent = createAsyncThunk(
   'events/fetchOne',
   async (eventId, { rejectWithValue }) => {
@@ -106,6 +166,12 @@ export const fetchEvent = createAsyncThunk(
   }
 );
 
+/**
+ * Create an event in a community: POST /communities/:id/events
+ * Events may require moderator approval before becoming visible.
+ * @param {{ communityId: string, payload: Object }} params
+ * @returns {{ communityId, event, message }}
+ */
 export const createEvent = createAsyncThunk(
   'events/create',
   async ({ communityId, payload }, { rejectWithValue }) => {
@@ -118,6 +184,11 @@ export const createEvent = createAsyncThunk(
   }
 );
 
+/**
+ * RSVP to an event: POST /events/:eventId/rsvp
+ * @param {{ eventId: string, status: 'coming'|'busy'|'none' }} params
+ * @returns {Object} Updated event from server.
+ */
 export const rsvpEvent = createAsyncThunk(
   'events/rsvp',
   async ({ eventId, status }, { rejectWithValue }) => {
@@ -130,34 +201,47 @@ export const rsvpEvent = createAsyncThunk(
   }
 );
 
+// --- Slice ----------------------------------------------------------------
+
 const eventsSlice = createSlice({
   name: 'events',
   initialState: {
+    /** Events bucketed by community ID (or ALL_PUBLIC_EVENTS_KEY) → { events, status }. */
     byCommunity: {},
+    /** The single event being viewed on the detail page. */
     currentEvent: null,
+    /** Event ID currently mid-RSVP, used to guard against stale fetchEvent overwrites. */
     rsvpInFlight: null,
+    /** General async status. */
     status: 'idle',
+    /** Most recent error message. */
     error: null,
+    /** Transient success notice (e.g. "Event submitted for approval"). */
     notice: null,
   },
   reducers: {
+    /** Dismiss the event notice toast. */
     clearEventNotice(state) {
       state.notice = null;
     },
+    /** Manually set a notice message. */
     showEventNotice(state, action) {
       state.notice = action.payload;
     },
+    /** Clear the detail-view event when navigating away. */
     clearCurrentEvent(state) {
       state.currentEvent = null;
     },
   },
   extraReducers: (builder) => {
     builder
+      // --- fetchEvents (per community) ---
       .addCase(fetchEvents.pending, (state, action) => {
         const cid = action.meta.arg.communityId;
         const prev = state.byCommunity[cid];
         state.byCommunity[cid] = { events: prev?.events ?? [], status: 'loading' };
       })
+      // Fulfilled: normalize events and preserve any in-flight RSVP counts.
       .addCase(fetchEvents.fulfilled, (state, action) => {
         const { communityId, events } = action.payload;
         const prevEvents = state.byCommunity[communityId]?.events ?? [];
@@ -167,6 +251,8 @@ const eventsSlice = createSlice({
         });
         state.byCommunity[communityId] = { events: merged, status: 'succeeded' };
       })
+
+      // --- fetchAllPublicEvents (global feed) ---
       .addCase(fetchAllPublicEvents.pending, (state) => {
         const prev = state.byCommunity[ALL_PUBLIC_EVENTS_KEY];
         state.byCommunity[ALL_PUBLIC_EVENTS_KEY] = {
@@ -185,6 +271,9 @@ const eventsSlice = createSlice({
           status: 'succeeded',
         };
       })
+
+      // --- fetchEvent (single detail) ---
+      // Skip overwrite if an RSVP is in flight for this event to prevent stale data.
       .addCase(fetchEvent.fulfilled, (state, action) => {
         const incoming = normalizeEvent(action.payload);
         const id = eventIdStr(incoming._id);
@@ -195,6 +284,9 @@ const eventsSlice = createSlice({
         }
         state.currentEvent = incoming;
       })
+
+      // --- createEvent ---
+      // Only auto-approved events are added to the bucket immediately.
       .addCase(createEvent.fulfilled, (state, action) => {
         const { communityId, event, message } = action.payload;
         state.notice = message || 'Event submitted for moderator approval.';
@@ -203,16 +295,21 @@ const eventsSlice = createSlice({
           if (bucket) bucket.events = [event, ...bucket.events];
         }
       })
+
+      // --- rsvpEvent ---
+      // Pending: optimistically adjust counts and set rsvpInFlight guard.
       .addCase(rsvpEvent.pending, (state, action) => {
         const { eventId, status } = action.meta.arg;
         state.rsvpInFlight = eventId;
         patchEventInState(state, eventId, (ev) => applyOptimisticRsvp(ev, status));
       })
+      // Fulfilled: replace with server-confirmed data; clear rsvpPending flag.
       .addCase(rsvpEvent.fulfilled, (state, action) => {
         state.rsvpInFlight = null;
         const updated = { ...normalizeEvent(action.payload), rsvpPending: false };
         patchEventInState(state, updated._id, () => updated);
       })
+      // Rejected: roll back optimistic RSVP to the previous state.
       .addCase(rsvpEvent.rejected, (state, action) => {
         state.rsvpInFlight = null;
         const { eventId, status, previousRsvp } = action.meta.arg;

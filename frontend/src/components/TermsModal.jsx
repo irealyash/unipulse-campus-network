@@ -1,3 +1,13 @@
+/**
+ * TermsModal — read-only modal displaying the Terms and Conditions.
+ *
+ * Contains the full legal text in scrollable sections. Opened from the
+ * signup/login footer links.
+ *
+ * Props:
+ * @param {boolean}    open    — controls modal visibility
+ * @param {() => void} onClose — close callback
+ */
 import { CloseIcon } from './icons';
 
 export default function TermsModal({ open, onClose }) {

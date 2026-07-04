@@ -1,7 +1,29 @@
+/**
+ * CHAT SLICE
+ * ----------------------------------------------------------------------------
+ * Real-time chat state for community timelines. Each community has a flat
+ * timeline array of messages and replies. The slice handles:
+ *   - Fetching the initial timeline from the REST API
+ *   - Optimistic inserts for outgoing messages/replies (before socket ack)
+ *   - Socket-driven inbound messages, replies, reactions, and deletions
+ *   - Optimistic like/dislike/emoji reactions on chat items
+ *
+ * All chat items are normalized through `normalizeItem` to guarantee a
+ * consistent shape regardless of whether they came from the REST API or
+ * a socket event.
+ */
+
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import api from '../../lib/api';
 import { applyOptimisticEmoji, applyOptimisticVote, voteFromArrays } from '../../lib/votes';
 
+/**
+ * Normalize a raw chat item (from API or socket) into a consistent shape.
+ * Computes derived fields like likeCount, dislikeCount, score, myVote, and isMine.
+ * @param {Object} raw    - Raw message/reply object from server or socket.
+ * @param {string} userId - The current user's ID, for computing myVote/isMine.
+ * @returns {Object} Normalized chat item.
+ */
 const normalizeItem = (raw, userId) => {
   const likes = raw.likes || [];
   const dislikes = raw.dislikes || [];
@@ -38,6 +60,14 @@ const normalizeItem = (raw, userId) => {
   };
 };
 
+// --- Thunks ---------------------------------------------------------------
+
+/**
+ * Fetch the chat timeline for a community: GET /communities/:id/timeline
+ * Normalizes every item and seeds the myReactions map.
+ * @param {string} communityId
+ * @returns {{ communityId, items: Array }} Normalized timeline items.
+ */
 export const fetchTimeline = createAsyncThunk(
   'chat/fetchTimeline',
   async (communityId, { rejectWithValue, getState }) => {
@@ -56,6 +86,12 @@ export const fetchTimeline = createAsyncThunk(
   }
 );
 
+/**
+ * Search all community buckets for a timeline item by its ID.
+ * @param {Object} state - The chat slice state.
+ * @param {string} id    - The item ID to find.
+ * @returns {Object|null} The matching timeline item, or null.
+ */
 const findInTimeline = (state, id) => {
   const key = String(id);
   for (const bucket of Object.values(state.byCommunity)) {
@@ -65,13 +101,18 @@ const findInTimeline = (state, id) => {
   return null;
 };
 
+// --- Slice ----------------------------------------------------------------
+
 const chatSlice = createSlice({
   name: 'chat',
   initialState: {
+    /** Chat timelines bucketed by community ID → { timeline: Array, status }. */
     byCommunity: {},
+    /** Quick-lookup map of item ID → user's current vote, for UI highlight state. */
     myReactions: {},
   },
   reducers: {
+    /** Add an optimistic outgoing message before the socket confirms it. */
     optimisticMessage(state, action) {
       const tempId = action.payload._id || `temp-${Date.now()}`;
       const item = normalizeItem(
@@ -89,6 +130,8 @@ const chatSlice = createSlice({
         bucket.timeline.push(item);
       }
     },
+
+    /** Add an optimistic outgoing reply before the socket confirms it. */
     optimisticReply(state, action) {
       const tempId = action.payload._id || `temp-${Date.now()}`;
       const item = normalizeItem(
@@ -106,6 +149,12 @@ const chatSlice = createSlice({
         bucket.timeline.push(item);
       }
     },
+
+    /**
+     * Handle an inbound message from the socket.
+     * If it matches a pending optimistic message, reconcile in place;
+     * otherwise append to the timeline.
+     */
     messageReceived(state, action) {
       const userId = action.payload._userId;
       const item = normalizeItem({ ...action.payload, itemType: 'message' }, userId);
@@ -135,6 +184,11 @@ const chatSlice = createSlice({
 
       if (item.myVote) state.myReactions[item._id] = item.myVote;
     },
+
+    /**
+     * Handle an inbound reply from the socket.
+     * Same reconciliation logic as messageReceived but for reply items.
+     */
     replyReceived(state, action) {
       const userId = action.payload._userId;
       const item = normalizeItem({ ...action.payload, itemType: 'reply' }, userId);
@@ -164,6 +218,8 @@ const chatSlice = createSlice({
 
       if (item.myVote) state.myReactions[item._id] = item.myVote;
     },
+
+    /** Update vote counts and emoji reactions on a chat item from a socket event. */
     reactionReceived(state, action) {
       const { targetId, likes, dislikes, reactions } = action.payload;
       const item = findInTimeline(state, targetId);
@@ -173,6 +229,8 @@ const chatSlice = createSlice({
       if (reactions) item.reactions = reactions;
       if (item.myVote) state.myReactions[String(targetId)] = item.myVote;
     },
+
+    /** Manually set the current user's reaction on an item (for UI sync). */
     setMyReaction(state, action) {
       const id = String(action.payload.id);
       const value = action.payload.value;
@@ -180,6 +238,8 @@ const chatSlice = createSlice({
       const item = findInTimeline(state, id);
       if (item) item.myVote = value;
     },
+
+    /** Optimistically apply a like/dislike vote on a chat item before the API responds. */
     optimisticChatReaction(state, action) {
       const { targetId, action: voteAction, userId } = action.payload;
       const item = findInTimeline(state, targetId);
@@ -188,12 +248,16 @@ const chatSlice = createSlice({
       Object.assign(item, updated);
       state.myReactions[String(targetId)] = updated.myVote;
     },
+
+    /** Optimistically toggle an emoji reaction on a chat item. */
     optimisticChatEmoji(state, action) {
       const { targetId, emoji, userId } = action.payload;
       const item = findInTimeline(state, targetId);
       if (!item || !userId) return;
       Object.assign(item, applyOptimisticEmoji(item, emoji, userId));
     },
+
+    /** Remove messages from the timeline when a moderator deletes them. */
     messagesDeleted(state, action) {
       const { communityId, removedIds } = action.payload;
       const bucket = state.byCommunity[communityId];
@@ -205,11 +269,13 @@ const chatSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
+      // Pending: initialize the community bucket and mark as loading.
       .addCase(fetchTimeline.pending, (state, action) => {
         const cid = action.meta.arg;
         state.byCommunity[cid] = state.byCommunity[cid] || { timeline: [] };
         state.byCommunity[cid].status = 'loading';
       })
+      // Fulfilled: replace the timeline with fresh data and seed myReactions.
       .addCase(fetchTimeline.fulfilled, (state, action) => {
         const { communityId, items } = action.payload;
         state.byCommunity[communityId] = { timeline: items, status: 'succeeded' };
@@ -217,6 +283,7 @@ const chatSlice = createSlice({
           if (item.myVote) state.myReactions[String(item._id)] = item.myVote;
         });
       })
+      // Rejected: store the error in the community bucket.
       .addCase(fetchTimeline.rejected, (state, action) => {
         const cid = action.meta.arg;
         state.byCommunity[cid] = { timeline: [], status: 'failed', error: action.payload };

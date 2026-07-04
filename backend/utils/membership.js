@@ -1,15 +1,32 @@
+/**
+ * membership.js
+ *
+ * Community access-control and visibility utilities.
+ * Centralizes the authorization logic that determines whether a user
+ * can view or interact with a given community. Also provides MongoDB
+ * filter builders for querying communities visible to a user (e.g.
+ * for the sidebar/navbar community lists).
+ *
+ * Used by route handlers for posts, comments, chat, and events to
+ * gate access before performing any mutations or reads.
+ */
+
 import Community from '../models/Community.js';
 import ApiError from './ApiError.js';
 
 /**
- * Central access-control helper used by posts, comments, chat and events.
+ * Checks whether a user has permission to access a community.
  *
- *   - private: false  -> any verified student can view & participate
- *   - private: true + type course   -> enrolledSections must include community id
- *   - private: true + type general    -> user must be in community.members
- *   - moderators may access any community (e.g. when opening from the mod tab)
+ * Access rules:
+ *   - Moderators can access any community
+ *   - Public communities (private: false) are open to all verified students
+ *   - Private course communities require the user's enrolledSections to include the community ID
+ *   - Private general communities require the user to be in the community's members list
+ *
+ * @param {Object} user       - The authenticated user document
+ * @param {Object} community  - The community document to check access for
+ * @returns {boolean} True if the user is allowed to access the community
  */
-
 export const canAccessCommunity = (user, community) => {
   if (user?.moderator) return true;
   if (!community.private) return true;
@@ -44,7 +61,14 @@ export const assertCommunityAccess = async (user, communityId) => {
   return community;
 };
 
-/** Mongo filter: communities visible in a user's community list. */
+/**
+ * Builds a MongoDB filter for communities visible to a user in the browse/discovery list.
+ * Includes public communities, enrolled course sections, and private communities
+ * where the user is an explicit member.
+ *
+ * @param {Object} user - The authenticated user document
+ * @returns {Object} MongoDB query filter with $or conditions
+ */
 export const visibleCommunitiesFilter = (user) => ({
   $or: [
     { private: false },
@@ -53,7 +77,14 @@ export const visibleCommunitiesFilter = (user) => ({
   ],
 });
 
-/** Navbar rail: joined catalog communities + enrolled course sections. */
+/**
+ * Builds a MongoDB filter for the navbar/sidebar community rail.
+ * Only includes communities the user has explicitly joined plus
+ * their enrolled course sections (a tighter subset than visibleCommunitiesFilter).
+ *
+ * @param {Object} user - The authenticated user document
+ * @returns {Object} MongoDB query filter with $or conditions
+ */
 export const navbarCommunitiesFilter = (user) => ({
   $or: [
     { _id: { $in: user.joinedCommunities || [] } },

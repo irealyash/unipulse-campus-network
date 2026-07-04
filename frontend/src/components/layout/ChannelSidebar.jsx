@@ -1,9 +1,23 @@
+/**
+ * ChannelSidebar — 240 px panel listing the available "channels" (tabs) for
+ * the currently selected community: Posts, Events, Group Chat, and optionally
+ * a Moderator link.
+ *
+ * When the route is /c/moderator it renders a minimal sidebar with a "Back"
+ * link instead of the full channel list.
+ *
+ * Also shows the community avatar, name, and an unpin button for pinned
+ * non-course communities.
+ *
+ * Used inside CommunityShell, shown/hidden via the sidebarOpen state.
+ */
 import { NavLink, useParams, useLocation, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import CommunityAvatar from '../CommunityAvatar';
 import usePinnedCommunities from '../../hooks/usePinnedCommunities';
 import { ChatIcon, PostIcon, CalendarIcon, ShieldIcon, PinIcon } from '../icons';
 
+// Available channel tabs for each community
 const TABS = [
   { id: 'posts', label: 'Posts', icon: <PostIcon /> },
   { id: 'events', label: 'Events', icon: <CalendarIcon /> },
@@ -16,14 +30,17 @@ export default function ChannelSidebar() {
   const navigate = useNavigate();
   const isModeratorRoute = location.pathname === '/c/moderator';
   const user = useSelector((s) => s.auth.user);
+  // Find the community object from Redux, falling back to `current`
   const community = useSelector((s) =>
     s.communities.list.find((c) => c._id === communityId) || s.communities.current
   );
   const { togglePin, isPinned } = usePinnedCommunities();
   const pinned = communityId ? isPinned(communityId) : false;
   const isCourse = community?.type === 'course';
+  // Course communities can't be manually unpinned
   const canUnpin = communityId && !isCourse && pinned;
 
+  // Unpin the community and navigate away to a fallback community
   const handleUnpin = () => {
     if (!canUnpin) return;
     togglePin(communityId, community);
@@ -34,6 +51,7 @@ export default function ChannelSidebar() {
     }
   };
 
+  // Simplified moderator sidebar — just a back-to-communities link
   if (isModeratorRoute) {
     return (
       <aside className="w-60 bg-base-300 flex flex-col min-h-0 border-r border-base-content/10 shrink-0">
@@ -53,6 +71,7 @@ export default function ChannelSidebar() {
 
   return (
     <aside className="w-60 bg-base-300 flex flex-col min-h-0 border-r border-base-content/10 shrink-0 pt-10">
+      {/* Community header — avatar + name + optional unpin button */}
       <div className="h-12 px-3 flex items-center gap-2 border-b border-base-content/10 shadow-sm shrink-0">
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <div className="avatar shrink-0">
@@ -75,6 +94,7 @@ export default function ChannelSidebar() {
         )}
       </div>
 
+      {/* Channel navigation links */}
       <nav className="flex-1 overflow-y-auto p-2 space-y-0.5 min-h-0">
         <p className="text-[10px] uppercase font-bold text-base-content/40 px-2 mb-1 tracking-wider">
           Channels
