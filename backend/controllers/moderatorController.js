@@ -697,13 +697,24 @@ export const listEventsForReview = asyncHandler(async (req, res) => {
     Event.countDocuments(filter),
   ]);
 
+  const creatorIds = [...new Set(events.map((e) => e.creatorId?.toString()).filter(Boolean))];
+  const creators = creatorIds.length
+    ? await User.find({ _id: { $in: creatorIds } }).select('username').lean()
+    : [];
+  const usernames = Object.fromEntries(creators.map((u) => [u._id.toString(), u.username]));
+
+  const enriched = events.map((ev) => ({
+    ...ev,
+    creatorUsername: ev.creatorUsername || usernames[ev.creatorId?.toString()] || 'unknown',
+  }));
+
   res.json({
     success: true,
     page,
     limit,
     total,
     hasMore: skip + events.length < total,
-    events,
+    events: enriched,
   });
 });
 

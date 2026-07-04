@@ -26,6 +26,7 @@ import PostPage from './pages/PostPage';
 import EventPage from './pages/EventPage';
 import AllEventsPage from './pages/AllEventsPage';
 import AllEventsFeedPage from './pages/AllEventsFeedPage';
+import UserMessagesPage from './pages/UserMessagesPage';
 
 function LegacyCommunityRedirect() {
   const { id } = useParams();
@@ -54,7 +55,7 @@ export default function App() {
   if (booting) {
     return (
       <div className="min-h-screen grid place-items-center bg-base-200">
-        <Loader label="Warming up UniPulse…" showLogo />
+        <Loader label="Loading communities…" showLogo />
       </div>
     );
   }
@@ -103,6 +104,7 @@ export default function App() {
             <Route index element={<AllEventsFeedPage />} />
             <Route path=":eventId" element={<EventPage />} />
           </Route>
+          <Route path="messages" element={<UserMessagesPage />} />
           <Route path=":communityId/posts/:postId" element={<PostPage />} />
           <Route path=":communityId/events/:eventId" element={<EventPage />} />
           <Route path=":communityId/:tab" element={<CommunityTabView />} />

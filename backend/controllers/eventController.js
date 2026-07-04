@@ -180,6 +180,7 @@ export const createEvent = asyncHandler(async (req, res) => {
   const event = await Event.create({
     communityId,
     creatorId: req.user._id,
+    creatorUsername: req.user.username,
     title: title.trim(),
     description: description?.trim() || '',
     imageUrl: coverUrl,

@@ -68,6 +68,7 @@ export default function CommunityHub() {
     communityId &&
     communityId !== 'moderator' &&
     communityId !== 'events' &&
+    communityId !== 'messages' &&
     !inList &&
     !enrolled &&
     !user?.moderator

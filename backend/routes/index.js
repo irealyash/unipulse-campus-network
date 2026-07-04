@@ -11,6 +11,7 @@ import reportRoutes from './reportRoutes.js';
 import requestRoutes from './requestRoutes.js';
 import uploadRoutes from './uploadRoutes.js';
 import moderatorRoutes from './moderatorRoutes.js';
+import modMessageRoutes from './modMessageRoutes.js';
 
 /**
  * Top-level API router. server.js mounts this at "/api", so every path below
@@ -34,6 +35,7 @@ router.use('/message-replies', messageReplyRoutes);
 router.use('/reports', reportRoutes);
 router.use('/requests', requestRoutes);
 router.use('/moderator', moderatorRoutes);
+router.use('/mod-messages', modMessageRoutes);
 router.use('/uploads', uploadRoutes);
 
 export default router;

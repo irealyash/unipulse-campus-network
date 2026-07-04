@@ -4,7 +4,7 @@ import CommunityRail from './CommunityRail';
 import ChannelSidebar from './ChannelSidebar';
 import ThemeToggle from '../ThemeToggle';
 import RequestModeratorModal from '../RequestModeratorModal';
-import { CalendarIcon, PlusIcon, LightbulbIcon } from '../icons';
+import { CalendarIcon, PlusIcon, LightbulbIcon, ShieldIcon } from '../icons';
 import AddCommunityModal from '../AddCommunityModal';
 
 const SIDEBAR_KEY = 'unipulse_channel_sidebar';
@@ -14,6 +14,7 @@ export default function CommunityShell() {
   const navigate = useNavigate();
   const { communityId } = useParams();
   const isAllEvents = location.pathname === '/c/events' || location.pathname.startsWith('/c/events/');
+  const isMessages = location.pathname === '/c/messages' || location.pathname.startsWith('/c/messages/');
 
   const [sidebarOpen, setSidebarOpen] = useState(
     () => localStorage.getItem(SIDEBAR_KEY) !== 'closed'
@@ -22,14 +23,14 @@ export default function CommunityShell() {
   const [addOpen, setAddOpen] = useState(false);
 
   useEffect(() => {
-    if (isAllEvents) setSidebarOpen(false);
-  }, [isAllEvents]);
+    if (isAllEvents || isMessages) setSidebarOpen(false);
+  }, [isAllEvents, isMessages]);
 
   useEffect(() => {
-    if (communityId && communityId !== 'moderator' && !isAllEvents) {
+    if (communityId && communityId !== 'moderator' && !isAllEvents && !isMessages) {
       setSidebarOpen(true);
     }
-  }, [communityId, isAllEvents]);
+  }, [communityId, isAllEvents, isMessages]);
 
   useEffect(() => {
     localStorage.setItem(SIDEBAR_KEY, sidebarOpen ? 'open' : 'closed');
@@ -38,6 +39,11 @@ export default function CommunityShell() {
   const openAllEvents = () => {
     setSidebarOpen(false);
     navigate('/c/events');
+  };
+
+  const openMessages = () => {
+    setSidebarOpen(false);
+    navigate('/c/messages');
   };
 
   return (
@@ -69,6 +75,15 @@ export default function CommunityShell() {
         <div className="justify-self-end flex items-center gap-2">
           <button
             type="button"
+            className={`btn btn-ghost btn-xs gap-1.5 rounded-full cursor-pointer ${
+              isMessages ? 'btn-active text-secondary' : 'text-base-content/70 hover:text-base-content'
+            }`}
+            onClick={openMessages}
+          >
+            <ShieldIcon className="w-4 h-4 shrink-0 text-secondary" /> Messages
+          </button>
+          <button
+            type="button"
             className="btn btn-ghost btn-xs gap-1.5 rounded-full text-base-content/70 hover:text-base-content"
             onClick={() => setRequestOpen(true)}
           >
@@ -84,7 +99,7 @@ export default function CommunityShell() {
           onToggleSidebar={() => setSidebarOpen((o) => !o)}
           onOpenSidebar={() => setSidebarOpen(true)}
         />
-        {sidebarOpen && !isAllEvents && <ChannelSidebar />}
+        {sidebarOpen && !isAllEvents && !isMessages && <ChannelSidebar />}
         <main className="flex-1 flex flex-col min-w-0 min-h-0 bg-base-100 overflow-hidden">
           <Outlet />
         </main>

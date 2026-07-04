@@ -31,6 +31,8 @@ import { PostMedia } from '../components/community/PostCommentSection';
 import { EventMediaCarousel, formatEventDate, hasEventUserMedia } from '../components/community/EventParts';
 import { CATEGORY_LABELS, CATALOG_CATEGORIES } from '../lib/communityCategories';
 import { EVENT_TAGS, EventTagBadge } from '../lib/eventTags';
+import ModSendMessagePanel from '../components/modMessages/ModSendMessagePanel';
+import ModUserMessagesPanel from '../components/modMessages/ModUserMessagesPanel';
 import { timeAgo } from '../lib/timeAgo';
 import {
   ShieldIcon,
@@ -48,6 +50,8 @@ const TABS = [
   { id: 'posts', label: 'Posts', icon: <ChatIcon /> },
   { id: 'events', label: 'Events', icon: <CalendarIcon /> },
   { id: 'requests', label: 'Requests', icon: <InboxIcon /> },
+  { id: 'sendMessage', label: 'Send message', icon: <ChatIcon /> },
+  { id: 'userMessages', label: 'User messages', icon: <InboxIcon /> },
   { id: 'users', label: 'Users', icon: <UsersIcon /> },
   { id: 'communities', label: 'Communities', icon: <CalendarIcon /> },
 ];
@@ -321,6 +325,9 @@ function ModEventsTab() {
                   </span>
                 </div>
                 <h3 className="font-bold mt-1 break-words [overflow-wrap:anywhere]">{ev.title}</h3>
+                <p className="text-xs text-base-content/50 mt-1">
+                  by <span className="font-medium">{ev.creatorUsername || 'unknown'}</span>
+                </p>
                 <p className="text-xs text-base-content/50">{formatEventDate(ev.eventDate)}</p>
                 <p className="text-xs text-base-content/50">
                   Capacity:{' '}
@@ -1072,7 +1079,7 @@ export default function ModeratorPage() {
         <span className="badge badge-secondary">full control</span>
       </div>
 
-      <div role="tablist" className="tabs tabs-box bg-base-100 rounded-2xl mb-5 p-1 w-fit">
+      <div role="tablist" className="tabs tabs-box bg-base-100 rounded-2xl mb-5 p-1 w-fit flex-wrap">
         {TABS.map((t) => (
           <button
             key={t.id}
@@ -1090,6 +1097,15 @@ export default function ModeratorPage() {
       {tab === 'posts' && <PostsTab />}
       {tab === 'events' && <ModEventsTab />}
       {tab === 'requests' && <RequestsTab />}
+      {tab === 'sendMessage' && (
+        <ModSendMessagePanel onSent={() => setTab('userMessages')} />
+      )}
+      {tab === 'userMessages' && (
+        <div>
+          <h2 className="text-lg font-bold mb-3">User messages</h2>
+          <ModUserMessagesPanel />
+        </div>
+      )}
       {tab === 'users' && <UsersTab />}
       {tab === 'communities' && <CommunitiesTab />}
     </div>
