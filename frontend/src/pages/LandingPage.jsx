@@ -86,7 +86,7 @@ export default function LandingPage() {
           {
             icon: <UsersIcon />,
             title: 'Course communities',
-            body: 'Upload your schedule and we auto-unlock private rooms for every class section you're in.',
+            body: "Upload your schedule and we auto-unlock private rooms for every class section you're in.",
           },
           {
             icon: <ChatIcon />,
