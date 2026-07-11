@@ -128,8 +128,8 @@ export default function ScheduleUploadForm({ onSkip, onSuccess }) {
               </button>
             </p>
             <p className="text-sm text-base-content/60 mt-2">
-              (Only add the current term&apos;s schedule, or the upcoming term&apos;s schedule if no
-              other term is in progress. Manipulating or editing course sections will result in an
+              (Only add the current year&apos;s schedule, or the upcoming year&apos;s schedule if no
+              term is in progress. Manipulating or editing course sections will result in an
               instant permanent ban. You may delete the &apos;My Enrolled Courses&apos; column
               completely for privacy, but modifying any other data is strictly prohibited.)
             </p>
