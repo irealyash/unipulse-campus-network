@@ -12,7 +12,7 @@
 import { useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { uploadSchedule } from '../features/auth/authSlice';
-import { CalendarIcon, ShieldIcon } from './icons';
+import { CalendarIcon, CloseIcon, ShieldIcon } from './icons';
 
 export default function ScheduleUploadForm({ onSkip, onSuccess }) {
   const dispatch = useDispatch();
@@ -27,6 +27,8 @@ export default function ScheduleUploadForm({ onSkip, onSuccess }) {
   const [error, setError] = useState('');
   // Whether a file is being dragged over the drop zone
   const [dragOver, setDragOver] = useState(false);
+  // Help popup showing where to download the schedule from Workday
+  const [helpOpen, setHelpOpen] = useState(false);
 
   // Clear the selected file and reset the input
   const clearFile = () => {
@@ -107,8 +109,24 @@ export default function ScheduleUploadForm({ onSkip, onSuccess }) {
           </p>
         ) : (
           <>
+          
             <p className="font-medium">Drag & drop your Workday registered schedule here</p>
             <p className="text-sm text-base-content/60">or click to browse (.xlsx only)</p>
+            <p className="font-medium inline-flex items-center justify-center gap-1.5 flex-wrap">
+              Download it from Course Page.
+              <button
+                type="button"
+                className="btn btn-ghost btn-xs btn-circle min-h-0 h-5 w-5 p-0 text-xs font-bold border border-base-content/25"
+                aria-label="Where to download schedule"
+                title="Where to download"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setHelpOpen(true);
+                }}
+              >
+                ?
+              </button>
+            </p>
             <p className="text-sm text-base-content/60 mt-2">
               (Only add the current term&apos;s schedule, or the upcoming term&apos;s schedule if no
               other term is in progress. Manipulating or editing course sections will result in an
@@ -145,6 +163,40 @@ export default function ScheduleUploadForm({ onSkip, onSuccess }) {
         Export from Workday via <strong>View My Courses</strong>. Public communities are available
         without uploading a schedule.
       </p>
+
+      {helpOpen && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Schedule download help"
+          onClick={() => setHelpOpen(false)}
+        >
+          <div
+            className="relative w-[min(calc(100vw-2rem),56rem)] max-w-[calc(100vw-2rem)] p-4 sm:p-5 rounded-2xl border border-primary/40 bg-base-100/55 backdrop-blur-xl shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm btn-circle absolute top-2 right-2"
+              onClick={() => setHelpOpen(false)}
+              aria-label="Close"
+            >
+              <CloseIcon />
+            </button>
+            <div className="pt-6">
+              <img
+                src="/Help.png"
+                alt="Workday course page showing where to download your schedule"
+                className="block w-full h-auto rounded-lg"
+              />
+              <p className="text-sm text-base-content/80 mt-3 text-center px-1">
+                Click on the button in the blue box to download your course schedule file.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
