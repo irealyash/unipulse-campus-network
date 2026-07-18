@@ -115,8 +115,7 @@ export default function LandingPage() {
       {/* Footer — tagline and legal links that open Terms/Privacy modals */}
       <div className="relative z-10 mt-auto">
         <footer className="text-center pt-10 text-sm text-base-content/50">
-          <p>Built for University students · Anonymous by design</p>
-          <br mt-1></br>
+          <p className="mb-1">Built for University students · Anonymous by design</p>
         </footer>
         <div className="text-center pb-[3px] flex items-center justify-center gap-8">
           {/* Opens the Terms and Conditions modal */}

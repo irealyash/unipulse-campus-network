@@ -41,8 +41,8 @@
 import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Routes, Route, Navigate, Outlet, useParams } from 'react-router-dom';
-import { fetchMe } from './features/auth/authSlice';
 import { getToken } from './lib/api';
+import { bootstrapSession, finishBoot } from './features/auth/authSlice';
 
 import Navbar from './components/Navbar';
 import Toasts from './components/Toasts';
@@ -90,16 +90,20 @@ export default function App() {
   const dispatch = useDispatch();
   const { booting, token, user } = useSelector((s) => s.auth);
 
-  // On mount, attempt to restore the user session from the stored JWT.
+  // Restore session from stored JWT — boot ends only when fetchMe settles (or no token).
   useEffect(() => {
-    if (getToken()) dispatch(fetchMe());
+    if (!getToken()) {
+      dispatch(finishBoot());
+      return undefined;
+    }
+    dispatch(bootstrapSession());
+    return undefined;
   }, [dispatch]);
 
-  // Show a full-screen loader while the stored token is being validated.
   if (booting) {
     return (
       <div className="min-h-screen grid place-items-center bg-base-200">
-        <Loader label="Loading communities…" showLogo />
+        <Loader label="Loading…" showLogo />
       </div>
     );
   }

@@ -11,6 +11,7 @@ import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
 import { login } from '../features/auth/authSlice';
+import { fetchCommunities } from '../features/communities/communitiesSlice';
 import AuthShell from '../components/AuthShell';
 
 /**
@@ -38,7 +39,10 @@ export default function LoginPage() {
   const onSubmit = async (e) => {
     e.preventDefault();
     const res = await dispatch(login(form));
-    if (login.fulfilled.match(res)) navigate('/c');
+    if (login.fulfilled.match(res)) {
+      dispatch(fetchCommunities());
+      navigate('/c');
+    }
   };
 
   return (

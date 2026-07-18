@@ -8,19 +8,21 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
+    host: '127.0.0.1',
     port: 5173,
     // Proxy API + socket to the backend during dev so we avoid CORS headaches.
+    // Force IPv4 everywhere — Windows `localhost` → IPv6 often causes ECONNREFUSED/502.
     proxy: {
-      '/api': { target: 'http://localhost:5000', changeOrigin: true },
-      '/socket.io': { target: 'http://localhost:5000', ws: true, changeOrigin: true },
+      '/api': { target: 'http://127.0.0.1:5000', changeOrigin: true },
+      '/socket.io': { target: 'http://127.0.0.1:5000', ws: true, changeOrigin: true },
     },
   },
   preview: {
+    host: '127.0.0.1',
     port: 4173,
-    // Same proxy when using `npm run preview` so /api does not 404.
     proxy: {
-      '/api': { target: 'http://localhost:5000', changeOrigin: true },
-      '/socket.io': { target: 'http://localhost:5000', ws: true, changeOrigin: true },
+      '/api': { target: 'http://127.0.0.1:5000', changeOrigin: true },
+      '/socket.io': { target: 'http://127.0.0.1:5000', ws: true, changeOrigin: true },
     },
   },
 })

@@ -102,6 +102,28 @@ export const fetchMe = createAsyncThunk('auth/me', async (_, { rejectWithValue }
 });
 
 /**
+ * Boot sequence: validate JWT, load profile, then load communities.
+ * Runs once on app start when a stored token exists.
+ */
+export const bootstrapSession = createAsyncThunk(
+  'auth/bootstrap',
+  async (_, { dispatch, rejectWithValue }) => {
+    if (!getToken()) return null;
+    try {
+      await dispatch(fetchMe()).unwrap();
+    } catch (err) {
+      return rejectWithValue(typeof err === 'string' ? err : err?.message || 'Session expired.');
+    }
+    try {
+      await dispatch(fetchCommunities()).unwrap();
+    } catch {
+      // Communities can fail independently — hub shows retry UI.
+    }
+    return true;
+  }
+);
+
+/**
  * Upload schedule: POST /users/me/schedule (multipart form)
  * Parses the uploaded schedule file on the backend, updates enrolledSections,
  * then re-fetches communities so new course rooms appear immediately.
@@ -177,6 +199,7 @@ const authSlice = createSlice({
     logout(state) {
       state.user = null;
       state.token = null;
+      state.booting = false;
       state.status = 'idle';
       state.error = null;
       clearToken();
@@ -187,35 +210,64 @@ const authSlice = createSlice({
       state.error = null;
       state.notice = null;
     },
+    /** End the boot splash (e.g. no stored token, or a safety timeout). */
+    finishBoot(state) {
+      state.booting = false;
+    },
   },
   extraReducers: (builder) => {
     builder
-      // --- Generic matchers for all auth/* thunks ---
+      // addCase must come before addMatcher (RTK requirement).
+      .addCase(bootstrapSession.fulfilled, (state) => {
+        state.booting = false;
+        state.status = 'succeeded';
+      })
+      .addCase(bootstrapSession.rejected, (state, action) => {
+        state.booting = false;
+        state.status = 'failed';
+        state.error = action.payload || 'Session expired.';
+        state.token = getToken() || null;
+        if (!state.token) state.user = null;
+      })
 
       // Any auth thunk pending → set loading, clear previous error.
+      // Skip bootstrap — it orchestrates other auth thunks and has its own handlers.
       .addMatcher(
-        (action) => action.type.startsWith('auth/') && action.type.endsWith('/pending'),
+        (action) =>
+          action.type.startsWith('auth/') &&
+          action.type.endsWith('/pending') &&
+          action.type !== 'auth/bootstrap/pending',
         (state) => {
           state.status = 'loading';
           state.error = null;
         }
       )
-      // Any auth thunk rejected → set failed, stop booting, store error message.
+      // Any auth thunk rejected → set failed; keep token in sync on /me failure.
+      // Skip bootstrap — handled by addCase above.
       .addMatcher(
-        (action) => action.type.startsWith('auth/') && action.type.endsWith('/rejected'),
+        (action) =>
+          action.type.startsWith('auth/') &&
+          action.type.endsWith('/rejected') &&
+          action.type !== 'auth/bootstrap/rejected',
         (state, action) => {
           state.status = 'failed';
-          state.booting = false;
           state.error = action.payload || 'Request failed.';
+          if (action.type === 'auth/me/rejected') {
+            state.token = getToken() || null;
+            if (!state.token) {
+              state.user = null;
+              state.booting = false;
+            }
+          }
         }
       )
 
-      // --- Token-issuing flows (verify + login) ---
-      // Store the JWT and user object; persist the token to localStorage.
+      // Token-issuing flows (verify + login)
       .addMatcher(
         (action) => ['auth/verify/fulfilled', 'auth/login/fulfilled'].includes(action.type),
         (state, action) => {
           state.status = 'succeeded';
+          state.booting = false;
           state.token = action.payload.token;
           state.user = action.payload.user;
           state.notice = action.payload.message || null;
@@ -223,8 +275,7 @@ const authSlice = createSlice({
         }
       )
 
-      // --- Profile/user-updating flows (fetchMe, uploadSchedule, changeUsername, completeOnboarding) ---
-      // Refresh the user object in state; clear the booting flag.
+      // Profile/user-updating flows
       .addMatcher(
         (action) =>
           ['auth/me/fulfilled', 'auth/schedule/fulfilled', 'auth/username/fulfilled', 'auth/completeOnboarding/fulfilled'].includes(
@@ -232,13 +283,11 @@ const authSlice = createSlice({
           ),
         (state, action) => {
           state.status = 'succeeded';
-          state.booting = false;
           state.user = action.payload?.user ?? action.payload;
         }
       )
 
-      // --- Cross-slice: optimistic community join ---
-      // When a join starts, optimistically add the community id to joinedCommunities.
+      // Cross-slice: optimistic community join
       .addMatcher(
         (action) => action.type === 'communities/join/pending',
         (state, action) => {
@@ -251,7 +300,6 @@ const authSlice = createSlice({
           }
         }
       )
-      // When join/leave completes, sync the user object from the server response.
       .addMatcher(
         (action) =>
           ['communities/join/fulfilled', 'communities/leave/fulfilled'].includes(action.type),
@@ -259,7 +307,6 @@ const authSlice = createSlice({
           if (action.payload?.user) state.user = action.payload.user;
         }
       )
-      // When join is rejected, roll back the optimistic addition.
       .addMatcher(
         (action) => action.type === 'communities/join/rejected',
         (state, action) => {
@@ -272,8 +319,7 @@ const authSlice = createSlice({
         }
       )
 
-      // --- Non-token flows (signup, forgot, reset) ---
-      // These don't issue a JWT; just surface a success notice to the UI.
+      // Non-token flows (signup, forgot, reset)
       .addMatcher(
         (action) =>
           ['auth/signup/fulfilled', 'auth/forgot/fulfilled', 'auth/reset/fulfilled'].includes(
@@ -287,5 +333,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { logout, clearAuthMessages } = authSlice.actions;
+export const { logout, clearAuthMessages, finishBoot } = authSlice.actions;
 export default authSlice.reducer;

@@ -150,7 +150,8 @@ const communitiesSlice = createSlice({
       })
       .addCase(fetchCommunities.fulfilled, (state, action) => {
         state.status = 'succeeded';
-        state.list = action.payload;
+        // Always store an array — empty [] means "user has no communities" (valid).
+        state.list = Array.isArray(action.payload) ? action.payload : [];
       })
       .addCase(fetchCommunities.rejected, (state, action) => {
         state.status = 'failed';
@@ -226,7 +227,19 @@ const communitiesSlice = createSlice({
       .addCase(modDeleteAllCourseCommunities.fulfilled, (state) => {
         state.list = state.list.filter((c) => c.type !== 'course');
         if (state.current?.type === 'course') state.current = null;
-      });
+      })
+      .addMatcher(
+        (action) => action.type === 'auth/logout',
+        (state) => {
+          state.list = [];
+          state.current = null;
+          state.catalog = [];
+          state.catalogCategory = null;
+          state.catalogStatus = 'idle';
+          state.status = 'idle';
+          state.error = null;
+        }
+      );
   },
 });
 

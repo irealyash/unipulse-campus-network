@@ -1,13 +1,8 @@
 /**
- * CommunityHub.jsx
+ * CommunityHub.jsx — main community shell (Discord-style layout).
  *
- * Main community shell page (Discord-style layout).
- * Route: "/c", "/c/:communityId", "/c/:communityId/:tab"
- * Role: Acts as the top-level layout for the authenticated community
- * experience. Fetches the community list, checks onboarding status,
- * validates that the user has access to the selected community, and
- * renders the CommunityShell (sidebar + content area). Also exports
- * CommunityRedirect for the bare /c path.
+ * Empty communities are a valid state: after a successful fetch with [],
+ * show the empty home — never keep spinning or re-fetching forever.
  */
 
 import { useEffect } from 'react';
@@ -17,23 +12,31 @@ import { fetchCommunities, fetchCommunity } from '../features/communities/commun
 import CommunityShell from '../components/layout/CommunityShell';
 import Loader from '../components/Loader';
 import { communityChatPath, pickDefaultCommunityId } from '../lib/communityNav';
-import { filterNavbarCommunities } from '../lib/navbarCommunities';
 import CommunityHomeEmpty from './CommunityHomeEmpty';
 
-/**
- * CommunityRedirect — renders at the bare "/c" path.
- * Reads the community list from Redux, picks the first available community,
- * and redirects to its chat tab. If no communities exist, shows the empty home.
- */
-export function CommunityRedirect() {
-  // Reads the full community list from Redux and filters to navbar-visible ones
-  const rawList = useSelector((s) => s.communities.list);
-  const user = useSelector((s) => s.auth.user);
-  const list = filterNavbarCommunities(rawList, user);
-  const status = useSelector((s) => s.communities.status);
+function CommunitiesLoadError({ message, onRetry }) {
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center gap-4">
+      <p className="text-error text-sm max-w-md">{message || 'Could not load communities.'}</p>
+      <p className="text-xs text-base-content/60 max-w-md">
+        Make sure the backend is running on port 5000, then try again.
+      </p>
+      <button type="button" className="btn btn-primary rounded-2xl" onClick={onRetry}>
+        Retry
+      </button>
+    </div>
+  );
+}
 
-  // Show loader while the community list is being fetched
-  if (status === 'loading') {
+/** Bare "/c" — redirect to default community, or empty home if the user has none. */
+export function CommunityRedirect() {
+  const list = useSelector((s) => s.communities.list);
+  const user = useSelector((s) => s.auth.user);
+  const { status, error } = useSelector((s) => s.communities);
+  const dispatch = useDispatch();
+
+  // Still fetching (or about to) — only while we have no data yet.
+  if ((status === 'idle' || status === 'loading') && list.length === 0) {
     return (
       <div className="flex-1 grid place-items-center">
         <Loader label="Loading communities…" />
@@ -41,7 +44,17 @@ export function CommunityRedirect() {
     );
   }
 
-  // Redirect to the first available community's chat, or show empty state
+  if (status === 'failed' && list.length === 0) {
+    return (
+      <CommunitiesLoadError message={error} onRetry={() => dispatch(fetchCommunities())} />
+    );
+  }
+
+  // Successful load with zero communities is valid — show empty state.
+  if (list.length === 0) {
+    return <CommunityHomeEmpty />;
+  }
+
   const target = pickDefaultCommunityId(list, user);
   if (target) {
     return <Navigate to={communityChatPath(target)} replace />;
@@ -55,38 +68,36 @@ export default function CommunityHub() {
   const dispatch = useDispatch();
   const { communityId } = useParams();
 
-  // Reads the community list from Redux and filters for the navbar
-  const rawList = useSelector((s) => s.communities.list);
+  const list = useSelector((s) => s.communities.list);
   const user = useSelector((s) => s.auth.user);
-  const list = filterNavbarCommunities(rawList, user);
-  const status = useSelector((s) => s.communities.status);
+  const { status, error } = useSelector((s) => s.communities);
 
-  /**
-   * useEffect: Fetches the full list of communities the user belongs to.
-   * Runs once on mount.
-   */
+  // Fetch only when we have never loaded yet (idle).
+  // Do NOT re-fetch when status is "succeeded" with an empty list — that is valid.
   useEffect(() => {
-    dispatch(fetchCommunities());
-  }, [dispatch]);
+    if (!user) return;
+    if (status === 'idle') {
+      dispatch(fetchCommunities());
+    }
+  }, [dispatch, user, status]);
 
-  /**
-   * useEffect: Fetches details for the currently selected community.
-   * Runs whenever communityId changes (but not for special virtual routes
-   * like "moderator").
-   */
   useEffect(() => {
-    if (communityId && communityId !== 'moderator') {
+    if (
+      communityId &&
+      communityId !== 'moderator' &&
+      communityId !== 'events' &&
+      communityId !== 'messages'
+    ) {
       dispatch(fetchCommunity(communityId));
     }
   }, [dispatch, communityId]);
 
-  // Redirect to onboarding if user hasn't completed it yet
   if (user && user.communityOnboardingComplete === false) {
     return <Navigate to="/onboarding" replace />;
   }
 
-  // Full-screen loader while the initial community list is being fetched
-  if (status === 'loading' && !list.length) {
+  // Spinner only while a first fetch is in progress / pending.
+  if ((status === 'idle' || status === 'loading') && list.length === 0) {
     return (
       <div className="h-screen grid place-items-center bg-base-300">
         <Loader label="Loading communities…" />
@@ -94,8 +105,15 @@ export default function CommunityHub() {
     );
   }
 
-  // Access control: if communityId is set but user isn't in the list and isn't
-  // enrolled, redirect to a valid community or the bare /c route
+  if (status === 'failed' && list.length === 0) {
+    return (
+      <div className="h-screen grid place-items-center bg-base-300">
+        <CommunitiesLoadError message={error} onRetry={() => dispatch(fetchCommunities())} />
+      </div>
+    );
+  }
+
+  // status === 'succeeded' (list may be empty) — render shell; index route shows empty home.
   const inList = list.some((c) => c._id === communityId);
   const enrolled = user?.enrolledSections?.includes(communityId);
   if (
@@ -114,6 +132,5 @@ export default function CommunityHub() {
     return <Navigate to="/c" replace />;
   }
 
-  // Render the main Discord-style community shell (sidebar + content outlet)
   return <CommunityShell />;
 }

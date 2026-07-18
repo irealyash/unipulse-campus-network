@@ -25,7 +25,7 @@ export function pickDefaultCommunityId(list, user) {
   const course = list.find((c) => c.type === 'course');
   if (course) return course._id;
 
-  return null;
+  return list[0]?._id ?? null;
 }
 
 /**

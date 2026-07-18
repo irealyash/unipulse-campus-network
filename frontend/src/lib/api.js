@@ -40,6 +40,8 @@ export const clearToken = () => localStorage.removeItem(TOKEN_KEY);
  */
 const api = axios.create({
   baseURL: '/api',
+  // Prevent infinite "Loading communities…" when the proxy/backend hangs.
+  timeout: 15000,
 });
 
 // Attach the bearer token (if any) to every outgoing request.
@@ -57,7 +59,11 @@ api.interceptors.response.use(
   (res) => res,
   (error) => {
     const message =
-      error.response?.data?.message || error.message || 'Something went wrong.';
+      error.code === 'ECONNABORTED'
+        ? 'Request timed out. Is the backend running on port 5000?'
+        : error.response?.status === 502
+          ? 'Backend unavailable. Start the API server (npm run dev in backend).'
+          : error.response?.data?.message || error.message || 'Something went wrong.';
     if (error.response?.status === 401) {
       clearToken();
     }

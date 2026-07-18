@@ -173,12 +173,12 @@ export default function ScheduleUploadForm({ onSkip, onSuccess }) {
           onClick={() => setHelpOpen(false)}
         >
           <div
-            className="relative w-[min(calc(100vw-2rem),56rem)] max-w-[calc(100vw-2rem)] p-4 sm:p-5 rounded-2xl border border-primary/40 bg-base-100/55 backdrop-blur-xl shadow-xl"
+            className="relative w-[min(calc(100vw-1.5rem),112rem)] max-w-[calc(100vw-1.5rem)] max-h-[min(calc(100vh-1.5rem),90rem)] overflow-auto p-5 sm:p-6 rounded-2xl border border-primary/40 bg-base-100/55 backdrop-blur-xl shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               type="button"
-              className="btn btn-ghost btn-sm btn-circle absolute top-2 right-2"
+              className="btn btn-ghost btn-sm btn-circle absolute top-2 right-2 z-10"
               onClick={() => setHelpOpen(false)}
               aria-label="Close"
             >
