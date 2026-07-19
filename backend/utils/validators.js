@@ -5,8 +5,18 @@
 
 // bad-words v4 is ESM and exposes a NAMED export, so we destructure { Filter }.
 import { Filter } from 'bad-words';
+import { DEMO_ACCOUNTS } from './demoAccounts.js';
 
 const filter = new Filter();
+
+/** Usernames reserved for seeded demo accounts (and staff impersonation). */
+const RESERVED_USERNAMES = new Set([
+  'admin',
+  'moderator',
+  'support',
+  'staff',
+  ...DEMO_ACCOUNTS.map((a) => a.username.toLowerCase()),
+]);
 
 /**
  * Confirms the email belongs to a UBC student. We only accept addresses ending
@@ -40,9 +50,8 @@ export const isValidUsername = (username) => {
   // 2. Check for Profanity
   if (filter.isProfane(trimmed)) return false;
 
-  // 3. Optional: Add a blacklist for impersonation
-  const blacklist = ['admin', 'moderator', 'support', 'staff'];
-  if (blacklist.includes(trimmed.toLowerCase())) return false;
+  // 3. Block staff impersonation + fixed demo account usernames
+  if (RESERVED_USERNAMES.has(trimmed.toLowerCase())) return false;
 
   return true;
 };

@@ -12,8 +12,10 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { signup } from '../features/auth/authSlice';
+import { login, signup } from '../features/auth/authSlice';
+import { fetchCommunities } from '../features/communities/communitiesSlice';
 import AuthShell from '../components/AuthShell';
+import DemoLoginPanel from '../components/DemoLoginPanel';
 import CommunityWelcomeModal from '../components/CommunityWelcomeModal';
 import TermsModal from '../components/TermsModal';
 import PrivacyModal from '../components/PrivacyModal';
@@ -69,6 +71,8 @@ export default function SignupPage() {
   // Visibility state for Terms and Privacy modals
   const [termsOpen, setTermsOpen] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
+  // Expands the card to show User / Moderator demo login choices
+  const [demoOpen, setDemoOpen] = useState(false);
 
   // Generic field updater
   const update = (k) => (e) => setForm({ ...form, [k]: e.target.value });
@@ -105,6 +109,17 @@ export default function SignupPage() {
     }
   };
 
+  /** Sign in as a seeded demo role (same accounts as the login page). */
+  const loginAsDemo = async (role) => {
+    const res = await dispatch(
+      login({ identifier: role.email, password: role.password })
+    );
+    if (login.fulfilled.match(res)) {
+      dispatch(fetchCommunities());
+      navigate('/c');
+    }
+  };
+
   return (
     <>
       {/* Welcome modal — shown only on first arrival from landing page */}
@@ -117,7 +132,14 @@ export default function SignupPage() {
           Already have an account?{' '}
           <Link to="/login" className="link link-primary font-medium">
             Log in
-          </Link>
+          </Link>{' '}
+          <button
+            type="button"
+            className="link link-primary font-medium"
+            onClick={() => setDemoOpen((open) => !open)}
+          >
+            Demo Login
+          </button>
         </span>
       }
     >
@@ -235,6 +257,8 @@ export default function SignupPage() {
           Send verification code
         </button>
       </form>
+
+      <DemoLoginPanel open={demoOpen} loading={loading} onSelect={loginAsDemo} />
     </AuthShell>
       {/* Legal modals — controlled by termsOpen/privacyOpen state */}
       <TermsModal open={termsOpen} onClose={() => setTermsOpen(false)} />
