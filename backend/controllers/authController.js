@@ -17,6 +17,7 @@ import {
   isValidPassword
 } from '../utils/validators.js';
 import { isModeratorEmail } from '../utils/moderators.js';
+import { isDemoEmail } from '../utils/demoAccounts.js';
 
 /**
  * AUTH CONTROLLER
@@ -47,8 +48,8 @@ export const signup = asyncHandler(async (req, res) => {
   const username = (req.body.username || '').trim();
   const password = req.body.password || '';
 
-  // 1) Must be a UBC student address — unless it's a configured moderator email.
-  if (!isValidUbcEmail(email) && !isModeratorEmail(email)) {
+  // 1) Must be a UBC student address — unless moderator allow-list or demo account.
+  if (!isValidUbcEmail(email) && !isModeratorEmail(email) && !isDemoEmail(email)) {
     throw new ApiError(
       400,
       `Email must end in ${process.env.ALLOWED_EMAIL_DOMAIN || '@student.ubc.ca'}`

@@ -6,6 +6,7 @@ import { Server as SocketServer } from 'socket.io';
 
 import connectDB from './config/db.js';
 import { ensureDefaultCommunities } from './utils/ensureCommunities.js';
+import { ensureDemoUsers } from './utils/ensureDemoUsers.js';
 import apiRoutes from './routes/index.js';
 import { notFound, errorHandler } from './middleware/errorHandler.js';
 import { initChat } from './socket/chatSocket.js';
@@ -25,6 +26,7 @@ import { initChat } from './socket/chatSocket.js';
 await connectDB();
 await ensureDefaultCommunities();
 console.log('[server] default communities ready');
+await ensureDemoUsers();
 
 // --- 2. Express app --------------------------------------------------------
 const app = express();

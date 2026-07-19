@@ -63,7 +63,16 @@ In production there is **no proxy** — the frontend must call the Railway URL v
 | `SEED_DEFAULT_COMMUNITIES` | First boot only | Set `true` once to seed default rooms, then remove/unset |
 | `PORT` | No | Railway injects this automatically — do not hardcode |
 
-**Signup rule:** only emails ending in `ALLOWED_EMAIL_DOMAIN` (default `@student.ubc.ca`) can register, unless listed in `MODERATOR_EMAILS`.
+**Signup rule:** only emails ending in `ALLOWED_EMAIL_DOMAIN` (default `@student.ubc.ca`) can register, unless listed in `MODERATOR_EMAILS` (or the fixed demo accounts below).
+
+**Demo accounts** (auto-seeded on every backend start — password reset each boot):
+
+| Role | Email | Password |
+|------|-------|----------|
+| User | `demo_user@unipulse.live` | `Password123` |
+| Moderator | `demo_admin@unipulse.live` | `Password123` |
+
+Login page also has one-click “Demo accounts” buttons for these.
 
 ### Frontend (Vercel → Environment Variables)
 

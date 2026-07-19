@@ -6,10 +6,12 @@
  *   1. Bypass the ALLOWED_EMAIL_DOMAIN restriction during signup
  *   2. Automatically receive moderator powers on signup or login
  *
- * Used by the auth controller to elevate specific users without manual DB edits.
+ * The fixed demo_admin@unipulse.live account is always treated as a moderator.
  *
  * Example .env:  MODERATOR_EMAILS=iyash636@student.ubc.ca,admin@ubc.ca
  */
+
+import { isDemoModeratorEmail } from './demoAccounts.js';
 
 /**
  * Parses the MODERATOR_EMAILS env var into an array of lowercase email addresses.
@@ -23,10 +25,11 @@ export const getModeratorEmails = () =>
     .filter(Boolean);
 
 /**
- * Checks whether a given email is in the moderator allow-list.
+ * Checks whether a given email is in the moderator allow-list (or is the demo admin).
  *
  * @param {string} email - The email address to check
  * @returns {boolean} True if the email is a designated moderator
  */
 export const isModeratorEmail = (email) =>
-  getModeratorEmails().includes((email || '').trim().toLowerCase());
+  getModeratorEmails().includes((email || '').trim().toLowerCase()) ||
+  isDemoModeratorEmail(email);

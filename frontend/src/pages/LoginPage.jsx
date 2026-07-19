@@ -5,6 +5,8 @@
  * Route: "/login"
  * Role: Accepts email-or-username + password, dispatches the login thunk,
  * and redirects to the community hub (/c) on success.
+ *
+ * Also exposes one-click recruiter demo accounts (standard user + moderator).
  */
 
 import { useState } from 'react';
@@ -13,6 +15,21 @@ import { Link, useNavigate } from 'react-router-dom';
 import { login } from '../features/auth/authSlice';
 import { fetchCommunities } from '../features/communities/communitiesSlice';
 import AuthShell from '../components/AuthShell';
+
+const DEMO_ACCOUNTS = [
+  {
+    label: 'User',
+    email: 'demo_user@unipulse.live',
+    password: 'Password123',
+    blurb: 'Posts, rooms, chat',
+  },
+  {
+    label: 'Moderator',
+    email: 'demo_admin@unipulse.live',
+    password: 'Password123',
+    blurb: 'Reports, bans, communities',
+  },
+];
 
 /**
  * Login with email OR username + password.
@@ -39,6 +56,17 @@ export default function LoginPage() {
   const onSubmit = async (e) => {
     e.preventDefault();
     const res = await dispatch(login(form));
+    if (login.fulfilled.match(res)) {
+      dispatch(fetchCommunities());
+      navigate('/c');
+    }
+  };
+
+  /** Fill credentials and sign in as a demo role in one click. */
+  const loginAsDemo = async (account) => {
+    const payload = { identifier: account.email, password: account.password };
+    setForm(payload);
+    const res = await dispatch(login(payload));
     if (login.fulfilled.match(res)) {
       dispatch(fetchCommunities());
       navigate('/c');
@@ -97,6 +125,32 @@ export default function LoginPage() {
           Log in
         </button>
       </form>
+
+      {/* Recruiter demo shortcuts */}
+      <div className="mt-5 pt-4 border-t border-base-300/60">
+        <p className="text-xs font-medium text-base-content/60 mb-2 uppercase tracking-wide">
+          Demo accounts
+        </p>
+        <div className="flex flex-col gap-2">
+          {DEMO_ACCOUNTS.map((account) => (
+            <button
+              key={account.email}
+              type="button"
+              disabled={loading}
+              onClick={() => loginAsDemo(account)}
+              className="btn btn-ghost btn-sm justify-start h-auto py-2 px-3 rounded-xl border border-base-300/70"
+            >
+              <span className="flex flex-col items-start text-left gap-0.5">
+                <span className="font-semibold text-sm">{account.label}</span>
+                <span className="text-xs font-normal text-base-content/55 normal-case">
+                  {account.email} · {account.blurb}
+                </span>
+              </span>
+            </button>
+          ))}
+        </div>
+        <p className="mt-2 text-[11px] text-base-content/45">Password for both: Password123</p>
+      </div>
     </AuthShell>
   );
 }
