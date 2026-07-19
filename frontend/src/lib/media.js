@@ -21,8 +21,8 @@ export async function uploadMedia(file) {
   return { url: data.url, mediaType: data.mediaType };
 }
 
-/** Giphy API key — falls back to a public default if env var is not set. */
-const GIPHY_KEY = import.meta.env.VITE_GIPHY_API_KEY || 'uPpK0Xdj6CjrdOOquxhsbVJvQY04hsA1';
+/** Giphy API key — set VITE_GIPHY_API_KEY in Vercel for production. */
+const GIPHY_KEY = import.meta.env.VITE_GIPHY_API_KEY || '';
 
 /**
  * Search Giphy for GIFs matching a query string.
@@ -31,6 +31,7 @@ const GIPHY_KEY = import.meta.env.VITE_GIPHY_API_KEY || 'uPpK0Xdj6CjrdOOquxhsbVJ
  * @returns {Promise<Array<Object>>} Array of Giphy GIF objects.
  */
 export async function searchGifs(query, offset = 0) {
+  if (!GIPHY_KEY) throw new Error('Giphy API key is not configured.');
   const res = await fetch(
     `https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_KEY}&q=${encodeURIComponent(query || 'trending')}&limit=20&offset=${offset}&rating=g`
   );
@@ -45,6 +46,7 @@ export async function searchGifs(query, offset = 0) {
  * @returns {Promise<Array<Object>>} Array of Giphy GIF objects.
  */
 export async function trendingGifs(offset = 0) {
+  if (!GIPHY_KEY) throw new Error('Giphy API key is not configured.');
   const res = await fetch(
     `https://api.giphy.com/v1/gifs/trending?api_key=${GIPHY_KEY}&limit=20&offset=${offset}&rating=g`
   );

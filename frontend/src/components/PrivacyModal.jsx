@@ -43,7 +43,7 @@ export default function PrivacyModal({ open, onClose }) {
           <section>
             <h3 className="font-semibold text-base-content mb-1">2. Information We Collect</h3>
             <p>
-              We collect information you provide directly, such as your student email address and
+              We collect information you provide directly, such as your email address and
               class schedule information, to verify your identity and facilitate community features.
             </p>
           </section>

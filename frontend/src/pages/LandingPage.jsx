@@ -66,7 +66,7 @@ export default function LandingPage() {
           Your campus, <span className="text-primary">anonymously</span> connected.
         </h1>
         <p className="mt-5 text-base sm:text-lg text-base-content/70 max-w-2xl mx-auto">
-          Verify with your <span className="font-semibold">student</span> email, drop in
+          Verify with your <span className="font-semibold">UBC student</span> email, drop in
           your class schedule, and instantly join anonymous communities for every course you take,
           plus campus-wide rooms for everything else.
         </p>

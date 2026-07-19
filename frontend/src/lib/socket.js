@@ -6,27 +6,28 @@
  * across all community chat rooms. The JWT is sent during the handshake so the
  * backend's socketAuth middleware can authenticate the user.
  *
- * Exports:
- *   - getSocket()       — returns (and lazily creates) the socket instance
- *   - disconnectSocket() — tears down the connection (e.g. on logout)
+ * Dev:  connects to same origin ('/') — Vite proxies /socket.io → backend
+ * Prod: connects to VITE_API_URL (Railway backend origin)
  */
 
 import { io } from 'socket.io-client';
-import { getToken } from './api';
+import { getToken, API_ORIGIN } from './api';
 
 /** The singleton socket instance; null until first connection. */
 let socket = null;
 
 /**
  * Get (or create) the Socket.io client connection.
- * On first call, connects to the server root ('/') with the JWT in auth.
- * Prefers WebSocket transport but falls back to polling.
  * @returns {import('socket.io-client').Socket} The active socket instance.
  */
 export const getSocket = () => {
   if (socket) return socket;
 
-  socket = io('/', {
+  // Production: hit the Railway API host directly.
+  // Development: same-origin so Vite can proxy /socket.io.
+  const url = API_ORIGIN || '/';
+
+  socket = io(url, {
     auth: { token: getToken() },
     autoConnect: true,
     transports: ['websocket', 'polling'],

@@ -5,7 +5,8 @@
  * utility functions to communicate with the UniPulse backend.
  *
  * Key behaviors:
- *   - baseURL is "/api", proxied to the backend by Vite in dev (see vite.config.js)
+ *   - baseURL is VITE_API_URL + "/api" in production, or "/api" in local dev
+ *     (Vite proxies /api → backend — see vite.config.js)
  *   - Automatically attaches the JWT bearer token to every outgoing request
  *   - Normalizes error responses so callers can read `err.message` consistently
  *   - Auto-clears the stored token on 401 (expired/invalid) to trigger re-login
@@ -17,6 +18,12 @@ import axios from 'axios';
 
 /** localStorage key where the JWT is stored. Used by auth slice and socket. */
 export const TOKEN_KEY = 'unipulse_token';
+
+/**
+ * Backend origin for production (e.g. https://unipulse-api.up.railway.app).
+ * Leave unset in local Vite dev so requests use the /api proxy.
+ */
+export const API_ORIGIN = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
 
 /**
  * Read the JWT from localStorage.
@@ -35,12 +42,12 @@ export const setToken = (token) => localStorage.setItem(TOKEN_KEY, token);
 export const clearToken = () => localStorage.removeItem(TOKEN_KEY);
 
 /**
- * Shared Axios instance. baseURL is "/api" which Vite proxies to the backend in
- * dev (see vite.config.js). Every request automatically carries the JWT.
+ * Shared Axios instance.
+ * Dev:  baseURL "/api" (proxied by Vite to localhost:5000)
+ * Prod: baseURL "{VITE_API_URL}/api"
  */
 const api = axios.create({
-  baseURL: '/api',
-  // Prevent infinite "Loading communities…" when the proxy/backend hangs.
+  baseURL: API_ORIGIN ? `${API_ORIGIN}/api` : '/api',
   timeout: 15000,
 });
 
@@ -60,9 +67,9 @@ api.interceptors.response.use(
   (error) => {
     const message =
       error.code === 'ECONNABORTED'
-        ? 'Request timed out. Is the backend running on port 5000?'
+        ? 'Request timed out. Please try again.'
         : error.response?.status === 502
-          ? 'Backend unavailable. Start the API server (npm run dev in backend).'
+          ? 'Backend unavailable. Please try again in a moment.'
           : error.response?.data?.message || error.message || 'Something went wrong.';
     if (error.response?.status === 401) {
       clearToken();

@@ -29,9 +29,25 @@ console.log('[server] default communities ready');
 // --- 2. Express app --------------------------------------------------------
 const app = express();
 
-// Allow the frontend (Vite dev server / deployed origin) to call the API.
-const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
-app.use(cors({ origin: clientUrl, credentials: true }));
+// Allow the frontend (Vite dev / Vercel production domain) to call the API.
+// CLIENT_URL may be a single origin or a comma-separated list (e.g. apex + www).
+const clientOrigins = (process.env.CLIENT_URL || 'http://localhost:5173')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      // Allow non-browser clients (curl, server-to-server) with no Origin header.
+      if (!origin || clientOrigins.includes(origin) || clientOrigins.includes('*')) {
+        return callback(null, true);
+      }
+      return callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
+    credentials: true,
+  })
+);
 
 // Parse JSON bodies (multipart is handled separately by multer on its route).
 app.use(express.json());
@@ -50,7 +66,10 @@ app.use(errorHandler);
 const server = http.createServer(app);
 
 const io = new SocketServer(server, {
-  cors: { origin: clientUrl, credentials: true }
+  cors: {
+    origin: clientOrigins.includes('*') ? true : clientOrigins,
+    credentials: true,
+  },
 });
 initChat(io); // wire up all live-chat event handlers
 

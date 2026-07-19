@@ -53,7 +53,6 @@ export default function ForgotPasswordPage() {
     >
       {/* Reset request form — email field and submit button */}
       <form onSubmit={onSubmit} className="flex flex-col gap-3">
-        {/* UBC email input */}
         <label className="form-control">
           <span className="label-text mb-1 font-medium">UBC email</span>
           <input

@@ -67,7 +67,7 @@ export default function VerifyPage() {
   return (
     <AuthShell
       title="Check your inbox"
-      subtitle="We sent a 6-digit code to your UBC email. Sometimes it takes a few minutes to arrive, and check your junk folder!"
+      subtitle="We sent a 6-digit code to your UBC email. Sometimes it takes a few minutes to arrive — check your junk folder!"
       footer={
         <Link to="/signup" className="link link-primary">
           ← Back to signup

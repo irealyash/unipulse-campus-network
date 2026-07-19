@@ -10,14 +10,17 @@ const filter = new Filter();
 
 /**
  * Confirms the email belongs to a UBC student. We only accept addresses ending
- * in the configured domain (default "@student.ubc.ca"). This is the very first
- * gate of the whole product: no UBC inbox => no account.
+ * in the configured domain (default "@student.ubc.ca"). Moderator emails listed
+ * in MODERATOR_EMAILS may bypass this at the controller layer.
  */
 export const isValidUbcEmail = (email) => {
-    if (typeof email !== 'string') return false;
-    const domain = (process.env.ALLOWED_EMAIL_DOMAIN || '@student.ubc.ca').toLowerCase();
-    return email.trim().toLowerCase().endsWith(domain);
+  if (typeof email !== 'string') return false;
+  const domain = (process.env.ALLOWED_EMAIL_DOMAIN || '@student.ubc.ca').toLowerCase();
+  return email.trim().toLowerCase().endsWith(domain);
 };
+
+/** Alias kept for callers that expect a generic name. */
+export const isValidEmail = isValidUbcEmail;
 
 /**
  * Username rules for the anonymous alias:
@@ -26,37 +29,32 @@ export const isValidUbcEmail = (email) => {
  * This keeps aliases URL-safe and avoids impersonation via spaces/symbols.
  */
 export const isValidUsername = (username) => {
-    if (typeof username !== 'string') return false;
+  if (typeof username !== 'string') return false;
 
-    const trimmed = username.trim();
+  const trimmed = username.trim();
 
-    // 1. Check Format (Length & Characters)
-    const formatRegex = /^[A-Za-z0-9_]{3,10}$/;
-    if (!formatRegex.test(trimmed)) return false;
+  // 1. Check Format (Length & Characters)
+  const formatRegex = /^[A-Za-z0-9_]{3,10}$/;
+  if (!formatRegex.test(trimmed)) return false;
 
-    // 2. Check for Profanity
-    if (filter.isProfane(trimmed)) return false;
+  // 2. Check for Profanity
+  if (filter.isProfane(trimmed)) return false;
 
-    // 3. Optional: Add a blacklist for impersonation
-    const blacklist = ['admin', 'moderator', 'support', 'staff'];
-    if (blacklist.includes(trimmed.toLowerCase())) return false;
+  // 3. Optional: Add a blacklist for impersonation
+  const blacklist = ['admin', 'moderator', 'support', 'staff'];
+  if (blacklist.includes(trimmed.toLowerCase())) return false;
 
-    return true;
+  return true;
 };
-
-
 
 /**
  * Password rules: at least 8 characters and not absurdly long (bcrypt only
- * uses the first 20 bytes, so we cap input to avoid silent truncation issues).
+ * uses the first 72 bytes, so we cap input to avoid silent truncation issues).
  * Kept intentionally simple — tighten (require digits/symbols) if you want.
  */
 export const isValidPassword = (password) => {
-
-    if (typeof password !== 'string') return false;
-
-    return password.length >= 8 && password.length <= 32;
-
+  if (typeof password !== 'string') return false;
+  return password.length >= 8 && password.length <= 32;
 };
 
 // Number of days a user must wait between username changes (spec: once a week).

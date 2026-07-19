@@ -23,7 +23,7 @@ import { isModeratorEmail } from '../utils/moderators.js';
  * ----------------------------------------------------------------------------
  * Identity rules for UniPulse:
  *   1. You must own a UBC student inbox (@student.ubc.ca) — proven via an
- *      emailed OTP at signup.
+ *      emailed OTP at signup. Configured moderator emails may bypass the domain rule.
  *   2. You set a PASSWORD at signup. After that, logging back in is just
  *      identifier (email OR username) + password. No OTP needed to log in.
  *   3. Forgot/reset password re-uses the emailed-OTP mechanism.
@@ -47,10 +47,12 @@ export const signup = asyncHandler(async (req, res) => {
   const username = (req.body.username || '').trim();
   const password = req.body.password || '';
 
-  // 1) Must be a UBC student address — unless it's a configured moderator email,
-  //    which is allowed to sign up regardless of domain.
+  // 1) Must be a UBC student address — unless it's a configured moderator email.
   if (!isValidUbcEmail(email) && !isModeratorEmail(email)) {
-    throw new ApiError(400, `Email must end in ${process.env.ALLOWED_EMAIL_DOMAIN || '@student.ubc.ca'}`);
+    throw new ApiError(
+      400,
+      `Email must end in ${process.env.ALLOWED_EMAIL_DOMAIN || '@student.ubc.ca'}`
+    );
   }
 
   // 2) Username + password format rules.
