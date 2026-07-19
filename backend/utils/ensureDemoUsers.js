@@ -4,9 +4,11 @@
  *
  * Always claims the reserved usernames `demo_user` / `demo_admin`. Any other
  * account holding those names is renamed so demo identity stays stable.
+ * Both accounts are auto-joined to every public "general" catalog community.
  */
 
 import User from '../models/User.js';
+import Community from '../models/Community.js';
 import { hashPassword } from './password.js';
 import { DEMO_ACCOUNTS } from './demoAccounts.js';
 
@@ -23,7 +25,19 @@ const reclaimUsername = async (username, keepEmail) => {
   await clash.save();
 };
 
+/** All public communities in the General Communities catalog category. */
+const getGeneralCommunityIds = async () => {
+  const ids = await Community.find({
+    type: 'general',
+    category: 'general',
+    private: false,
+  }).distinct('_id');
+  return ids.map(String);
+};
+
 export const ensureDemoUsers = async () => {
+  const generalCommunityIds = await getGeneralCommunityIds();
+
   for (const account of DEMO_ACCOUNTS) {
     const passwordHash = await hashPassword(account.password);
     await reclaimUsername(account.username, account.email);
@@ -36,6 +50,7 @@ export const ensureDemoUsers = async () => {
       existing.moderator = account.moderator;
       existing.isBanned = false;
       existing.communityOnboardingComplete = true;
+      existing.joinedCommunities = generalCommunityIds;
       await existing.save();
       continue;
     }
@@ -47,10 +62,11 @@ export const ensureDemoUsers = async () => {
       moderator: account.moderator,
       communityOnboardingComplete: true,
       scheduleUploaded: false,
+      joinedCommunities: generalCommunityIds,
     });
   }
 
   console.log(
-    `[demo] ready — user ${DEMO_ACCOUNTS[0].email} / admin ${DEMO_ACCOUNTS[1].email} (Password123)`
+    `[demo] ready — user ${DEMO_ACCOUNTS[0].email} / admin ${DEMO_ACCOUNTS[1].email} (Password123); joined ${generalCommunityIds.length} general communities`
   );
 };
